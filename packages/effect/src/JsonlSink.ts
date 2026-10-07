@@ -1,9 +1,9 @@
 import { Array as Arr, Console, Crypto, Effect, FileSystem, Path, PlatformError, Ref } from "effect";
 
-import { type Body, type SlimSpan, slimSpan } from "./Bodies.ts";
-import { toLines } from "./Jsonl.ts";
+import { type Body, type SlimSpan, slimSpan } from "./format/Bodies.ts";
+import { toLines } from "./format/Jsonl.ts";
 
-import type { Span } from "./TraceData.ts";
+import type { Span } from "./format/TraceData.ts";
 
 export interface JsonlSinkOptions {
     // Created with its parent directories if missing. Each batch is appended, so an existing file is kept.

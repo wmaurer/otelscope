@@ -1,7 +1,7 @@
 import { Cause, Console, Effect, Layer, Schema } from "effect";
 import { HttpClient, type HttpClientRequest, HttpClientResponse } from "effect/http";
 
-import { TraceData } from "./TraceData.ts";
+import { TraceData } from "./format/TraceData.ts";
 
 const decodeTraceData = Schema.decodeUnknownEffect(Schema.fromJsonString(TraceData));
 

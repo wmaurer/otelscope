@@ -2,9 +2,9 @@ import { NodeServices } from "@effect/platform-node";
 import { assert, describe, it } from "@effect/vitest";
 import { Effect } from "effect";
 
-import { PREVIEW_CHARS, slimSpan } from "../src/Bodies.ts";
-import { plainAttributes } from "../src/Jsonl.ts";
-import { otlpSpan, str } from "./support/spans.ts";
+import { PREVIEW_CHARS, slimSpan } from "../../src/format/Bodies.ts";
+import { plainAttributes } from "../../src/format/Jsonl.ts";
+import { otlpSpan, str } from "../support/spans.ts";
 
 describe("slimSpan", () => {
     it.effect("replaces a .body attribute with its hash, size and preview, and returns the body", () =>

@@ -6,7 +6,7 @@ import { TestConsole } from "effect/testing";
 import * as ReceiverClient from "../src/ReceiverClient.ts";
 import { otlpSpan, traceData } from "./support/spans.ts";
 
-import type { TraceData } from "../src/TraceData.ts";
+import type { TraceData } from "../src/format/TraceData.ts";
 
 const post = (request: HttpClientRequest.HttpClientRequest, ingest: (data: TraceData) => Effect.Effect<void>) =>
     Effect.gen(function* () {

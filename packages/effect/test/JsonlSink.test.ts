@@ -10,7 +10,7 @@ import { TestConsole } from "effect/testing";
 import * as JsonlSink from "../src/JsonlSink.ts";
 import { otlpSpan, str } from "./support/spans.ts";
 
-import type { JsonlSpanRecord } from "../src/Jsonl.ts";
+import type { JsonlSpanRecord } from "../src/format/Jsonl.ts";
 
 // SAFETY: every line of the file is one JsonlSpanRecord, written by the sink through JSON.stringify of that
 // same interface.

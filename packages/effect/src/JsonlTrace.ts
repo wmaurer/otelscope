@@ -1,9 +1,9 @@
 import { Crypto, DateTime, Effect, FileSystem, Layer, Path, Random } from "effect";
 import { OtlpSerialization, OtlpTracer } from "effect/observability";
 
+import { spansOf } from "./format/TraceData.ts";
 import * as JsonlSink from "./JsonlSink.ts";
 import * as ReceiverClient from "./ReceiverClient.ts";
-import { spansOf } from "./TraceData.ts";
 
 export interface JsonlTraceOptions {
     readonly serviceName: string;

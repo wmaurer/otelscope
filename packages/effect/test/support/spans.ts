@@ -1,4 +1,4 @@
-import type { KeyValue, Span, TraceData } from "../../src/TraceData.ts";
+import type { KeyValue, Span, TraceData } from "../../src/format/TraceData.ts";
 
 // One OTLP span as `OtlpTracer` writes it. Times are nanoseconds since the epoch, as strings.
 export const otlpSpan = (over: Partial<Span> & { readonly name: string; readonly spanId: string }): Span => ({

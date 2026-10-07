@@ -1,7 +1,7 @@
 import { assert, describe, it } from "@effect/vitest";
 
-import { toLines, toRecord } from "../src/Jsonl.ts";
-import { otlpSpan, str } from "./support/spans.ts";
+import { toLines, toRecord } from "../../src/format/Jsonl.ts";
+import { otlpSpan, str } from "../support/spans.ts";
 
 describe("toRecord", () => {
     it("maps ids, parent and run", () => {
