@@ -40,8 +40,8 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
   `@wmaurer/otelscope-effect`.
 - **Effect** drives the non-view code (reading, watching, decoding, indexing). React renders.
 - Input is **one JSONL file**. Runs are told apart by `run`, and `bodies/` is resolved next to the file.
-- Navigation is **runs → traces → trace view**, one route per level. Use **TanStack Router** if it works
-  under OpenTUI.
+- Navigation is **runs → traces → trace view**, one screen per level. It is a typed screen stack, not TanStack
+  Router; see Route tree and URL state.
 - v1 features: the **trace waterfall with a details pane**, a **logs pane** built from events, a **body
   viewer**, and **search/filter**.
 - **Effect-aware** rendering: exit states styled, exception events shown as causes, source locations, and
@@ -76,6 +76,9 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - [Data layer: tailing, indexing and exposing the file to React](tickets/08-data-layer-design.md) — record
   Schema exported from `format` in 0.3.0; every record in memory, 250k spans targeted; traces keyed by id
   across runs, partial trees kept by parent id; copy-on-write snapshots every 100 ms; bad lines classified.
+- [Route tree and URL state](tickets/09-routes-and-url-state.md) — no TanStack Router: a typed stack of
+  `Runs | Traces | Trace | Body` screens in an Atom, each carrying its view state with selection by id;
+  missing ids show a placeholder in place, and a Reset never rewrites the stack.
 
 ## Not yet specified
 
@@ -84,8 +87,9 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
   be a record-format change for 0.3.0.
 - **Search and filter.** What can be searched (span name, attribute keys and values, exit, log text), the
   query syntax, and where filters apply (trace list, span tree, logs).
-- **Body viewer.** Pager or split pane, JSON pretty-printing or highlighting, handling of truncated bodies,
-  and whether to hand off to `$EDITOR` or `$PAGER`.
+- **Body viewer.** It is a full-screen screen pushed from the details pane. Left: whether bodies also show
+  inline in the trace view, JSON pretty-printing or highlighting, handling of truncated bodies, and whether to
+  hand off to `$EDITOR` or `$PAGER`.
 - **Effect-aware rendering details.** How the Cause section built from `exception` events is formatted
   (neither reference tool renders exit or causes), and how interrupted spans and fibers (`#12`) read.
 - **Live-tail UX.** Follow mode (auto-select the newest run or trace) and signalling new data. How partial
@@ -93,10 +97,11 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - **Keymap and help bar.** One consistent key scheme across screens, plus discoverability. This includes how
   single-letter bindings coexist with typing in the search input, and whether `@opentui/keymap` is used at
   all (it requires Bun 1.3 or later).
-- **CLI surface and npm packaging.** Bin name, flags (such as run filter, no-follow, or `--last-runs`), and
-  the README.
+- **CLI surface and npm packaging.** Bin name, flags (such as run filter, no-follow, `--last-runs`, and
+  `--run`/`--trace` to seed the screen stack), and the README.
   Runtime, Node version and native-dependency policy are a ticket.
-- **Testing strategy.** How views and the data layer are tested in this repo's vitest setup.
+- **Testing strategy.** How views and the data layer are tested in this repo's vitest setup. Navigation is
+  pure functions over the screen stack, so it can be tested without a renderer.
 - **Performance limits.** v1 targets 250k spans with every record in memory. Left: whether the windowed list
   and the waterfall stay responsive at that size, and how it is checked.
 - **Spec assembly.** The final pass that turns the closed tickets into the hand-off spec.

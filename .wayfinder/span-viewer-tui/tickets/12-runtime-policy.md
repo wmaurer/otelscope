@@ -17,9 +17,9 @@ requires `>=22.18`, this machine runs Node 24.14, and the pre-push hook runs eve
   Node (raise the repo's Node, skip, or run the TUI's tests under Bun);
 - how the bin shim handles the `ExperimentalWarning` and an unsupported runtime;
 - the OpenTUI pinning policy (exact version) and the musl story (`OPENTUI_LIBC=musl`);
-- whether the published bin is bundled (Bun.build or another bundler) or `tsc` output. TanStack Router needs
-  its `isServer` import redirected, which a bundler plugin does cleanly. Bundling also keeps a single React
-  copy and could cut the install bloat;
+- whether the published bin is bundled (Bun.build or another bundler) or `tsc` output. Bundling keeps a single
+  React copy and could cut the install bloat. TanStack Router, whose `isServer` redirect needed a bundler, was
+  dropped in Route tree and URL state;
 - whether to work around the upstream install bloat (`typescript@5`, `react-devtools-core`, `ws`).
 
 Findings: `docs/research/opentui-runtime-and-tooling.md` on branch `research/opentui-runtime-and-tooling`.
