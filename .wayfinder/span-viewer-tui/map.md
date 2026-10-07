@@ -1,0 +1,101 @@
+---
+title: Span viewer TUI for otelscope JSONL
+labels: [wayfinder:map]
+status: open
+---
+
+## Destination
+
+An implementation-ready spec for v1 of `packages/tui`: a terminal UI, written in React on `@opentui/react`, that
+opens one otelscope JSONL file and lets you browse its runs, traces and spans, live or after the fact. The
+map ends when the spec settles every screen, the data layer, routing, the record-format change and the
+packaging, so someone can build it without deciding anything further.
+
+## Notes
+
+**Domain.** The input is the JSONL file that `JsonlTrace.layer` from `@wmaurer/otelscope-effect`
+(`packages/effect/`) writes: one `JsonlSpanRecord` per line, with `bodies/<sha256>.txt` beside it. The terms:
+
+- **Run**: one program execution, the `run` field. A file holds many runs.
+- **Trace / span**: OTel trace and span ids; `parent` builds the tree. `ms` is the duration and `exit` is
+  `Success`, `Failure` or `Interrupted`.
+- **Event / log**: entries in `events`, with `offsetMs` from span start. `Effect.log*` calls become events
+  carrying `effect.logLevel` and `effect.fiberId`. A failure carries an `exception` event.
+- **Body**: a `<prefix>.body` attribute moved to a file, leaving `<prefix>.sha256`, `.bytes` and `.preview`.
+
+**Inspiration.** otel-tui (`.repos/refs/otel-tui/`, especially `docs/spans.png`) for the trace timeline,
+details and logs panes, and the Effect VS Code extension (`.repos/refs/effect-vscode-extension/`) for
+Effect-aware span presentation. OpenTUI source is in `.repos/deps/opentui/`.
+
+**Skills.** `/grill-me` for grilling tickets, `/prototype` for prototype tickets, and `/research` for
+research tickets. Research findings go on a throwaway `research/<slug>` branch as `docs/research/<slug>.md`,
+linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `packages/effect/node_modules/`.
+
+**Settled while charting** (standing preferences, not tickets):
+
+- The TUI follows the file live, like `tail -f`. Opening a finished file is the same path with nothing new
+  arriving.
+- `JsonlSpanRecord` gains an **absolute start time**, so the waterfall is exact. Its shape is a ticket.
+- The TUI lives in **`packages/tui`** and is published to npm with a CLI bin, next to
+  `@wmaurer/otelscope-effect`.
+- **Effect** drives the non-view code (reading, watching, decoding, indexing). React renders.
+- Input is **one JSONL file**. Runs are told apart by `run`, and `bodies/` is resolved next to the file.
+- Navigation is **runs → traces → trace view**, one route per level. Use **TanStack Router** if it works
+  under OpenTUI.
+- v1 features: the **trace waterfall with a details pane**, a **logs pane** built from events, a **body
+  viewer**, and **search/filter**.
+- **Effect-aware** rendering: exit states styled, exception events shown as causes, source locations, and
+  fiber ids in logs. Where source locations come from is a ticket, since `code.stacktrace` does not exist.
+
+**Tracker.** Local markdown; see `.wayfinder/README.md`.
+
+## Decisions so far
+
+<!-- one line per closed ticket: [title](tickets/NN-slug.md) — gist -->
+
+- [OpenTUI building blocks for the trace views](tickets/05-opentui-building-blocks.md) — layout, panes, input,
+  keymap and mouse are built in; lists don't virtualize, so a custom windowed list and custom waterfall bars
+  are needed.
+- [Prior art: otel-tui's trace view and the Effect extension's span view](tickets/06-prior-art-survey.md) —
+  adopt otel-tui's layout and keys, the extension's axis and per-span details; exit and cause rendering is new
+  design; `code.stacktrace` doesn't exist.
+- [OpenTUI React under Node: runtime, packaging and repo tooling](tickets/02-opentui-runtime-and-tooling.md) —
+  runs under Node >= 26.9 (experimental `node:ffi`) or Bun, not on 22/24; fits the repo's TS, lint, fmt and
+  vitest setup.
+- [Bridging an Effect data layer into OpenTUI React](tickets/04-effect-react-bridge.md) — Effect owns the
+  process and renderer; a custom tail `Stream`; per-line Schema decode; `@effect/atom-react` to feed React.
+- [TanStack Router under OpenTUI's React renderer](tickets/03-tanstack-router-under-opentui.md) — viable with
+  four workarounds (redirecting the `isServer` import, `origin`, global stubs, no `<Link>`); fragile upstream,
+  so pin it; fallback is a ~50-line typed router.
+
+## Not yet specified
+
+- **Run and trace list screens.** Columns, sorting, what marks a run or trace as live or failed, and how a
+  run's identity reads when there are many.
+- **Search and filter.** What can be searched (span name, attribute keys and values, exit, log text), the
+  query syntax, and where filters apply (trace list, span tree, logs).
+- **Body viewer.** Pager or split pane, JSON pretty-printing or highlighting, handling of truncated bodies,
+  and whether to hand off to `$EDITOR` or `$PAGER`.
+- **Effect-aware rendering details.** How the Cause section built from `exception` events is formatted
+  (neither reference tool renders exit or causes), and how interrupted spans and fibers (`#12`) read.
+- **Live-tail UX.** Follow mode (auto-select the newest run or trace), signalling new data, and showing
+  partial traces whose children are written before their parents.
+- **Keymap and help bar.** One consistent key scheme across screens, plus discoverability. This includes how
+  single-letter bindings coexist with typing in the search input, and whether `@opentui/keymap` is used at
+  all (it requires Bun 1.3 or later).
+- **CLI surface and npm packaging.** Bin name, flags (such as run filter or no-follow), and the README.
+  Runtime, Node version and native-dependency policy are a ticket.
+- **Testing strategy.** How views and the data layer are tested in this repo's vitest setup.
+- **Performance limits.** File sizes and span counts v1 must handle. OpenTUI lists don't virtualize, and
+  200k decoded lines already take 360–460 MB, so the windowed list and the index depend on this.
+- **Spec assembly.** The final pass that turns the closed tickets into the hand-off spec.
+
+## Out of scope
+
+- **Metrics, topology and standalone logs**: otel-tui's other tabs. The input contains only spans and their
+  events.
+- **An OTLP network receiver**: the TUI reads the JSONL file, it does not collect telemetry.
+- **Multiple files or directories as input**: v1 takes one file.
+- **Effect DevTools debug features**: fibers, context, breakpoints and metrics from the VS Code extension
+  need a live connection to the program, which a JSONL file cannot give.
+- **JSONL from other producers**: only `JsonlSpanRecord` as `@wmaurer/otelscope-effect` writes it.
