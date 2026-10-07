@@ -10,7 +10,7 @@ import { type JsonlSpanRecord, JsonlTrace } from "../src/index.ts";
 
 const program = Effect.gen(function* () {
     yield* Effect.annotateCurrentSpan({ "item.count": 3, "prompt.body": "p".repeat(300_000) });
-    yield* Effect.logWarning("rate limited, retrying");
+    yield* Effect.logWarning("sample warning");
     yield* Effect.fail(new Error("boom")).pipe(Effect.withSpan("child.fails"), Effect.ignore);
 }).pipe(Effect.withSpan("parent"));
 
@@ -45,7 +45,7 @@ describe("JsonlTrace.layer", () => {
         assert.strictEqual(child?.exit, "Failure");
         assert.strictEqual(parent?.exit, "Success");
         assert.isTrue(Arr.some(child?.events ?? [], (e) => e.name === "exception"));
-        assert.isTrue(Arr.some(parent?.events ?? [], (e) => e.name === "rate limited, retrying"));
+        assert.isTrue(Arr.some(parent?.events ?? [], (e) => e.name === "sample warning"));
         assert.strictEqual(parent?.attrs["item.count"], 3);
     });
 

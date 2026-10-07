@@ -84,7 +84,7 @@ describe("toRecord", () => {
                 spanId: "s1",
                 events: [
                     {
-                        name: "rate limited, retrying",
+                        name: "sample warning",
                         timeUnixNano: "1757000001700000000",
                         attributes: [str("effect.logLevel", "WARN"), str("ticket.key", "PROJ-412")],
                         droppedAttributesCount: 0,
@@ -95,7 +95,7 @@ describe("toRecord", () => {
 
         assert.deepStrictEqual(record.events, [
             {
-                name: "rate limited, retrying",
+                name: "sample warning",
                 offsetMs: 1200,
                 attrs: { "effect.logLevel": "WARN", "ticket.key": "PROJ-412" },
             },
