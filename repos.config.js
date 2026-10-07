@@ -24,7 +24,10 @@ export default {
     //   { name: "some-lib", url: "https://github.com/acme/some-lib.git", ref: "next" } // branch
     //   { name: "some-lib", url: "https://github.com/acme/some-lib.git", ref: "v1.2.3" } // tag
     //   { name: "some-lib", url: "https://github.com/acme/some-lib.git", ref: "abc1234" } // commit SHA
-    refs: [],
+    refs: [
+        { name: "effect-vscode-extension", url: "https://github.com/Effect-TS/vscode-extension.git" },
+        { name: "otel-tui", url: "https://github.com/ymtdzzz/otel-tui.git" },
+    ],
 
     // DEPENDENCY source repos: the things this project is built against. Unlike
     // the branch-tip references above, each one is pinned to the exact VERSION
@@ -95,5 +98,13 @@ export default {
     //
     //   { name: "spec", url: "https://github.com/example/spec.git",
     //     probe: { kind: "none" }, tag: "v{v}", seed: "1.4.0" }
-    deps: [],
+    deps: [
+        {
+            name: "opentui",
+            url: "https://github.com/anomalyco/opentui.git",
+            probe: { kind: "npm", pkg: "@opentui/core" },
+            tag: "v{v}",
+            seed: "0.5.14",
+        },
+    ],
 };

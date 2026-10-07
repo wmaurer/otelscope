@@ -18,7 +18,7 @@ The packages are not hoisted to the root `node_modules/`. Reach them through a w
 
 ## Other Dependency Source (`.repos/`)
 
-`.repos/deps/` is for upstream dependencies that do not ship their source, cloned at the exact version used here. `.repos/refs/` is for repositories read as prior art, tracked at branch tip. Entries go in the `deps` and `refs` arrays of `repos.config.js`; `pnpm deps:fetch` and `pnpm refs:fetch` populate them, and `pnpm deps:check` confirms nothing has drifted. Both arrays are empty for now. The directory is gitignored.
+`.repos/deps/` is for upstream dependencies that do not ship their source, cloned at the exact version used here. `.repos/refs/` is for repositories read as prior art, tracked at branch tip. Entries go in the `deps` and `refs` arrays of `repos.config.js`; `pnpm deps:fetch` and `pnpm refs:fetch` populate them, and `pnpm deps:check` confirms nothing has drifted. `refs` holds the Effect VS Code extension (`.repos/refs/effect-vscode-extension/`) and otel-tui (`.repos/refs/otel-tui/`); `deps` holds OpenTUI (`.repos/deps/opentui/`), pinned to the installed `@opentui/core`. The directory is gitignored.
 
 > **Location:** `.repos/` lives at the root of the **main repository checkout**, never inside a worktree. From a worktree such as `.claude/worktrees/agent-xxx/`, `git rev-parse --show-toplevel` returns the worktree and is the wrong answer. Use `--git-common-dir` instead. It returns the shared `.git` directory that every worktree points at, and the parent of that directory is the main checkout:
 >
