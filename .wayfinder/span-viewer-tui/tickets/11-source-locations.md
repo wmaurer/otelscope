@@ -21,3 +21,8 @@ record's only source locations are the frames inside an `exception` event's `exc
 
 If recording call sites changes `JsonlSpanRecord`, do it in the same release as the start-time change.
 Findings: `docs/research/prior-art-survey.md` on branch `research/prior-art-survey`.
+
+The sample fixture shows that an `exception.stacktrace` already has one frame per enclosing span. Each frame
+is named after its span and gives the call site of that span's `withSpan`, such as `at payment.attempt
+(file:50:20)`. So a failure already maps every span on its path to a source location. See the sample-fixture
+ticket's resolution.
