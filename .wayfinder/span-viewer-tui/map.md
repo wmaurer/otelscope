@@ -67,6 +67,9 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - [TanStack Router under OpenTUI's React renderer](tickets/03-tanstack-router-under-opentui.md) — viable with
   four workarounds (redirecting the `isServer` import, `origin`, global stubs, no `<Link>`); fragile upstream,
   so pin it; fallback is a ~50-line typed router.
+- [Shape of the start-time field, and files without it](tickets/01-start-time-field.md) — `startMs` in epoch ms
+  to the microsecond; `ms` and `offsetMs` go to microseconds too; 0.2.x lines are rejected with a specific
+  notice; all format changes ship together in 0.3.0.
 
 ## Not yet specified
 

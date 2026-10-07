@@ -15,6 +15,8 @@ How does the TUI load and follow the JSONL file, and what does it expose to view
 - the in-memory index from runs to traces to span trees, and how partial trees (children written before
   their parents) are represented;
 - handling of malformed or partial lines and file truncation;
+- how lines from 0.2.x (no `startMs`) are told apart from other bad lines, so a file with no usable spans gets
+  the "rerun with >= 0.3" notice the start-time ticket settled;
 - the granularity and throttling of live updates pushed to React;
 - loading body text on demand;
 - the file size the design targets, given 360–460 MB resident for 200k lines before any index;
