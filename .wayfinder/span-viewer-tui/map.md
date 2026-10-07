@@ -45,7 +45,7 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - v1 features: the **trace waterfall with a details pane**, a **logs pane** built from events, a **body
   viewer**, and **search/filter**.
 - **Effect-aware** rendering: exit states styled, exception events shown as causes, source locations, and
-  fiber ids in logs. Where source locations come from is a ticket, since `code.stacktrace` does not exist.
+  fiber ids in logs. Source locations are recorded per span; see Source locations.
 
 **Tracker.** Local markdown; see `.wayfinder/README.md`.
 
@@ -82,6 +82,9 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - [Trace view layout and interaction](tickets/10-trace-view-prototype.md) — otel-tui's layout at a resizable
   50:50, stacked below 100 columns; opens expanded on the first problem span; log markers on bars; same-name
   siblings grouped from 20; the full cause only where a failure started; trace view keymap settled.
+- [Source locations: record span call sites, or failures only?](tickets/11-source-locations.md) — every
+  span records its call site (and `Effect.fn` its definition) as `site`/`def` in 0.3.0, read by a tracer
+  `context` hook at ~6 µs a span; always on; shown in details, `e` opens `$EDITOR`.
 
 ## Not yet specified
 

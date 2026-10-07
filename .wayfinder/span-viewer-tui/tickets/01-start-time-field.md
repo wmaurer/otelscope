@@ -88,3 +88,6 @@ The interface gains `startMs: number; // start, epoch milliseconds to the micros
 `// duration in milliseconds, to the microsecond`, and the event shape's note says `offsetMs` is measured from
 `startMs` to the microsecond. A short "Changes in 0.3" line notes that `ms` is no longer an integer and that
 records without `startMs` come from earlier versions.
+
+**Amended by** [Source locations: record span call sites, or failures only?](11-source-locations.md): 0.3.0
+also adds `site` and `def` (call site and `Effect.fn` definition site, each `{ file, line, col } | null`).

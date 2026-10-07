@@ -145,3 +145,6 @@ snapshot in a derived atom, with no inverted index; the search fog can revisit t
 
 - Records carry no service name: resource attributes are not written, so a run is known only by its `run` id
   (`2026-10-07T10-01-48-041-9dcb`). Showing a service name would be a record-format change for 0.3.0.
+
+**Amended by** [Source locations: record span call sites, or failures only?](11-source-locations.md): the
+record Schema gains required `site` and `def` fields, each `{ file, line, col } | null`.

@@ -91,3 +91,7 @@ tracked as the GitHub issue [Light-theme palette for the span viewer TUI](https:
 **Additions to the `Trace` view state** from "Route tree and URL state": `openGroups: HashSet<GroupKey>` (empty
 means every group closed; a group key is parent span id plus name) and `logScope: "span" | "subtree" | "trace"`
 (default `"subtree"`).
+
+**Amended by** [Source locations: record span call sites, or failures only?](11-source-locations.md): the
+details pane header adds `at <site>` and `defined at <def>`, and `e` (any pane) opens the location in
+`$VISUAL`/`$EDITOR`.
