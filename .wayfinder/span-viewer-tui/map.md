@@ -85,6 +85,9 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - [Source locations: record span call sites, or failures only?](tickets/11-source-locations.md) — every
   span records its call site (and `Effect.fn` its definition) as `site`/`def` in 0.3.0, read by a tracer
   `context` hook at ~6 µs a span; always on; shown in details, `e` opens `$EDITOR`.
+- [Runtime and Node version policy for packages/tui](tickets/12-runtime-policy.md) — Node >= 26.9 only, no
+  Bun; the repo develops on 26 via `.nvmrc` and `engine-strict`, `packages/effect` keeps `>=22.18`; a bin shim
+  guards, sets musl and drops the FFI warning; OpenTUI pinned exactly; `tsc` output, no bundle.
 
 ## Not yet specified
 
@@ -102,13 +105,14 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
   across screens are not. Also the help bar, how single-letter bindings coexist with typing in the search
   input, and whether `@opentui/keymap` is used at all (it requires Bun 1.3 or later).
 - **CLI surface and npm packaging.** Bin name, flags (such as run filter, no-follow, `--last-runs`, and
-  `--run`/`--trace` to seed the screen stack), and the README.
-  Runtime, Node version and native-dependency policy are a ticket.
+  `--run`/`--trace` to seed the screen stack), and the README. The runtime, the bin shim and the build are
+  settled in Runtime and Node version policy for packages/tui.
 - **Testing strategy.** How views and the data layer are tested in this repo's vitest setup. Navigation is
   pure functions over the screen stack, so it can be tested without a renderer.
 - **Performance limits.** v1 targets 250k spans with every record in memory. Grouping same-name siblings keeps
   a 10,000-child parent to one row. Left: whether the windowed list and the waterfall stay responsive at that
-  size, and how it is checked.
+  size, and how it is checked. Also startup time: the bin is unbundled `tsc` output, so Node loads Effect as
+  hundreds of modules; if the first frame is slow, revisit bundling.
 - **Spec assembly.** The final pass that turns the closed tickets into the hand-off spec.
 
 ## Out of scope

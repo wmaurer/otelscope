@@ -49,3 +49,7 @@ files.
   makes `items.map(() => <jsx/>)` an error (`effect-native/native-array-method`), and React hook rules are
   off. Two new tickets cover these: "Runtime and Node version policy for packages/tui" and "Lint rules for
   React TSX".
+
+**Amended by** [Runtime and Node version policy for packages/tui](12-runtime-policy.md): the risks above are
+settled. The repo develops on Node 26 (`.nvmrc`, `engine-strict`), the bin shim also sets `OPENTUI_LIBC=musl`
+on musl, and `react` is held at `~19.2.0`.
