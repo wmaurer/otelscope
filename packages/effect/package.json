@@ -1,0 +1,48 @@
+{
+    "name": "@wmaurer/otelscope-effect",
+    "version": "0.1.0",
+    "description": "Write the spans of an Effect program to a JSONL file.",
+    "keywords": [
+        "effect",
+        "jsonl",
+        "opentelemetry",
+        "otel",
+        "tracing"
+    ],
+    "license": "MIT",
+    "author": "Wayne Maurer",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/wmaurer/otelscope.git",
+        "directory": "packages/effect"
+    },
+    "files": [
+        "dist",
+        "src"
+    ],
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        }
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "scripts": {
+        "build": "rm -rf dist tsconfig.build.tsbuildinfo && tsc -p tsconfig.build.json",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "prepublishOnly": "pnpm build && pnpm test"
+    },
+    "devDependencies": {
+        "@effect/platform-node": "4.0.1",
+        "@effect/vitest": "4.0.1",
+        "effect": "4.0.1",
+        "vitest": "^5.0.3"
+    },
+    "peerDependencies": {
+        "effect": "^4.0.1"
+    }
+}

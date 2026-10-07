@@ -136,7 +136,25 @@
                     "unsafeEffectTypeAssertion": "warning",
                     "unstableApiUsage": "off"
                 },
-                "overrides": []
+                "overrides": [
+                    {
+                        "include": ["**/test/**/*.ts", "**/test/**/*.tsx", "**/test/**/*.mts", "**/test/**/*.cts"],
+                        "options": {
+                            "diagnosticSeverity": {
+                                "asyncFunction": "off",
+                                "catchToIgnore": "off",
+                                "globalDate": "off",
+                                "globalErrorInEffectFailure": "off",
+                                "lazyEffect": "off",
+                                "multipleEffectProvide": "off",
+                                "nodeBuiltinImport": "off",
+                                "preferSchemaOverJson": "off",
+                                "preferTypedSchemaDecoder": "off",
+                                "processEnv": "off"
+                            }
+                        }
+                    }
+                ]
             }
         ]
     }

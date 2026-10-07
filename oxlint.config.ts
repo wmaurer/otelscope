@@ -168,6 +168,29 @@ export default defineConfig({
         "effect-native/imperative-collection-build": "error",
     },
 
+    // These ten rules describe how production Effect code is written. The test tree deliberately
+    // reaches for vitest's async callbacks, node built-ins, `process.env`, `Date` and raw JSON,
+    // because the boundary those rules govern is the thing under test: a test that expressed the
+    // boundary through Effect would no longer exercise it. Named one by one rather than as a
+    // wildcard, so every other Effect rule still gates test code.
+    overrides: [
+        {
+            files: ["**/test/**"],
+            rules: {
+                "effecttsgo/async-function": "off",
+                "effecttsgo/catch-to-ignore": "off",
+                "effecttsgo/global-date": "off",
+                "effecttsgo/global-error-in-effect-failure": "off",
+                "effecttsgo/lazy-effect": "off",
+                "effecttsgo/multiple-effect-provide": "off",
+                "effecttsgo/node-builtin-import": "off",
+                "effecttsgo/prefer-schema-over-json": "off",
+                "effecttsgo/prefer-typed-schema-decoder": "off",
+                "effecttsgo/process-env": "off",
+            },
+        },
+    ],
+
     // Grouped by the scaffold feature each entry belongs to, so a project that took
     // only some of them knows which lines to drop. Kept in step with .oxfmtrc.json's
     // ignorePatterns, which carries the same groups.

@@ -5,6 +5,7 @@
     "type": "module",
     "scripts": {
         "prepare": "node scripts/patch-tsgo.js && simple-git-hooks",
+        "build": "pnpm -r build",
         "typecheck": "node scripts/typecheck.js",
         "test": "pnpm -r test",
         "pre-push": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm test",
