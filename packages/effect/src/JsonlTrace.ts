@@ -1,4 +1,4 @@
-import { DateTime, Effect, FileSystem, Layer, Path, Random } from "effect";
+import { Crypto, DateTime, Effect, FileSystem, Layer, Path, Random } from "effect";
 import { OtlpSerialization, OtlpTracer } from "effect/observability";
 
 import * as JsonlSink from "./JsonlSink.ts";
@@ -11,6 +11,8 @@ export interface JsonlTraceOptions {
     readonly file: string;
     // The `run` value of every record. `makeRunId` gives the default.
     readonly runId?: string | undefined;
+    // `true` writes the text of each `<prefix>.body` attribute to `bodies/` next to `file`. See `JsonlSink`.
+    readonly bodies?: boolean | undefined;
 }
 
 // The tracer posts here, but the request never reaches the network: `ReceiverClient` answers it in process.
@@ -26,11 +28,13 @@ export const makeRunId: Effect.Effect<string> = Effect.gen(function* () {
 
 // Installs Effect's OTLP tracer and writes every span it exports to `file`. Provide it as the outermost layer,
 // so the tracer is installed before any other layer is built.
-export const layer = (options: JsonlTraceOptions): Layer.Layer<never, never, FileSystem.FileSystem | Path.Path> =>
+export const layer = (
+    options: JsonlTraceOptions,
+): Layer.Layer<never, never, FileSystem.FileSystem | Path.Path | Crypto.Crypto> =>
     Layer.unwrap(
         Effect.gen(function* () {
             const runId = options.runId ?? (yield* makeRunId);
-            const write = yield* JsonlSink.make({ file: options.file, runId });
+            const write = yield* JsonlSink.make({ file: options.file, runId, bodies: options.bodies });
 
             return OtlpTracer.layer({
                 url: RECEIVER_URL,
