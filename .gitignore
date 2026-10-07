@@ -9,6 +9,9 @@ dist/
 # repos: upstream source cloned by scripts/repos.js
 .repos
 
+# Claude Code agent worktrees
+.claude/worktrees/
+
 # Session transcript (large one-shot conversation log; kept on disk, not tracked)
 .session/
 
