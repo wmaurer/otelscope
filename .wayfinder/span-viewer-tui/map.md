@@ -88,6 +88,9 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - [Runtime and Node version policy for packages/tui](tickets/12-runtime-policy.md) — Node >= 26.9 only, no
   Bun; the repo develops on 26 via `.nvmrc` and `engine-strict`, `packages/effect` keeps `>=22.18`; a bin shim
   guards, sets musl and drops the FFI warning; OpenTUI pinned exactly; `tsc` output, no bundle.
+- [Lint rules for React TSX](tickets/13-tsx-lint-rules.md) — views keep `native-array-method` and map with
+  Effect's `Array.map`; a root `overrides` entry for `packages/tui/**` adds the `react` plugin plus
+  `rules-of-hooks`, no `jsx-a11y`; its default-on rules stay unpinned, reported by `lint:sync`.
 
 ## Not yet specified
 

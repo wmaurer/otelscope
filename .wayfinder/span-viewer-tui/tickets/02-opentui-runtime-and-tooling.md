@@ -53,3 +53,7 @@ files.
 **Amended by** [Runtime and Node version policy for packages/tui](12-runtime-policy.md): the risks above are
 settled. The repo develops on Node 26 (`.nvmrc`, `engine-strict`), the bin shim also sets `OPENTUI_LIBC=musl`
 on musl, and `react` is held at `~19.2.0`.
+
+**Amended by** [Lint rules for React TSX](13-tsx-lint-rules.md): the lint risk is settled. Views keep
+`native-array-method` and use Effect's `Array.map`, and a root override for `packages/tui/**` adds the `react`
+plugin with `rules-of-hooks` at `"error"`.
