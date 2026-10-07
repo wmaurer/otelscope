@@ -79,6 +79,9 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - [Route tree and URL state](tickets/09-routes-and-url-state.md) — no TanStack Router: a typed stack of
   `Runs | Traces | Trace | Body` screens in an Atom, each carrying its view state with selection by id;
   missing ids show a placeholder in place, and a Reset never rewrites the stack.
+- [Trace view layout and interaction](tickets/10-trace-view-prototype.md) — otel-tui's layout at a resizable
+  50:50, stacked below 100 columns; opens expanded on the first problem span; log markers on bars; same-name
+  siblings grouped from 20; the full cause only where a failure started; trace view keymap settled.
 
 ## Not yet specified
 
@@ -87,23 +90,22 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
   be a record-format change for 0.3.0.
 - **Search and filter.** What can be searched (span name, attribute keys and values, exit, log text), the
   query syntax, and where filters apply (trace list, span tree, logs).
-- **Body viewer.** It is a full-screen screen pushed from the details pane. Left: whether bodies also show
-  inline in the trace view, JSON pretty-printing or highlighting, handling of truncated bodies, and whether to
-  hand off to `$EDITOR` or `$PAGER`.
-- **Effect-aware rendering details.** How the Cause section built from `exception` events is formatted
-  (neither reference tool renders exit or causes), and how interrupted spans and fibers (`#12`) read.
+- **Body viewer.** It is a full-screen screen pushed from the details pane, which lists bodies one row per
+  prefix with size and preview. Left: the key that opens one, JSON pretty-printing or highlighting, handling
+  of truncated bodies, and whether to hand off to `$EDITOR` or `$PAGER`.
 - **Live-tail UX.** Follow mode (auto-select the newest run or trace) and signalling new data. How partial
   traces are stored and marked is decided in the data layer.
-- **Keymap and help bar.** One consistent key scheme across screens, plus discoverability. This includes how
-  single-letter bindings coexist with typing in the search input, and whether `@opentui/keymap` is used at
-  all (it requires Bun 1.3 or later).
+- **Keymap and help bar.** The trace view's keys are settled; the list screens' keys and one consistent scheme
+  across screens are not. Also the help bar, how single-letter bindings coexist with typing in the search
+  input, and whether `@opentui/keymap` is used at all (it requires Bun 1.3 or later).
 - **CLI surface and npm packaging.** Bin name, flags (such as run filter, no-follow, `--last-runs`, and
   `--run`/`--trace` to seed the screen stack), and the README.
   Runtime, Node version and native-dependency policy are a ticket.
 - **Testing strategy.** How views and the data layer are tested in this repo's vitest setup. Navigation is
   pure functions over the screen stack, so it can be tested without a renderer.
-- **Performance limits.** v1 targets 250k spans with every record in memory. Left: whether the windowed list
-  and the waterfall stay responsive at that size, and how it is checked.
+- **Performance limits.** v1 targets 250k spans with every record in memory. Grouping same-name siblings keeps
+  a 10,000-child parent to one row. Left: whether the windowed list and the waterfall stay responsive at that
+  size, and how it is checked.
 - **Spec assembly.** The final pass that turns the closed tickets into the hand-off spec.
 
 ## Out of scope
@@ -115,3 +117,6 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - **Effect DevTools debug features**: fibers, context, breakpoints and metrics from the VS Code extension
   need a live connection to the program, which a JSONL file cannot give.
 - **JSONL from other producers**: only `JsonlSpanRecord` as `@wmaurer/otelscope-effect` writes it.
+- **A light-theme palette**: v1 ships one dark palette behind a role-named theme object, so a light palette
+  is a later addition, tracked as the GitHub issue [Light-theme palette for the span viewer TUI](https://github.com/wmaurer/otelscope/issues/1). Decided in
+  [Trace view layout and interaction](tickets/10-trace-view-prototype.md).

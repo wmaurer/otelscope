@@ -99,3 +99,6 @@ type Nav = { stack: NonEmptyReadonlyArray<Screen> } // the head is always Runs
   shown, with the same placeholder rule, and the status bar carries the data layer's Reset notice.
 - A selected span that is missing falls back to the root, or to the first row of a partial trace. A body
   that cannot be read shows the data layer's `BodyMissing` or `BodyReadFailed` placeholder.
+
+**Amended by** [Trace view layout and interaction](10-trace-view-prototype.md): the `Trace` view also carries
+`openGroups` (closed same-name sibling groups are the default) and `logScope` (default span + descendants).
