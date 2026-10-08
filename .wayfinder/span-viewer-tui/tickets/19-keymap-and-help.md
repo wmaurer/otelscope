@@ -16,3 +16,7 @@ Once each screen's keys are known, make them one scheme and decide how they are 
   on `?`;
 - how key handling is built, given that `@opentui/keymap` requires Bun 1.3 or later and the TUI runs on Node
   only (see Runtime and Node version policy for packages/tui).
+
+**Amended by** [Search and filter](17-search-and-filter.md): on Runs, Traces and Trace `/` opens a query input
+that takes every key while open, and `Esc` clears an active query before it goes back. Whether the Body screen's
+`Esc` does the same is for this ticket.

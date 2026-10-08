@@ -110,3 +110,7 @@ opens on `[Runs, Traces R]`.
 **Amended by** [Body viewer](16-body-viewer.md): `Body` becomes `{ trace, span, prefix, view }`, so the screen
 can switch between a span's bodies with `Tab`; the `Body` view is `topLine`, `leftCol`, `wrap`, `raw` and
 `search`. Bodies are never shown inline in the trace view.
+
+**Amended by** [Search and filter](17-search-and-filter.md): the `Trace` view gains `search: string`, the tree's
+highlight query. Opening a run or trace from a filtered list seeds the pushed screen's `filter` or `search` with
+the list's query, once; no global search screen is built in v1.

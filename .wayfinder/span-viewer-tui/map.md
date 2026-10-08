@@ -100,6 +100,9 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - [Body viewer](tickets/16-body-viewer.md) — `b` opens a span's bodies full screen, `Tab` between them; JSON
   pretty-printed with `\n` as real lines, `r` raw, `w` wrap; local `/` search; `e` editor, `y` copy up to
   100 KB; a missing file shows the preview.
+- [Search and filter](tickets/17-search-and-filter.md) — `/` filters the lists and the logs, highlights in the
+  tree with `n`/`N` between matches; space-separated terms, smart case, `key=value`, `is:failed`; seeded down at
+  push; `Esc` clears before going back.
 
 ## Not yet specified
 

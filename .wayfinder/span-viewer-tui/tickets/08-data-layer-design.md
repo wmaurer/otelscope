@@ -157,3 +157,6 @@ run whose records disagree is counted as malformed once.
 (root failed), failed and interrupted spans, logs, and the time of the last record (for the 5-second live
 mark). Per trace: failed and interrupted spans, logs, the root's exit, the first exception's type and message,
 and the time of the last record.
+
+**Amended by** [Search and filter](17-search-and-filter.md): the search scan matches spans on name, attributes,
+events, exception, ids, `service` and `site`/`def` paths, never body files, with a debounce of about 150 ms.

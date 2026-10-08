@@ -97,3 +97,7 @@ lists never walk spans: per run, failed traces (root failed), failed and interru
 the last record; per trace, failed and interrupted spans, logs, the root's exit, the first exception's type and
 message, and the time of the last record. Group headings (p50, most common error) are derived per render from
 the group's traces.
+
+**Amended by** [Search and filter](17-search-and-filter.md): `/` filters both lists, group headings count only
+matching members, and `n`/`N` keep their meaning among visible rows. `Esc` clears an active filter before going
+back, so `Esc` does nothing on `Runs` only when no filter is set.

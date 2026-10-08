@@ -98,3 +98,8 @@ details pane header adds `at <site>` and `defined at <def>`, and `e` (any pane) 
 
 **Amended by** [Body viewer](16-body-viewer.md): `b` (any pane) opens the selected span's first body, and
 clicking a Bodies row opens that body; a truncated body's row is marked.
+
+**Amended by** [Search and filter](17-search-and-filter.md): `/` belongs to the focused pane, searching the tree
+(highlight, never hide) from tree or details and setting `logFilter` from logs. While a tree search is active
+`n`/`N` move between matches; `Esc` clears the focused pane's query before going back. A trace opened with a
+seeded search selects its first matching span instead of the first problem span, when one span matches.
