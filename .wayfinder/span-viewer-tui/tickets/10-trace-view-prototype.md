@@ -95,3 +95,6 @@ means every group closed; a group key is parent span id plus name) and `logScope
 **Amended by** [Source locations: record span call sites, or failures only?](11-source-locations.md): the
 details pane header adds `at <site>` and `defined at <def>`, and `e` (any pane) opens the location in
 `$VISUAL`/`$EDITOR`.
+
+**Amended by** [Body viewer](16-body-viewer.md): `b` (any pane) opens the selected span's first body, and
+clicking a Bodies row opens that body; a truncated body's row is marked.

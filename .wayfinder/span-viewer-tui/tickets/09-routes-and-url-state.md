@@ -106,3 +106,7 @@ type Nav = { stack: NonEmptyReadonlyArray<Screen> } // the head is always Runs
 **Amended by** [Run and trace list screens](15-list-screens.md): the `Runs` view also carries `sort` and
 `reverse`; the `Traces` view carries `sort`, `reverse` and `openGroups` (root span names). A file with one run
 opens on `[Runs, Traces R]`.
+
+**Amended by** [Body viewer](16-body-viewer.md): `Body` becomes `{ trace, span, prefix, view }`, so the screen
+can switch between a span's bodies with `Tab`; the `Body` view is `topLine`, `leftCol`, `wrap`, `raw` and
+`search`. Bodies are never shown inline in the trace view.

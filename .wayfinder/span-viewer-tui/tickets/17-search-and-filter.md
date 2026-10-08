@@ -18,3 +18,6 @@ What can be searched and filtered, and how? Decide:
   spans in the tree);
 - how the search input takes focus and coexists with single-letter keys;
 - whether filters live in each screen's view state, so `Esc` back restores them.
+
+**Amended by** [Body viewer](16-body-viewer.md): the Body screen has its own local `/` search (substring, smart
+case, `n`/`N` between matches), which stays local whatever `/` means elsewhere.
