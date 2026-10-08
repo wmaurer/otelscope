@@ -103,3 +103,7 @@ clicking a Bodies row opens that body; a truncated body's row is marked.
 (highlight, never hide) from tree or details and setting `logFilter` from logs. While a tree search is active
 `n`/`N` move between matches; `Esc` clears the focused pane's query before going back. A trace opened with a
 seeded search selects its first matching span instead of the first problem span, when one span matches.
+
+**Amended by** [Live-tail UX](18-live-tail-ux.md): an open trace that grows keeps its selection, folds and the selected
+row's place on screen; the axis is recomputed per snapshot, rounded up to the next tick while running; a group
+formed mid-view keeps the selected member visible; the opening selection is computed once.

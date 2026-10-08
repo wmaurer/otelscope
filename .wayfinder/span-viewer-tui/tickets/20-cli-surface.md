@@ -18,3 +18,6 @@ version policy for packages/tui". Decide:
 - what happens with no file, a missing file, or a file of 0.2.x records;
 - exit codes and what is printed on exit;
 - the README that becomes the npm page.
+
+**Amended by** [Live-tail UX](18-live-tail-ux.md): without following, the status bar's phase reads `read once`; a seeded
+`--run` or `--trace` selection does not follow.

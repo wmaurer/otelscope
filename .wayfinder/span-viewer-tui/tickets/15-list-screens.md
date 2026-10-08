@@ -101,3 +101,7 @@ the group's traces.
 **Amended by** [Search and filter](17-search-and-filter.md): `/` filters both lists, group headings count only
 matching members, and `n`/`N` keep their meaning among visible rows. `Esc` clears an active filter before going
 back, so `Esc` does nothing on `Runs` only when no filter is set.
+
+**Amended by** [Live-tail UX](18-live-tail-ux.md): the implicit rule becomes follow mode: `selected: None` follows the
+newest row under a time sort, any move stops it, and `g` on Runs or `G` on Traces (the other key when reversed)
+follows again. A list that is not following counts new rows in the status bar.

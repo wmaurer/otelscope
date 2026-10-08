@@ -160,3 +160,7 @@ and the time of the last record.
 
 **Amended by** [Search and filter](17-search-and-filter.md): the search scan matches spans on name, attributes,
 events, exception, ids, `service` and `site`/`def` paths, never body files, with a debounce of about 150 ms.
+
+**Amended by** [Live-tail UX](18-live-tail-ux.md): the status bar shows the phase (`waiting for <path>…`, `loading 43%`,
+`● following`, `read once`), runs and spans, bad and legacy line counts, and the Reset flash; `!` opens the
+bad-line samples.

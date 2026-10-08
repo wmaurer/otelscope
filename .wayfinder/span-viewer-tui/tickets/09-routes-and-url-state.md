@@ -114,3 +114,7 @@ can switch between a span's bodies with `Tab`; the `Body` view is `topLine`, `le
 **Amended by** [Search and filter](17-search-and-filter.md): the `Trace` view gains `search: string`, the tree's
 highlight query. Opening a run or trace from a filtered list seeds the pushed screen's `filter` or `search` with
 the list's query, once; no global search screen is built in v1.
+
+**Amended by** [Live-tail UX](18-live-tail-ux.md): follow mode needs no view field: a list follows while its `selected`
+is `None`, moving the cursor stops it, and jumping to the newest end sets `None` again. The trace view never
+follows.

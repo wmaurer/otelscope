@@ -103,6 +103,9 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - [Search and filter](tickets/17-search-and-filter.md) — `/` filters the lists and the logs, highlights in the
   tree with `n`/`N` between matches; space-separated terms, smart case, `key=value`, `is:failed`; seeded down at
   push; `Esc` clears before going back.
+- [Live-tail UX](tickets/18-live-tail-ux.md) — lists follow the newest row while nothing is selected, a move
+  stops it and `g`/`G` resumes; others count `↓ 12 new`; a growing trace keeps selection and place; status bar
+  shows phase, counts and bad lines; no pause key.
 
 ## Not yet specified
 

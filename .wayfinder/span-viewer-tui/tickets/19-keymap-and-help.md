@@ -20,3 +20,6 @@ Once each screen's keys are known, make them one scheme and decide how they are 
 **Amended by** [Search and filter](17-search-and-filter.md): on Runs, Traces and Trace `/` opens a query input
 that takes every key while open, and `Esc` clears an active query before it goes back. Whether the Body screen's
 `Esc` does the same is for this ticket.
+
+**Amended by** [Live-tail UX](18-live-tail-ux.md): `!` (any screen) opens the bad-line samples; `g`/`G` to the newest
+end of a list also turns following back on.
