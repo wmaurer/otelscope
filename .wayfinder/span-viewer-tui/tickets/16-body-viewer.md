@@ -110,3 +110,6 @@ across `Tab`.
 | `/` · `n`/`N`          | search · next / previous match     |
 | `y` · `e`              | copy · open in `$VISUAL`/`$EDITOR` |
 | `Esc` · `q`            | back to the trace · quit           |
+
+**Amended by** [Keymap and help across screens](19-keymap-and-help.md): `Esc` with search highlights active clears
+them first, and the next `Esc` goes back; `Home`/`End` join the movement keys.

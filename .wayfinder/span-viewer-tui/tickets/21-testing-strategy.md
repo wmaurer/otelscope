@@ -19,3 +19,6 @@ How is `packages/tui` tested in this repo's vitest setup? Decide:
 - which fixtures the tests use (the sample fixture from "Representative sample JSONL fixture", hand-written
   small files);
 - how the tests fit the `pre-push` hook on Node 26.
+
+**Amended by** [Keymap and help across screens](19-keymap-and-help.md): key dispatch is a pure
+`(mode, nav, key) → Action` over one binding table, which also generates the hint line and `?` overlay.

@@ -106,6 +106,9 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - [Live-tail UX](tickets/18-live-tail-ux.md) — lists follow the newest row while nothing is selected, a move
   stops it and `g`/`G` resumes; others count `↓ 12 new`; a growing trace keeps selection and place; status bar
   shows phase, counts and bad lines; no pause key.
+- [Keymap and help across screens](tickets/19-keymap-and-help.md) — our own binding table with pure dispatch,
+  not `@opentui/keymap`; panes on `1`/`2`/`3` so `h`/`l` mean left/right; one movement set; `Esc` peels one
+  layer; hints in the status bar, `?` overlay per screen; `Ctrl-c`/`Ctrl-z` handled by us.
 
 ## Not yet specified
 

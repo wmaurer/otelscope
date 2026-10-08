@@ -107,3 +107,6 @@ seeded search selects its first matching span instead of the first problem span,
 **Amended by** [Live-tail UX](18-live-tail-ux.md): an open trace that grows keeps its selection, folds and the selected
 row's place on screen; the axis is recomputed per snapshot, rounded up to the next tick while running; a group
 formed mid-view keeps the selected member visible; the opening selection is computed once.
+
+**Amended by** [Keymap and help across screens](19-keymap-and-help.md): pane focus is `1`/`2`/`3` and `Tab`, not
+`t`/`d`/`l`; `l`/`→` unfold in the tree; `=` aliases `+`; details and logs take the shared movement set.
