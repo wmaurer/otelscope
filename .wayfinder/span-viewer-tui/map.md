@@ -94,6 +94,9 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - [Run identity: does the record carry the service name?](tickets/14-run-identity.md) — 0.3.0 adds a
   required `service` per record, stamped by the sink from `serviceName`; no version or other resource
   attributes; a run reads as service plus start time.
+- [Run and trace list screens](tickets/15-list-screens.md) — flat tables; runs newest first, traces grouped by
+  root span name from 20 with at most 5 problems shown closed; `n`/`N` stop only where a root failed; live is
+  a record in the last 5 s; a one-run file opens on its traces.
 
 ## Not yet specified
 

@@ -152,3 +152,8 @@ record Schema gains required `site` and `def` fields, each `{ file, line, col } 
 **Amended by** [Run identity: does the record carry the service name?](14-run-identity.md): records carry a
 required `service`, which settles the first fact above. `Run` gains `service`, taken from its first record; a
 run whose records disagree is counted as malformed once.
+
+**Amended by** [Run and trace list screens](15-list-screens.md): the aggregates grow. Per run: failed traces
+(root failed), failed and interrupted spans, logs, and the time of the last record (for the 5-second live
+mark). Per trace: failed and interrupted spans, logs, the root's exit, the first exception's type and message,
+and the time of the last record.

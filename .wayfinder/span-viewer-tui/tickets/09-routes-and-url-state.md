@@ -102,3 +102,7 @@ type Nav = { stack: NonEmptyReadonlyArray<Screen> } // the head is always Runs
 
 **Amended by** [Trace view layout and interaction](10-trace-view-prototype.md): the `Trace` view also carries
 `openGroups` (closed same-name sibling groups are the default) and `logScope` (default span + descendants).
+
+**Amended by** [Run and trace list screens](15-list-screens.md): the `Runs` view also carries `sort` and
+`reverse`; the `Traces` view carries `sort`, `reverse` and `openGroups` (root span names). A file with one run
+opens on `[Runs, Traces R]`.
