@@ -91,3 +91,6 @@ records without `startMs` come from earlier versions.
 
 **Amended by** [Source locations: record span call sites, or failures only?](11-source-locations.md): 0.3.0
 also adds `site` and `def` (call site and `Effect.fn` definition site, each `{ file, line, col } | null`).
+
+**Amended by** [Run identity: does the record carry the service name?](14-run-identity.md): 0.3.0 also adds a
+required `service` field, the `serviceName` given to `JsonlTrace.layer`.

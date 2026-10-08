@@ -91,27 +91,12 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - [Lint rules for React TSX](tickets/13-tsx-lint-rules.md) — views keep `native-array-method` and map with
   Effect's `Array.map`; a root `overrides` entry for `packages/tui/**` adds the `react` plugin plus
   `rules-of-hooks`, no `jsx-a11y`; its default-on rules stay unpinned, reported by `lint:sync`.
+- [Run identity: does the record carry the service name?](tickets/14-run-identity.md) — 0.3.0 adds a
+  required `service` per record, stamped by the sink from `serviceName`; no version or other resource
+  attributes; a run reads as service plus start time.
 
 ## Not yet specified
 
-- **Run and trace list screens.** Columns, sorting, what marks a run or trace as live or failed, and how a
-  run's identity reads when there are many. Records carry no service name, only the `run` id; adding one would
-  be a record-format change for 0.3.0.
-- **Search and filter.** What can be searched (span name, attribute keys and values, exit, log text), the
-  query syntax, and where filters apply (trace list, span tree, logs).
-- **Body viewer.** It is a full-screen screen pushed from the details pane, which lists bodies one row per
-  prefix with size and preview. Left: the key that opens one, JSON pretty-printing or highlighting, handling
-  of truncated bodies, and whether to hand off to `$EDITOR` or `$PAGER`.
-- **Live-tail UX.** Follow mode (auto-select the newest run or trace) and signalling new data. How partial
-  traces are stored and marked is decided in the data layer.
-- **Keymap and help bar.** The trace view's keys are settled; the list screens' keys and one consistent scheme
-  across screens are not. Also the help bar, how single-letter bindings coexist with typing in the search
-  input, and whether `@opentui/keymap` is used at all (it requires Bun 1.3 or later).
-- **CLI surface and npm packaging.** Bin name, flags (such as run filter, no-follow, `--last-runs`, and
-  `--run`/`--trace` to seed the screen stack), and the README. The runtime, the bin shim and the build are
-  settled in Runtime and Node version policy for packages/tui.
-- **Testing strategy.** How views and the data layer are tested in this repo's vitest setup. Navigation is
-  pure functions over the screen stack, so it can be tested without a renderer.
 - **Performance limits.** v1 targets 250k spans with every record in memory. Grouping same-name siblings keeps
   a 10,000-child parent to one row. Left: whether the windowed list and the waterfall stay responsive at that
   size, and how it is checked. Also startup time: the bin is unbundled `tsc` output, so Node loads Effect as

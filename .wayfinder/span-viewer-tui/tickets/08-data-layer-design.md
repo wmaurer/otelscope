@@ -148,3 +148,7 @@ snapshot in a derived atom, with no inverted index; the search fog can revisit t
 
 **Amended by** [Source locations: record span call sites, or failures only?](11-source-locations.md): the
 record Schema gains required `site` and `def` fields, each `{ file, line, col } | null`.
+
+**Amended by** [Run identity: does the record carry the service name?](14-run-identity.md): records carry a
+required `service`, which settles the first fact above. `Run` gains `service`, taken from its first record; a
+run whose records disagree is counted as malformed once.
