@@ -34,7 +34,12 @@ export const layer = (
     Layer.unwrap(
         Effect.gen(function* () {
             const runId = options.runId ?? (yield* makeRunId);
-            const write = yield* JsonlSink.make({ file: options.file, runId, bodies: options.bodies });
+            const write = yield* JsonlSink.make({
+                file: options.file,
+                runId,
+                service: options.serviceName,
+                bodies: options.bodies,
+            });
 
             return OtlpTracer.layer({
                 url: RECEIVER_URL,

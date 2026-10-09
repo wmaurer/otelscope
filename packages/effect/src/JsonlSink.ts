@@ -10,6 +10,8 @@ export interface JsonlSinkOptions {
     readonly file: string;
     // The `run` value of every record this sink writes.
     readonly runId: string;
+    // The `service` value of every record this sink writes.
+    readonly service: string;
     // `true` moves the text of every `<prefix>.body` attribute to `bodies/<sha256>.txt` next to `file`, and
     // replaces the attribute with `<prefix>.sha256`, `<prefix>.bytes` and `<prefix>.preview`. Otherwise the
     // text stays inline in the record.
@@ -66,6 +68,7 @@ export const make = Effect.fn(function* (options: JsonlSinkOptions) {
                 options.file,
                 toLines(
                     options.runId,
+                    options.service,
                     Arr.map(slim, (s) => s.span),
                 ),
                 { flag: "a" },

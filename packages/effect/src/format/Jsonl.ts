@@ -1,41 +1,59 @@
-import { Array as Arr } from "effect";
+import { Array as Arr, Option, Record, Schema } from "effect";
+
+import { DEF, FIBER, type LocationKeys, SITE } from "../Sites.ts";
 
 import type { AnyValue, KeyValue, Span } from "./TraceData.ts";
 
 export type AttributeValue = string | number | boolean | null | ReadonlyArray<AttributeValue>;
 
-export interface Attributes {
-    readonly [key: string]: AttributeValue;
-}
+export const AttributeValue: Schema.Codec<AttributeValue> = Schema.Union([
+    Schema.String,
+    // Not `Finite`: JSON cannot carry a non-finite number anyway.
+    // @effect-diagnostics-next-line schemaNumber:off
+    Schema.Number,
+    Schema.Boolean,
+    Schema.Null,
+    Schema.Array(Schema.suspend((): Schema.Codec<AttributeValue> => AttributeValue)),
+]);
+
+export const Attributes = Schema.Record(Schema.String, AttributeValue);
+export type Attributes = typeof Attributes.Type;
+
+export const Location = Schema.Struct({ file: Schema.String, line: Schema.Finite, col: Schema.Finite });
+export type Location = typeof Location.Type;
 
 // Effect's logger records every `Effect.log*` call made inside a span as an event on it, carrying the log
 // annotations plus `effect.fiberId` and `effect.logLevel`. An error span also carries an `exception` event.
-export interface JsonlSpanEvent {
-    readonly name: string;
-    // Milliseconds from the start of the enclosing span, not a wall clock: this file reports every other
-    // time as a whole-millisecond duration, and the offset is what tells retries apart from each other.
-    readonly offsetMs: number;
-    readonly attrs: Attributes;
-}
+// `offsetMs` is measured from the span's `startMs`.
+export const JsonlSpanEvent = Schema.Struct({ name: Schema.String, offsetMs: Schema.Finite, attrs: Attributes });
+export type JsonlSpanEvent = typeof JsonlSpanEvent.Type;
 
-export interface JsonlSpanRecord {
-    readonly run: string;
-    readonly trace: string;
-    readonly span: string;
-    readonly parent: string | null;
-    readonly name: string;
-    readonly ms: number;
-    readonly exit: "Success" | "Failure" | "Interrupted";
-    readonly attrs: Attributes;
-    readonly events: ReadonlyArray<JsonlSpanEvent>;
-}
+// Decoding drops unknown keys, so a line from a newer writer with extra fields still decodes.
+export const JsonlSpanRecord = Schema.Struct({
+    run: Schema.String,
+    service: Schema.String,
+    trace: Schema.String,
+    span: Schema.String,
+    parent: Schema.NullOr(Schema.String),
+    name: Schema.String,
+    startMs: Schema.Finite,
+    ms: Schema.Finite,
+    exit: Schema.Literals(["Success", "Failure", "Interrupted"]),
+    site: Schema.NullOr(Location),
+    def: Schema.NullOr(Location),
+    fiber: Schema.NullOr(Schema.Finite),
+    attrs: Attributes,
+    events: Schema.Array(JsonlSpanEvent),
+});
+export type JsonlSpanRecord = typeof JsonlSpanRecord.Type;
 
 const STATUS_ERROR = 2;
 
-// OTLP times are nanoseconds since the epoch, as decimal strings past `Number.MAX_SAFE_INTEGER`. The
-// difference is taken exactly and rounded once.
-const millisBetween = (startNanos: string, endNanos: string): number =>
-    Math.round(Number(BigInt(endNanos) - BigInt(startNanos)) / 1_000_000);
+// OTLP times are nanoseconds since the epoch, as decimal strings past `Number.MAX_SAFE_INTEGER`. Rounding to
+// whole microseconds in BigInt first gives a value a double holds exactly.
+const toMillis = (nanos: bigint): number => Number((nanos + 500n) / 1_000n) / 1_000;
+
+const millisBetween = (startNanos: string, endNanos: string): number => toMillis(BigInt(endNanos) - BigInt(startNanos));
 
 const plainValue = (value: AnyValue): AttributeValue => {
     if (value.stringValue !== undefined) return value.stringValue;
@@ -49,22 +67,40 @@ const plainValue = (value: AnyValue): AttributeValue => {
 export const plainAttributes = (attributes: ReadonlyArray<KeyValue>): Attributes =>
     Object.fromEntries(Arr.map(attributes, (attribute) => [attribute.key, plainValue(attribute.value)]));
 
+const LIFTED: ReadonlySet<string> = new Set([...SITE, ...DEF, FIBER]);
+
+const decodeLocation = Schema.decodeUnknownOption(Schema.Tuple([Schema.String, Schema.Finite, Schema.Finite]));
+
+const decodeFiber = Schema.decodeUnknownOption(Schema.Finite);
+
+const location = (attrs: Attributes, keys: LocationKeys): Location | null =>
+    Option.match(decodeLocation(Arr.map(keys, (key) => attrs[key])), {
+        onNone: () => null,
+        onSome: ([file, line, col]) => ({ file, line, col }),
+    });
+
 const exitOf = (span: Span, attrs: Attributes): JsonlSpanRecord["exit"] => {
     if (span.status.code === STATUS_ERROR) return "Failure";
     // Effect's tracer reports an interrupted span with status Ok and this attribute.
     return attrs["status.interrupted"] === true ? "Interrupted" : "Success";
 };
 
-export const toRecord = (runId: string, span: Span): JsonlSpanRecord => {
-    const attrs = plainAttributes(span.attributes);
+export const toRecord = (run: string, service: string, span: Span): JsonlSpanRecord => {
+    const all = plainAttributes(span.attributes);
+    const attrs = Record.filter(all, (_, key) => !LIFTED.has(key));
     return {
-        run: runId,
+        run,
+        service,
         trace: span.traceId,
         span: span.spanId,
         parent: span.parentSpanId ?? null,
         name: span.name,
+        startMs: toMillis(BigInt(span.startTimeUnixNano)),
         ms: millisBetween(span.startTimeUnixNano, span.endTimeUnixNano),
         exit: exitOf(span, attrs),
+        site: location(all, SITE),
+        def: location(all, DEF),
+        fiber: Option.getOrNull(decodeFiber(all[FIBER])),
         attrs,
         events: Arr.map(span.events, (event) => ({
             name: event.name,
@@ -74,8 +110,8 @@ export const toRecord = (runId: string, span: Span): JsonlSpanRecord => {
     };
 };
 
-export const toLines = (runId: string, spans: ReadonlyArray<Span>): string =>
+export const toLines = (run: string, service: string, spans: ReadonlyArray<Span>): string =>
     Arr.join(
-        Arr.map(spans, (span) => `${JSON.stringify(toRecord(runId, span))}\n`),
+        Arr.map(spans, (span) => `${JSON.stringify(toRecord(run, service, span))}\n`),
         "",
     );

@@ -21,7 +21,7 @@ const records = (file: string): ReadonlyArray<JsonlSpanRecord> =>
     );
 
 const open = (file: string, bodies?: boolean) =>
-    JsonlSink.make({ file, runId: "run-1", bodies }).pipe(Effect.provide(NodeServices.layer));
+    JsonlSink.make({ file, runId: "run-1", service: "shop-api", bodies }).pipe(Effect.provide(NodeServices.layer));
 
 const prompt = (spanId: string) =>
     otlpSpan({ name: "agent.match", spanId, attributes: [str("prompt.body", "Compare this ticket.")] });
@@ -40,7 +40,7 @@ describe("JsonlSink", () => {
                 Arr.map(rows, (r) => r.name),
                 ["first", "second", "third"],
             );
-            assert.isTrue(Arr.every(rows, (r) => r.run === "run-1"));
+            assert.isTrue(Arr.every(rows, (r) => r.run === "run-1" && r.service === "shop-api"));
         }),
     );
 
