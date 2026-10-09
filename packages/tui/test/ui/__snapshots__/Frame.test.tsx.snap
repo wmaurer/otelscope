@@ -1,0 +1,205 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Frame > draws a placeholder for a seeded id that is not in the file 1`] = `
+"Runs › abcd…                                                                                                            
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                             Trace abcd… is not in the file                                             
+                                                     Esc to go back                                                     
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+⏎ fold · / search · n problem · b body · ? help                                 spans.jsonl  read once  2 runs · 3 spans
+"
+`;
+
+exports[`Frame > draws the bad-lines overlay with its samples 1`] = `
+"Runs                                                                                                                    
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+            ┌─ Bad lines · 2 malformed · 120 legacy (not sampled) ─────────────────────────────────────────┐            
+            │ line 1,204 · byte 412,330 · not JSON                                                         │            
+            │   {"run":"2026-10-06T14-03-27","trace":                                                      │            
+            │ line 1,299 · byte 450,002 · missing field \`span\`                                             │            
+            │   {"run":"r","trace":"t","name":"x"}                                                         │            
+            └──────────────────────────────────────────────────────────────────────────────────────────────┘            
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+Esc close              ⚠ 2 bad lines  120 lines from otelscope < 0.3 skipped  spans.jsonl  ● following  2 runs · 3 spans
+"
+`;
+
+exports[`Frame > draws the breadcrumb and status bar around an empty screen 1`] = `
+"Runs                                                                                                                    
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+⏎ open · / filter · n problem · S sort · ? help                               spans.jsonl  ● following  0 runs · 0 spans
+"
+`;
+
+exports[`Frame > draws the help overlay over the current screen 1`] = `
+"Runs                                                                                                                    
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+            ┌─ Help · Runs ────────────────────────────────────────────────────────────────────────────────┐            
+            │ Runs                                                                                         │            
+            │   ⏎              open, or toggle a group                                                     │            
+            │   Space          toggle a group                                                              │            
+            │   /              filter                                                                      │            
+            │   n/N            problem                                                                     │            
+            │   S              sort                                                                        │            
+            │   r              reverse                                                                     │            
+            │                                                                                              │            
+            │ Movement                                                                                     │            
+            │   j/k/↑/↓        row                                                                         │            
+            │   Ctrl-d/Ctrl-u  half page                                                                   │            
+            │   PgDn/PgUp      page                                                                        │            
+            │   g/G/Home/End   ends                                                                        │            
+            │                                                                                              │            
+            │ Global                                                                                       │            
+            │   Esc            close, clear the query, or go back                                          │            
+            │   ?              help                                                                        │            
+            │   !              bad lines                                                                   │            
+            │   q              quit                                                                        │            
+            │   Ctrl-z         suspend to the shell                                                        │            
+            │   Ctrl-c         quit from anywhere                                                          │            
+            │                                                                                              │            
+            │ Mouse: click selects, click again opens · wheel scrolls the pane under it · drag the divider │            
+            └──────────────────────────────────────────────────────────────────────────────────────────────┘            
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+Esc close                                                                     spans.jsonl  ● following  2 runs · 3 spans
+"
+`;
+
+exports[`Frame > fits the help overlay on a Trace screen into 80x24, focused pane first 1`] = `
+"Runs › shop-api · 14:03:20 › root trace-1                                       
+                                                                                
+        ┌─ Help · Trace ───────────────────────────────────────────────┐        
+        │ ▸ Trace · details  focused                                   │        
+        │   /              search                                      │        
+        │                                                              │        
+        │ Trace · any pane                                             │        
+        │   1              focus tree                                  │        
+        │   2              focus details                               │        
+        │   3              focus logs                                  │        
+        │   Tab/Shift-Tab  cycle panes                                 │        
+        │   -/+/=          split                                       │        
+        │   </>            name column                                 │        
+        │   s              log scope                                   │        
+        │   b              body                                        │        
+        │   e              open the source location in the editor      │        
+        │                                                              │        
+        │ Trace · tree                                                 │        
+        │   ⏎/Space        fold, or toggle a group                     │        
+        │   /              search                                      │        
+        └──────────────────────────────────────────────────────────────┘        
+                                                                                
+                                                                                
+Esc close                             spans.jsonl  ● following  2 runs · 3 spans
+"
+`;

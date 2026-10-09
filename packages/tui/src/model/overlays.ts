@@ -1,11 +1,16 @@
 import { Array as Arr } from "effect";
 
+import { helpSections } from "../keys/Help.ts";
+import { top } from "../nav/Nav.ts";
 import { count } from "./format.ts";
 import { chunk } from "./Role.ts";
 import { cells } from "./text.ts";
 
 import type { BadLines } from "../data/Snapshot.ts";
+import type { Snapshot } from "../data/Snapshot.ts";
 import type { HelpSection } from "../keys/Help.ts";
+import type { Extent } from "../keys/Shell.ts";
+import type { Nav } from "../nav/Nav.ts";
 import type { Line } from "./Role.ts";
 
 export interface OverlayContent {
@@ -16,7 +21,6 @@ export interface OverlayContent {
 export const MOUSE_HELP =
     "Mouse: click selects, click again opens · wheel scrolls the pane under it · drag the divider";
 
-/** The help overlay's lines: each section's title, then its rows with the keys in one column, a blank between. */
 export const helpContent = (screen: string, sections: ReadonlyArray<HelpSection>): OverlayContent => {
     const keyWidth = Arr.reduce(
         Arr.flatMap(sections, (section) => section.rows),
@@ -42,7 +46,6 @@ export const helpContent = (screen: string, sections: ReadonlyArray<HelpSection>
     };
 };
 
-/** The bad-lines overlay: each sample's position and issue, then its text, dim. */
 export const badLinesContent = (badLines: BadLines): OverlayContent => {
     const title = Arr.join(
         [
@@ -62,16 +65,17 @@ export const badLinesContent = (badLines: BadLines): OverlayContent => {
     };
 };
 
+export const overlayContent = (kind: "help" | "badLines", nav: Nav, snapshot: Snapshot): OverlayContent =>
+    kind === "help" ? helpContent(top(nav)._tag, helpSections(nav)) : badLinesContent(snapshot.badLines);
+
 export interface Frame {
     readonly left: number;
     readonly top: number;
     readonly width: number;
     readonly height: number;
-    /** Rows inside the border. */
     readonly viewport: number;
 }
 
-/** A centred box at most 80% of the terminal, no taller than its content. */
 export const overlayFrame = (terminal: { readonly width: number; readonly height: number }, lines: number): Frame => {
     const width = Math.min(terminal.width, Math.max(40, Math.floor(terminal.width * 0.8)));
     const height = Math.min(Math.max(3, Math.floor(terminal.height * 0.8)), lines + 2);
@@ -83,3 +87,8 @@ export const overlayFrame = (terminal: { readonly width: number; readonly height
         viewport: Math.max(0, height - 2),
     };
 };
+
+export const overlayExtent = (
+    content: OverlayContent,
+    terminal: { readonly width: number; readonly height: number },
+): Extent => ({ total: content.lines.length, viewport: overlayFrame(terminal, content.lines.length).viewport });

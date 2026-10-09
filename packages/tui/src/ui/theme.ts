@@ -1,6 +1,5 @@
 import type { Role } from "../model/Role.ts";
 
-/** The background is the terminal's own, so no role sets one for the whole screen. */
 export type Theme = Readonly<Record<Role, string>>;
 
 export const theme = {
@@ -27,4 +26,5 @@ export const theme = {
     jsonString: "#98c379",
     jsonNumber: "#d19a66",
     jsonLiteral: "#c678dd",
+    overlayBg: "#21252b",
 } satisfies Theme;

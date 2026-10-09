@@ -1,4 +1,3 @@
-/** A colour by what it means. Only ui/theme.ts knows the colour itself. */
 export type Role =
     | "text"
     | "muted"
@@ -22,7 +21,8 @@ export type Role =
     | "jsonKey"
     | "jsonString"
     | "jsonNumber"
-    | "jsonLiteral";
+    | "jsonLiteral"
+    | "overlayBg";
 
 export interface Chunk {
     readonly text: string;

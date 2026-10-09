@@ -24,7 +24,7 @@ const servicesLayer = (args: CliArgs, nav: Nav) =>
 export const run = (args: CliArgs, nav: Nav) =>
     Effect.scoped(
         Effect.gen(function* () {
-            const { registry } = yield* Atoms;
+            const atoms = yield* Atoms;
             const quit = yield* Deferred.make<void>();
             const requestQuit = () => {
                 Deferred.doneUnsafe(quit, Effect.void);
@@ -48,10 +48,21 @@ export const run = (args: CliArgs, nav: Nav) =>
                 () => Effect.sync(() => process.off("SIGHUP", requestQuit)),
             );
 
+            // Raw mode delivers Ctrl-z as a key, not a signal, so suspending is ours to do.
+            const suspend = () => {
+                renderer.suspend();
+                process.kill(process.pid, "SIGTSTP");
+            };
+            const resume = () => renderer.resume();
+            yield* Effect.acquireRelease(
+                Effect.sync(() => process.on("SIGCONT", resume)),
+                () => Effect.sync(() => process.off("SIGCONT", resume)),
+            );
+
             yield* Effect.sync(() =>
                 createRoot(renderer).render(
-                    <RegistryContext.Provider value={registry}>
-                        <App onQuit={requestQuit} />
+                    <RegistryContext.Provider value={atoms.registry}>
+                        <App atoms={atoms} file={args.file} onQuit={requestQuit} onSuspend={suspend} />
                     </RegistryContext.Provider>,
                 ),
             );
