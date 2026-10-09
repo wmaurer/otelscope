@@ -7,5 +7,6 @@ export default defineConfig({
     test: {
         include: ["test/**/*.test.{ts,tsx}"],
         globals: false,
+        env: { TZ: "UTC" },
     },
 });
