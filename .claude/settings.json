@@ -1,0 +1,17 @@
+{
+    "enabledPlugins": {
+        "pstack@pstack-claude": true,
+        "atlassian@claude-plugins-official": false,
+        "frontend-design@claude-plugins-official": false,
+        "superpowers@claude-plugins-official": false,
+        "mattpocock-skills@claude-plugins-official": false
+    },
+    "extraKnownMarketplaces": {
+        "pstack-claude": {
+            "source": {
+                "source": "github",
+                "repo": "michael-denyer/pstack-claude"
+            }
+        }
+    }
+}
