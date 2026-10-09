@@ -1,0 +1,51 @@
+{
+    "name": "@wmaurer/otelscope",
+    "version": "0.1.0",
+    "description": "A terminal viewer for otelscope JSONL span files.",
+    "license": "MIT",
+    "author": "Wayne Maurer",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/wmaurer/otelscope.git",
+        "directory": "packages/tui"
+    },
+    "bin": {
+        "otelscope": "./dist/bin.js"
+    },
+    "files": [
+        "dist",
+        "src"
+    ],
+    "type": "module",
+    "exports": {
+        "./package.json": "./package.json"
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "scripts": {
+        "build": "rm -rf dist tsconfig.build.tsbuildinfo && tsc -p tsconfig.build.json",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "perf": "pnpm --filter \"@wmaurer/otelscope...\" build && node --expose-gc --conditions=@otelscope/source --import tsx perf/run.ts",
+        "prepublishOnly": "pnpm build && pnpm test"
+    },
+    "dependencies": {
+        "@effect/atom-react": "4.0.1",
+        "@effect/platform-node": "4.0.1",
+        "@opentui/core": "0.5.14",
+        "@opentui/react": "0.5.14",
+        "@wmaurer/otelscope-effect": "workspace:^",
+        "effect": "4.0.1",
+        "react": "~19.2.0",
+        "scheduler": "^0.27.0"
+    },
+    "devDependencies": {
+        "@effect/vitest": "4.0.1",
+        "@types/react": "~19.2.0",
+        "vitest": "^5.0.3"
+    },
+    "engines": {
+        "node": ">=26.9"
+    }
+}

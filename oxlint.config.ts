@@ -201,6 +201,15 @@ export default defineConfig({
                 "effecttsgo/process-env": "off",
             },
         },
+        {
+            // The react plugin turns on 31 rules at "warn" (fatal under --max-warnings=0). They stay unpinned:
+            // correctness-rules.ts pins only what the root plugins turn on, and `pnpm lint:sync` reports this scope.
+            files: ["packages/tui/**"],
+            plugins: ["react"],
+            rules: {
+                "react/rules-of-hooks": "error",
+            },
+        },
     ],
 
     // Grouped by the scaffold feature each entry belongs to, so a project that took
