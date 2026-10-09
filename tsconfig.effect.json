@@ -153,6 +153,22 @@
                                 "processEnv": "off"
                             }
                         }
+                    },
+                    {
+                        "include": [
+                            "**/.claude/skills/verify/programs/**/*.ts",
+                            "**/.claude/skills/verify/programs/**/*.tsx",
+                            "**/.claude/skills/verify/programs/**/*.mts",
+                            "**/.claude/skills/verify/programs/**/*.cts"
+                        ],
+                        "options": {
+                            "diagnosticSeverity": {
+                                "globalConsole": "off",
+                                "multipleEffectProvide": "off",
+                                "nodeBuiltinImport": "off",
+                                "processEnv": "off"
+                            }
+                        }
                     }
                 ]
             }

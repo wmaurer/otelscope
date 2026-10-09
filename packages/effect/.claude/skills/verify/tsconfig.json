@@ -1,0 +1,13 @@
+// The programs belong to no package project. Without this one, type-aware lint resolves @wmaurer/otelscope-effect
+// to dist/, so before a build its types are unresolved and every await on them reads as await-thenable.
+{
+    "extends": "../../../../../tsconfig.effect.json",
+    "compilerOptions": {
+        "noEmit": true,
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "customConditions": ["@otelscope/source"],
+        "types": ["node"]
+    },
+    "include": ["programs"]
+}
