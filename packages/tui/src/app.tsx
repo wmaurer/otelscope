@@ -12,15 +12,16 @@ import { SpanStore } from "./data/SpanStore.ts";
 import { App } from "./ui/App.tsx";
 
 import type { CliArgs } from "./cli/Args.ts";
+import type { Nav } from "./nav/Nav.ts";
 
-const servicesLayer = (args: CliArgs) =>
-    Atoms.layer.pipe(
+const servicesLayer = (args: CliArgs, nav: Nav) =>
+    Atoms.layer(nav).pipe(
         Layer.provide(Layer.mergeAll(SpanStore.layer.pipe(Layer.provide(SpanSource.layer)), Bodies.layer)),
         Layer.provide(InputFile.layer({ file: args.file, follow: args.follow })),
         Layer.provide(NodeServices.layer),
     );
 
-export const run = (args: CliArgs) =>
+export const run = (args: CliArgs, nav: Nav) =>
     Effect.scoped(
         Effect.gen(function* () {
             const { registry } = yield* Atoms;
@@ -56,4 +57,4 @@ export const run = (args: CliArgs) =>
             );
             yield* Deferred.await(quit);
         }),
-    ).pipe(Effect.provide(servicesLayer(args)));
+    ).pipe(Effect.provide(servicesLayer(args, nav)));
