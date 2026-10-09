@@ -142,9 +142,10 @@ finished file marks nothing live. A run or trace is **live** when `now - lastArr
 
 Indexing must not freeze the UI while a big file loads ([12-performance.md](12-performance.md)): the while-loading
 key-press budget requires a yield at least every 16–30 ms. The store indexes a `Lines` event in slices of at most
-**2,000 lines** (about 6 ms) and yields to the event loop between slices, so stdin and render callbacks run. Use a
-macrotask yield (for example `Effect.sleep(0)` on the live clock, or a `setImmediate`-backed effect); a bare
-`Effect.yieldNow` may not leave the microtask queue. Tune the slice size against the perf scenarios.
+**2,000 lines** (about 6 ms) and yields to the event loop between slices, so stdin and render callbacks run.
+`Effect.yieldNow` is that yield: Effect's default scheduler resumes the fiber from a `setImmediate` callback on Node,
+a later turn of the event loop, not from the microtask queue (`MixedScheduler` in `effect/src/Scheduler.ts`). Avoid
+`Effect.sleep(0)`, which does not yield at all under `TestClock`. Tune the slice size against the perf scenarios.
 
 ## The snapshot
 
