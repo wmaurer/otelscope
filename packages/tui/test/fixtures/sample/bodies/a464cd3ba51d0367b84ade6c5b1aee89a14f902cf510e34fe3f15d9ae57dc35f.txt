@@ -1,0 +1,5 @@
+{
+  "role": "assistant",
+  "content": "been is before account number a address invoice warehouse carrier confirmed today updated customer order tracking yesterday.\nagain was missing the after status delayed please check refund has shipment requested not parcel been is.\nbefore account number a address invoice warehouse carrier confirmed today updated customer order tracking yesterday again was.\nmissing the after status delayed please check refund has shipment requested not parcel been is before account.\nnumber a address invoice warehouse carrier confirmed today updated customer order tracking yesterday again was missing the.\nafter status delayed please check refund has shipment requested not parcel been is before account number a.\naddress invoice warehouse carrier confirmed today updated customer order tracking yesterday again was missing the after status.\ndelayed",
+  "stop_reason": "end_turn"
+}

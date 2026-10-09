@@ -6,6 +6,9 @@ node_modules/
 dist/
 *.tsbuildinfo
 
+# span-viewer fixture: the large variant is regenerated, not committed (packages/effect/scripts/sample-fixture.ts)
+packages/tui/test/fixtures/large/
+
 # repos: upstream source cloned by scripts/repos.js
 .repos
 

@@ -115,14 +115,12 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - [Testing strategy for packages/tui](tickets/21-testing-strategy.md) — pure functions carry most tests, with
   five property tests; `SpanSource` on real temp files, `SpanStore` on a stub source with `TestClock`; char-frame
   snapshots per screen at 120×40 and 80×24 plus targeted colour checks; a normalised sample fixture is rebuilt.
+- [Rebuild the sample-fixture generator](tickets/22-rebuild-sample-fixture.md) — `pnpm exec tsx
+  packages/effect/scripts/sample-fixture.ts [sample|large]`, via a 0.3.0 stand-in for `JsonlTrace.layer`, run in
+  virtual time so the committed sample is byte-stable; sample 511 spans, large 36,059 (250k needs a bigger scale).
 
 ## Not yet specified
 
-- **Performance limits.** v1 targets 250k spans with every record in memory. Grouping same-name siblings keeps
-  a 10,000-child parent to one row. Left: whether the windowed list and the waterfall stay responsive at that
-  size, and how it is checked. Also startup time: the bin is unbundled `tsc` output, so Node loads Effect as
-  hundreds of modules; if the first frame is slow, revisit bundling. The checks run against the large fixture as a separate
-  script outside `pre-push`, so they wait on [Rebuild the sample-fixture generator](tickets/22-rebuild-sample-fixture.md).
 - **Spec assembly.** The final pass that turns the closed tickets into the hand-off spec.
 
 ## Out of scope
