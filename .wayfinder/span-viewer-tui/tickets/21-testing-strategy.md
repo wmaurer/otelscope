@@ -3,7 +3,7 @@ id: "21"
 title: Testing strategy for packages/tui
 labels: [wayfinder:grilling]
 status: open
-assignee:
+assignee: wmaurer
 blocked_by: []
 ---
 
