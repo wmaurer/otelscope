@@ -1,0 +1,335 @@
+import { Array as Arr, Option, Order, Predicate } from "effect";
+
+import { classify } from "./Decode.ts";
+import { insertSorted, SortedIds } from "./SortedIds.ts";
+
+import type {
+    BadLine,
+    BadLines,
+    FirstError,
+    Run,
+    RunId,
+    Snapshot,
+    SpanId,
+    Status,
+    Trace,
+    TraceId,
+} from "./Snapshot.ts";
+import type { JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
+
+const MAX_SAMPLES = 100;
+const SAMPLE_CHARS = 200;
+
+const LOG_LEVEL = "effect.logLevel";
+
+class TraceBuilder {
+    readonly id: TraceId;
+    runs: ReadonlyArray<RunId> = [];
+    readonly spans = new Map<SpanId, JsonlSpanRecord>();
+    readonly children = new Map<SpanId | null, Array<SpanId>>();
+    readonly ownedSinceFreeze = new Set<SpanId | null>();
+    readonly missing = new Set<SpanId>();
+    startMs = Infinity;
+    endMs = -Infinity;
+    failedSpans = 0;
+    interruptedSpans = 0;
+    logs = 0;
+    firstError = Option.none<FirstError>();
+    lastArrivalAt = Option.none<number>();
+    earliest: JsonlSpanRecord | undefined = undefined;
+    failedRootRun: RunId | undefined = undefined;
+
+    constructor(id: TraceId) {
+        this.id = id;
+    }
+
+    readonly startOf = (span: SpanId): number => this.spans.get(span)?.startMs ?? 0;
+}
+
+class RunBuilder {
+    readonly id: RunId;
+    readonly service: string;
+    firstStartMs = Infinity;
+    lastEndMs = -Infinity;
+    readonly traceIds = new SortedIds();
+    spanCount = 0;
+    failedTraces = 0;
+    failedSpans = 0;
+    interruptedSpans = 0;
+    logs = 0;
+    lastArrivalAt = Option.none<number>();
+    serviceReported = false;
+
+    constructor(id: RunId, service: string) {
+        this.id = id;
+        this.service = service;
+    }
+}
+
+const startsBefore = (a: JsonlSpanRecord, b: JsonlSpanRecord): boolean =>
+    a.startMs < b.startMs || (a.startMs === b.startMs && a.span < b.span);
+
+const firstErrorOf = (record: JsonlSpanRecord): Option.Option<FirstError> => {
+    for (const event of record.events) {
+        if (event.name === "exception") {
+            const type = event.attrs["exception.type"];
+            const message = event.attrs["exception.message"];
+            return Option.some({
+                type: Predicate.isString(type) ? type : "",
+                message: Predicate.isString(message) ? message : "",
+            });
+        }
+    }
+    return Option.none();
+};
+
+const logsOf = (record: JsonlSpanRecord): number => Arr.countBy(record.events, (event) => LOG_LEVEL in event.attrs);
+
+const freezeTrace = (trace: TraceBuilder): Trace => {
+    trace.ownedSinceFreeze.clear();
+    const topLevel: ReadonlyArray<SpanId> = trace.children.get(null) ?? [];
+    const rootId = Arr.head(topLevel);
+    const root = Option.flatMapNullishOr(rootId, (id) => trace.spans.get(id));
+    const byEarliestChild = Order.mapInput(
+        Order.Tuple([Order.Number, Order.String]),
+        (parent: SpanId) => [trace.startOf(trace.children.get(parent)?.[0] ?? ""), parent] as const,
+    );
+    return {
+        id: trace.id,
+        runs: trace.runs,
+        root: rootId,
+        headName: Option.getOrElse(root, () => trace.earliest)?.name ?? "",
+        startMs: trace.startMs,
+        endMs: trace.endMs,
+        spanCount: trace.spans.size,
+        failedSpans: trace.failedSpans,
+        interruptedSpans: trace.interruptedSpans,
+        logs: trace.logs,
+        rootExit: Option.map(root, (span) => span.exit),
+        firstError: trace.firstError,
+        lastArrivalAt: trace.lastArrivalAt,
+        spans: new Map(trace.spans),
+        children: new Map(trace.children),
+        topLevel,
+        missingParents: Arr.sort(Array.from(trace.missing), byEarliestChild),
+    };
+};
+
+const freezeRun = (run: RunBuilder): Run => ({
+    id: run.id,
+    service: run.service,
+    firstStartMs: run.firstStartMs,
+    lastEndMs: run.lastEndMs,
+    traceIds: run.traceIds.freeze(),
+    spanCount: run.spanCount,
+    failedTraces: run.failedTraces,
+    failedSpans: run.failedSpans,
+    interruptedSpans: run.interruptedSpans,
+    logs: run.logs,
+    lastArrivalAt: run.lastArrivalAt,
+});
+
+const withFrozen = <K, B, A>(
+    previous: ReadonlyMap<K, A>,
+    dirty: ReadonlySet<B>,
+    keyOf: (builder: B) => K,
+    freeze: (builder: B) => A,
+): ReadonlyMap<K, A> =>
+    dirty.size === 0
+        ? previous
+        : new Map([
+              ...previous,
+              ...Arr.map(Array.from(dirty), (builder) => [keyOf(builder), freeze(builder)] as const),
+          ]);
+
+const emptyBadLines: BadLines = { legacy: 0, malformed: 0, samples: [] };
+
+export class Index {
+    private version = 0;
+    private epoch = 0;
+    private traces = new Map<TraceId, TraceBuilder>();
+    private runs = new Map<RunId, RunBuilder>();
+    private traceOrder = new SortedIds();
+    private runOrder = new SortedIds();
+    private dirtyTraces = new Set<TraceBuilder>();
+    private dirtyRuns = new Set<RunBuilder>();
+    private spanCount = 0;
+    private badLines = emptyBadLines;
+    private frozenTraces: ReadonlyMap<TraceId, Trace> = new Map();
+    private frozenRuns: ReadonlyMap<RunId, Run> = new Map();
+
+    ingest(text: string, line: number, offset: number, arrivalAt: Option.Option<number>): void {
+        if (text.length === 0) {
+            return;
+        }
+        const classified = classify(text);
+        switch (classified._tag) {
+            case "Span":
+                return this.add(classified.record, line, offset, text, arrivalAt);
+            case "Legacy":
+                this.badLines = { ...this.badLines, legacy: this.badLines.legacy + 1 };
+                return;
+            case "Malformed":
+                return this.malformed(line, offset, classified.issue, text);
+        }
+    }
+
+    reset(): void {
+        this.epoch += 1;
+        this.traces = new Map();
+        this.runs = new Map();
+        this.traceOrder = new SortedIds();
+        this.runOrder = new SortedIds();
+        this.dirtyTraces = new Set();
+        this.dirtyRuns = new Set();
+        this.spanCount = 0;
+        this.badLines = emptyBadLines;
+        this.frozenTraces = new Map();
+        this.frozenRuns = new Map();
+    }
+
+    freeze(status: Status): Snapshot {
+        this.version += 1;
+        this.frozenTraces = withFrozen(this.frozenTraces, this.dirtyTraces, (trace) => trace.id, freezeTrace);
+        this.frozenRuns = withFrozen(this.frozenRuns, this.dirtyRuns, (run) => run.id, freezeRun);
+        this.dirtyTraces.clear();
+        this.dirtyRuns.clear();
+        return {
+            version: this.version,
+            epoch: this.epoch,
+            status,
+            runs: this.frozenRuns,
+            runOrder: this.runOrder.freeze(),
+            traces: this.frozenTraces,
+            traceOrder: this.traceOrder.freeze(),
+            spanCount: this.spanCount,
+            badLines: this.badLines,
+        };
+    }
+
+    private malformed(line: number, offset: number, issue: string, text: string): void {
+        const sample: BadLine = { line, offset, issue, text: text.slice(0, SAMPLE_CHARS) };
+        const samples = this.badLines.samples;
+        this.badLines = {
+            ...this.badLines,
+            malformed: this.badLines.malformed + 1,
+            samples: samples.length < MAX_SAMPLES ? Arr.append(samples, sample) : samples,
+        };
+    }
+
+    private add(
+        record: JsonlSpanRecord,
+        line: number,
+        offset: number,
+        text: string,
+        arrivalAt: Option.Option<number>,
+    ): void {
+        const known = this.traces.get(record.trace);
+        if (known?.spans.has(record.span) === true) {
+            return this.malformed(line, offset, `duplicate span ${record.span.slice(0, 8)}…`, text);
+        }
+        const trace = known ?? new TraceBuilder(record.trace);
+        if (known === undefined) {
+            this.traces.set(trace.id, trace);
+        }
+        const run = this.runs.get(record.run) ?? new RunBuilder(record.run, record.service);
+        if (!this.runs.has(run.id)) {
+            this.runs.set(run.id, run);
+        } else if (run.service !== record.service && !run.serviceReported) {
+            run.serviceReported = true;
+            this.malformed(
+                line,
+                offset,
+                `run ${run.id}: service "${record.service}" differs from "${run.service}"`,
+                text,
+            );
+        }
+
+        const logs = logsOf(record);
+        this.addSpan(trace, record, logs, arrivalAt);
+        if (!Arr.contains(trace.runs, run.id)) {
+            trace.runs = Arr.append(trace.runs, run.id);
+            run.traceIds.upsert(trace.id, trace.startMs);
+        }
+        this.addToRun(run, record, logs, arrivalAt);
+        this.moveFailedTraceCredit(trace);
+        this.spanCount += 1;
+        this.dirtyTraces.add(trace);
+        this.dirtyRuns.add(run);
+    }
+
+    private addSpan(
+        trace: TraceBuilder,
+        record: JsonlSpanRecord,
+        logs: number,
+        arrivalAt: Option.Option<number>,
+    ): void {
+        trace.spans.set(record.span, record);
+        const parent = record.parent;
+        const shared = trace.children.get(parent);
+        const siblings = trace.ownedSinceFreeze.has(parent) && shared !== undefined ? shared : (shared?.slice() ?? []);
+        trace.children.set(parent, siblings);
+        trace.ownedSinceFreeze.add(parent);
+        insertSorted(siblings, record.span, record.startMs, trace.startOf);
+        if (parent !== null && !trace.spans.has(parent)) {
+            trace.missing.add(parent);
+        }
+        trace.missing.delete(record.span);
+
+        if (record.startMs < trace.startMs) {
+            trace.startMs = record.startMs;
+            this.traceOrder.upsert(trace.id, trace.startMs);
+            for (const runId of trace.runs) {
+                this.runs.get(runId)?.traceIds.upsert(trace.id, trace.startMs);
+            }
+        }
+        trace.endMs = Math.max(trace.endMs, record.startMs + record.ms);
+        if (trace.earliest === undefined || startsBefore(record, trace.earliest)) {
+            trace.earliest = record;
+        }
+        trace.failedSpans += record.exit === "Failure" ? 1 : 0;
+        trace.interruptedSpans += record.exit === "Interrupted" ? 1 : 0;
+        trace.logs += logs;
+        if (Option.isNone(trace.firstError)) {
+            trace.firstError = firstErrorOf(record);
+        }
+        if (Option.isSome(arrivalAt)) {
+            trace.lastArrivalAt = arrivalAt;
+        }
+    }
+
+    private addToRun(run: RunBuilder, record: JsonlSpanRecord, logs: number, arrivalAt: Option.Option<number>): void {
+        if (record.startMs < run.firstStartMs) {
+            run.firstStartMs = record.startMs;
+            this.runOrder.upsert(run.id, run.firstStartMs);
+        }
+        run.lastEndMs = Math.max(run.lastEndMs, record.startMs + record.ms);
+        run.spanCount += 1;
+        run.failedSpans += record.exit === "Failure" ? 1 : 0;
+        run.interruptedSpans += record.exit === "Interrupted" ? 1 : 0;
+        run.logs += logs;
+        if (Option.isSome(arrivalAt)) {
+            run.lastArrivalAt = arrivalAt;
+        }
+    }
+
+    private moveFailedTraceCredit(trace: TraceBuilder): void {
+        const rootId = trace.children.get(null)?.[0];
+        const root = rootId === undefined ? undefined : trace.spans.get(rootId);
+        const credited = root?.exit === "Failure" ? root.run : undefined;
+        if (credited === trace.failedRootRun) {
+            return;
+        }
+        for (const [runId, change] of [
+            [trace.failedRootRun, -1],
+            [credited, 1],
+        ] as const) {
+            const run = runId === undefined ? undefined : this.runs.get(runId);
+            if (run !== undefined) {
+                run.failedTraces += change;
+                this.dirtyRuns.add(run);
+            }
+        }
+        trace.failedRootRun = credited;
+    }
+}
