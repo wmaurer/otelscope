@@ -108,7 +108,7 @@ directories only when the user asks.
 
 Only the sample-fixture feature touches tracked files. If it was run as a check and the change was not meant to
 alter the fixture, restore it with `git checkout -- packages/tui/test/fixtures/sample` and delete the gitignored
-`packages/tui/test/fixtures/large/` if it was generated.
+`packages/tui/test/fixtures/large/` and `packages/tui/test/fixtures/huge/` if they were generated.
 
 ## Helpers
 

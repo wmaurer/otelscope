@@ -1,8 +1,8 @@
 import { Array as Arr, Data, Duration, Effect, Option, Random, Ref, Schedule, Schema } from "effect";
 
 // The four programs behind the fixture, one per run. Every choice that shapes a trace is fixed by index or drawn
-// from a seeded `Random`, so the traces come out the same on every run. Only `Scale` differs between the sample
-// and the large variant.
+// from a seeded `Random`, so the traces come out the same on every run. Only `Scale` differs between the sample,
+// large and huge variants.
 
 export interface Scale {
     // `POST /orders` traces in `shop-api`.
@@ -13,6 +13,8 @@ export interface Scale {
 
 export const SAMPLE: Scale = { orders: 6, wideChildren: 400 };
 export const LARGE: Scale = { orders: 3000, wideChildren: 10_000 };
+// The perf harness's fixture: 250,000 to 260,000 spans.
+export const HUGE: Scale = { orders: 28_000, wideChildren: 10_000 };
 
 // Typed errors with fields: their `exception` events have an empty message, and only the type names them.
 class PaymentGatewayError extends Data.TaggedError("PaymentGatewayError")<{ readonly status: number }> {}

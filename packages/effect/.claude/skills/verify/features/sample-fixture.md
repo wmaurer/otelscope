@@ -1,19 +1,20 @@
 # Sample fixture
 
 `scripts/sample-fixture.ts` traces four seeded Effect programs under virtual time and writes the span-viewer
-fixture: `packages/tui/test/fixtures/sample/` (committed, byte-stable) and `packages/tui/test/fixtures/large/`
-(gitignored). Its user is a span-viewer developer who needs the same fixture on every regeneration.
+fixture: `packages/tui/test/fixtures/sample/` (committed, byte-stable), and `packages/tui/test/fixtures/large/`
+and `packages/tui/test/fixtures/huge/` (both gitignored). Its user is a span-viewer developer who needs the same fixture on every regeneration.
 
 ## Sub-features
 
 - `fixture-stable` regenerates `sample/` byte for byte when the record format has not changed.
 - `fixture-summary` prints the span, trace, event and body counts it wrote.
 - `fixture-large` writes the gitignored `large/` variant.
+- `fixture-huge` writes the gitignored `huge/` variant, the span viewer's perf fixture, only when asked for.
 
 ## How to get to it (user POV)
 
-- From the repo root: `pnpm exec tsx packages/effect/scripts/sample-fixture.ts [sample|large]`. With no
-  argument, both variants are rewritten.
+- From the repo root: `pnpm exec tsx packages/effect/scripts/sample-fixture.ts [sample|large|huge]`. With no
+  argument, `sample` and `large` are rewritten.
 
 ## Driving it with the shell
 
@@ -31,8 +32,12 @@ Preconditions:
 - **Check stability.** Run `git status --porcelain packages/tui/test/fixtures/sample`. Output is empty. After
   an intentional format change, `git diff --stat packages/tui/test/fixtures/sample` instead shows the
   expected change and nothing else, and the diff is committed with it.
-- **Large variant.** Run `pnpm exec tsx packages/effect/scripts/sample-fixture.ts large`. It writes
-  `packages/tui/test/fixtures/large/`, which `git status` does not show.
+- **Large variant.** Run `pnpm exec tsx packages/effect/scripts/sample-fixture.ts large`. It prints
+  `large: 36059 spans, 3004 traces, 13031 events, 8 bodies, 19.1 MB of JSONL in packages/tui/test/fixtures/large`
+  in about 4 s, and `git status` does not show the directory.
+- **Huge variant.** Run `pnpm exec tsx packages/effect/scripts/sample-fixture.ts huge`. It prints
+  `huge: 252725 spans, 28004 traces, 121366 events, 8 bodies, 146.5 MB of JSONL in packages/tui/test/fixtures/huge`
+  in about 75 s, and `git status` does not show the directory.
 
 ## Gotchas
 

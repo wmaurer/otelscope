@@ -15,11 +15,15 @@ Source: [Performance budgets and how they are checked](../../../.wayfinder/span-
 
 ## Fixture
 
-- `HUGE` in `packages/effect/scripts/fixture/scenarios.ts`, about `{ orders: 28_000, wideChildren: 10_000 }`, tuned
-  when first generated so that **250,000 ≤ spans < 260,000** (about 130 MB of JSONL). Record the final order count
-  and span count here when it is generated: _orders: TBD at generation · spans: TBD at generation_.
+- `HUGE` in `packages/effect/scripts/fixture/scenarios.ts` is `{ orders: 28_000, wideChildren: 10_000 }`, which
+  gives **252,725 spans** (the target was 250,000 ≤ spans < 260,000), 28,004 traces and 121,366 events in
+  146.5 MB of JSONL.
 - `pnpm exec tsx packages/effect/scripts/sample-fixture.ts huge` writes `packages/tui/test/fixtures/huge/`
-  (gitignored). The perf script generates it when missing (about 30 s, once).
+  (gitignored). The perf script generates it when missing, once. Generation takes about 73 s on the reference
+  machine (measured twice: 72.7 s and 73.0 s). A CPU profile puts about half of that in the generator's
+  `VirtualTime`: the 28,000 orders run concurrently, and each sleep is inserted into a sorted array by copying
+  it, so the cost grows with the square of the order count. The writer's own work (`toRecord` and the tracer
+  hook) is under 2 % of the profile.
 - Its 10,001-span trace, with 10,000 siblings under one parent, is the worst case for a single trace.
 
 ## Budgets

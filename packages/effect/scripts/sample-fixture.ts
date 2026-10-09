@@ -1,11 +1,12 @@
 // Regenerates the span-viewer fixtures in `packages/tui/test/fixtures/`, by tracing four small Effect programs,
 // one run each, into one JSONL file:
 //
-//     pnpm exec tsx packages/effect/scripts/sample-fixture.ts [sample|large]
+//     pnpm exec tsx packages/effect/scripts/sample-fixture.ts [sample|large|huge]
 //
-// `sample/` is committed and byte-stable across regenerations; `large/` is gitignored. With no argument, both
-// are rewritten. The scenarios are in `fixture/scenarios.ts`, and how the output is made stable is described in
-// `fixture/VirtualTime.ts` and `makeNormaliser` in `fixture/FixtureWriter.ts`.
+// `sample/` is committed and byte-stable across regenerations; `large/` and `huge/` are gitignored. With no
+// argument, `sample/` and `large/` are rewritten; `huge/` is written only when asked for. The scenarios are in
+// `fixture/scenarios.ts`, and how the output is made stable is described in `fixture/VirtualTime.ts` and
+// `makeNormaliser` in `fixture/FixtureWriter.ts`.
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import {
     Array as Arr,
@@ -22,15 +23,15 @@ import {
 } from "effect";
 
 import * as FixtureWriter from "./fixture/FixtureWriter.ts";
-import { batchJobs, LARGE, SAMPLE, type Scale, shopApi, supportAgent, worker } from "./fixture/scenarios.ts";
+import { batchJobs, HUGE, LARGE, SAMPLE, type Scale, shopApi, supportAgent, worker } from "./fixture/scenarios.ts";
 import * as VirtualTime from "./fixture/VirtualTime.ts";
 
 // 2026-10-06T14:03:27Z, the start of the first run.
 const EPOCH_MILLIS = 1_791_295_407_000;
 const SEED = "otelscope-fixture";
 
-const VARIANTS = { sample: SAMPLE, large: LARGE } satisfies Record<string, Scale>;
-const Variant = Schema.UndefinedOr(Schema.Literals(["sample", "large"]));
+const VARIANTS = { sample: SAMPLE, large: LARGE, huge: HUGE } satisfies Record<string, Scale>;
+const Variant = Schema.UndefinedOr(Schema.Literals(["sample", "large", "huge"]));
 
 const RUNS = [
     ["shop-api", shopApi],
@@ -93,9 +94,8 @@ const generate = Effect.fnUntraced(function* (name: string, scale: Scale) {
 
 const main = Effect.gen(function* () {
     const only = yield* Schema.decodeUnknownEffect(Variant)(process.argv[2]);
-    for (const name of ["sample", "large"] as const) {
-        if (only === undefined || only === name) yield* generate(name, VARIANTS[name]);
-    }
+    const names = only === undefined ? (["sample", "large"] as const) : [only];
+    for (const name of names) yield* generate(name, VARIANTS[name]);
 });
 
 NodeRuntime.runMain(main.pipe(Effect.provide(NodeServices.layer)));
