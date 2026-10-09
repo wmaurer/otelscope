@@ -1,9 +1,10 @@
-import { Crypto, DateTime, Effect, FileSystem, Layer, Path, Random } from "effect";
+import { Crypto, DateTime, Effect, FileSystem, Layer, Path, Random, Tracer } from "effect";
 import { OtlpSerialization, OtlpTracer } from "effect/observability";
 
 import { spansOf } from "./format/TraceData.ts";
 import * as JsonlSink from "./JsonlSink.ts";
 import * as ReceiverClient from "./ReceiverClient.ts";
+import { withSites } from "./Sites.ts";
 
 export interface JsonlTraceOptions {
     readonly serviceName: string;
@@ -41,9 +42,12 @@ export const layer = (
                 bodies: options.bodies,
             });
 
-            return OtlpTracer.layer({
+            const otlp = OtlpTracer.layer({
                 url: RECEIVER_URL,
                 resource: { serviceName: options.serviceName },
+                // Writes are local appends, so exporting often costs little, and a live viewer sees spans
+                // within about a second instead of Effect's default of five.
+                exportInterval: "1 second",
                 // The receiver is local, so this bounds only how long the final flush may take to write.
                 // When the exporter reaches it, the exporter drops every span still buffered.
                 shutdownTimeout: "30 seconds",
@@ -51,5 +55,6 @@ export const layer = (
                 Layer.provide(OtlpSerialization.layerJson),
                 Layer.provide(ReceiverClient.layer((data) => write(spansOf(data)))),
             );
+            return Layer.effect(Tracer.Tracer, Effect.map(Tracer.Tracer, withSites)).pipe(Layer.provide(otlp));
         }),
     );
