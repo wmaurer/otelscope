@@ -109,6 +109,9 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - [Keymap and help across screens](tickets/19-keymap-and-help.md) — our own binding table with pure dispatch,
   not `@opentui/keymap`; panes on `1`/`2`/`3` so `h`/`l` mean left/right; one movement set; `Esc` peels one
   layer; hints in the status bar, `?` overlay per screen; `Ctrl-c`/`Ctrl-z` handled by us.
+- [CLI surface and npm packaging](tickets/20-cli-surface.md) — `@wmaurer/otelscope`, bin `otelscope <file>`
+  with `--no-follow`, `--run`, `--trace` (exact or unique prefix) via `effect/cli`; startup errors exit 1 before
+  the renderer, usage 2; bin only, own versions from 0.1.0 on `otelscope-effect ^0.3.0`.
 
 ## Not yet specified
 

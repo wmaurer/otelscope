@@ -118,3 +118,7 @@ the list's query, once; no global search screen is built in v1.
 **Amended by** [Live-tail UX](18-live-tail-ux.md): follow mode needs no view field: a list follows while its `selected`
 is `None`, moving the cursor stops it, and jumping to the newest end sets `None` again. The trace view never
 follows.
+
+**Amended by** [CLI surface and npm packaging](20-cli-surface.md): a CLI-seeded `--run` or `--trace` may be a unique
+prefix. Until it matches exactly one id the screen shows the placeholder, with "9f3c matches 3 traces" when
+ambiguous; on the first unique match the screen's id is rewritten to the full id once.

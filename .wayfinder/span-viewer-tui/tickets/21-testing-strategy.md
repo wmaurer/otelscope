@@ -22,3 +22,7 @@ How is `packages/tui` tested in this repo's vitest setup? Decide:
 
 **Amended by** [Keymap and help across screens](19-keymap-and-help.md): key dispatch is a pure
 `(mode, nav, key) → Action` over one binding table, which also generates the hint line and `?` overlay.
+
+**Amended by** [CLI surface and npm packaging](20-cli-surface.md): arguments are parsed with `effect/cli`; argv →
+initial `Nav`, unique-prefix resolution of seeded ids, and the startup errors with their exit codes (0, 1, 2) are
+also to be tested.
