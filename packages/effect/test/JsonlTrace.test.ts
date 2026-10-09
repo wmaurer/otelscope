@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 
 import { NodeServices } from "@effect/platform-node";
 import { assert, describe, it } from "@effect/vitest";
-import { Array as Arr, Effect, Exit, Fiber, Option, Schedule, Schema } from "effect";
+import { Array as Arr, Effect, Fiber, Option, Schedule, Schema } from "effect";
 import { TestClock } from "effect/testing";
 
 import { type JsonlSpanRecord, JsonlSpanRecord as RecordSchema, JsonlTrace } from "../src/index.ts";
@@ -38,8 +38,10 @@ const run = <A, E>(effect: Effect.Effect<A, E>, file: string, runId?: string, bo
 const lines = (file: string): ReadonlyArray<string> =>
     existsSync(file) ? Arr.filter(readFileSync(file, "utf8").split("\n"), (l) => l.length > 0) : [];
 
+const decodeLine = Schema.decodeUnknownOption(Schema.fromJsonString(RecordSchema));
+
 const records = (file: string): ReadonlyArray<JsonlSpanRecord> =>
-    Arr.map(lines(file), (l) => Option.getOrThrow(Schema.decodeUnknownOption(RecordSchema)(JSON.parse(l))));
+    Arr.map(lines(file), (l) => Option.getOrThrow(decodeLine(l)));
 
 const named = (rows: ReadonlyArray<JsonlSpanRecord>, name: string): JsonlSpanRecord | undefined =>
     Option.getOrUndefined(Arr.findFirst(rows, (r) => r.name === name));
@@ -77,9 +79,9 @@ describe("JsonlTrace.layer", () => {
         await run(program, file);
         await run(hooked, file);
 
-        const decoded = Arr.map(lines(file), (line) => Schema.decodeUnknownExit(RecordSchema)(JSON.parse(line)));
+        const decoded = Arr.map(lines(file), (line) => decodeLine(line));
         assert.lengthOf(decoded, 7);
-        assert.isTrue(Arr.every(decoded, Exit.isSuccess));
+        assert.isTrue(Arr.every(decoded, Option.isSome));
     });
 
     it("names the run by start time and a random suffix when no run id is given", async () => {

@@ -1,5 +1,5 @@
 import { assert, describe, it } from "@effect/vitest";
-import { Array as Arr, Exit, Schema } from "effect";
+import { Array as Arr, Exit, Option, Schema } from "effect";
 
 import { JsonlSpanRecord, toLines, toRecord } from "../../src/format/Jsonl.ts";
 import { otlpSpan, str } from "../support/spans.ts";
@@ -194,16 +194,21 @@ describe("toLines", () => {
         const lines = text.split("\n");
         assert.lengthOf(lines, 3);
         assert.strictEqual(lines[2], "");
-        assert.strictEqual(JSON.parse(lines[1] ?? "").name, "b");
+        const decodeLine = Schema.decodeUnknownOption(Schema.fromJsonString(JsonlSpanRecord));
+        const records = Arr.map(Arr.take(lines, 2), (line) => decodeLine(line));
         assert.deepStrictEqual(
-            Arr.map(Arr.take(lines, 2), (line) => JSON.parse(line).service),
-            ["shop-api", "shop-api"],
+            Arr.map(
+                records,
+                Option.map((r) => [r.name, r.service]),
+            ),
+            [Option.some(["a", "shop-api"]), Option.some(["b", "shop-api"])],
         );
     });
 });
 
 describe("JsonlSpanRecord", () => {
     const decode = Schema.decodeUnknownExit(JsonlSpanRecord);
+    const decodeLine = Schema.decodeUnknownExit(Schema.fromJsonString(JsonlSpanRecord));
     const span = otlpSpan({
         name: "a",
         spanId: "s1",
@@ -214,10 +219,10 @@ describe("JsonlSpanRecord", () => {
             int("otelscope.fiber.id", 3),
         ],
     });
-    const written: object = JSON.parse(toLines("r", "shop-api", [span]));
+    const record = toRecord("r", "shop-api", span);
 
     it("decodes a line the writer produces", () => {
-        assert.deepStrictEqual(decode(written), Exit.succeed(toRecord("r", "shop-api", span)));
+        assert.deepStrictEqual(decodeLine(toLines("r", "shop-api", [span])), Exit.succeed(record));
     });
 
     it("rejects a 0.2 line, which has no startMs, service, site, def or fiber", () => {
@@ -238,8 +243,8 @@ describe("JsonlSpanRecord", () => {
 
     it("drops unknown keys", () => {
         assert.deepStrictEqual(
-            decode({ ...written, gpu: "H100", extra: { nested: true } }),
-            Exit.succeed(toRecord("r", "shop-api", span)),
+            decodeLine(JSON.stringify({ ...record, gpu: "H100", extra: { nested: true } })),
+            Exit.succeed(record),
         );
     });
 });

@@ -14,7 +14,7 @@ body reference to its file.
 ## How to get to it (user POV)
 
 - `import { BODY_SUFFIX, JsonlSpanRecord } from "@wmaurer/otelscope-effect/format"`, then
-  `Schema.decodeUnknownExit(JsonlSpanRecord)(JSON.parse(line))`.
+  `Schema.decodeUnknownExit(Schema.fromJsonString(JsonlSpanRecord))(line)`.
 
 ## Driving it with drive.sh
 

@@ -257,7 +257,8 @@ Documented in the README, not configurable:
 - **Changes in 0.3**: `ms` is no longer an integer; `startMs`, `service`, `site`, `def` and `fiber` are new; records
   without `startMs` come from earlier versions; spans are written about every second.
 - **Reading the format**: names the `JsonlSpanRecord` Schema and shows a decode:
-  `Schema.decodeUnknownExit(JsonlSpanRecord)(JSON.parse(line))`.
+  `Schema.decodeUnknownExit(Schema.fromJsonString(JsonlSpanRecord))(line)`, which also turns a line that is not
+  valid JSON into a failure instead of a thrown `SyntaxError`.
 - **View the file**: one line, `npx @wmaurer/otelscope traces/spans.jsonl`.
 
 ## Fixture generator

@@ -133,13 +133,16 @@ Without `bodies: true`, `.body` attributes stay inline like any other attribute.
 reads the JSONL file. It exports the `JsonlSpanRecord` Schema and its parts, the OTLP `TraceData` schema, and the
 bodies convention (`slimSpan`, `SlimSpan`, `BODY_SUFFIX`). The main entry re-exports the same names.
 
-Decode each line with the `JsonlSpanRecord` Schema:
+Decode each line with the `JsonlSpanRecord` Schema. `Schema.fromJsonString` parses the JSON as part of the
+decode, so a line that is not valid JSON gives a failure instead of a thrown `SyntaxError`:
 
 ```ts
 import { Schema } from "effect";
 import { JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
 
-const record = Schema.decodeUnknownExit(JsonlSpanRecord)(JSON.parse(line));
+const decodeLine = Schema.decodeUnknownExit(Schema.fromJsonString(JsonlSpanRecord));
+
+const record = decodeLine(line);
 ```
 
 Decoding drops keys the Schema does not know, so a line from a newer version with extra fields still decodes.

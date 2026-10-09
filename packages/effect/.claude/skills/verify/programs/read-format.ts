@@ -10,11 +10,13 @@ import { Exit, Schema } from "effect";
 const file = process.env.OTELSCOPE_FILE ?? process.argv[2];
 if (file === undefined) throw new Error("set OTELSCOPE_FILE to a spans.jsonl");
 
+const decodeLine = Schema.decodeUnknownExit(Schema.fromJsonString(JsonlSpanRecord));
+
 const records = readFileSync(file, "utf8")
     .split("\n")
     .filter((line) => line.length > 0)
     .map((line, index) => {
-        const exit = Schema.decodeUnknownExit(JsonlSpanRecord)(JSON.parse(line));
+        const exit = decodeLine(line);
         if (Exit.isFailure(exit)) throw new Error(`line ${index + 1} is not a JsonlSpanRecord`);
         return exit.value;
     });

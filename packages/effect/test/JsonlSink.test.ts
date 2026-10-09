@@ -11,10 +11,12 @@ import { JsonlSpanRecord } from "../src/format/Jsonl.ts";
 import * as JsonlSink from "../src/JsonlSink.ts";
 import { otlpSpan, str } from "./support/spans.ts";
 
+const decodeLine = Schema.decodeUnknownOption(Schema.fromJsonString(JsonlSpanRecord));
+
 const records = (file: string): ReadonlyArray<JsonlSpanRecord> =>
     Arr.map(
         Arr.filter(readFileSync(file, "utf8").split("\n"), (l) => l.length > 0),
-        (l) => Option.getOrThrow(Schema.decodeUnknownOption(JsonlSpanRecord)(JSON.parse(l))),
+        (l) => Option.getOrThrow(decodeLine(l)),
     );
 
 const open = (file: string, bodies?: boolean) =>
