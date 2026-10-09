@@ -36,10 +36,12 @@ Preconditions:
 
 ## Gotchas
 
-- The generator writes through its own `Writer03` layer in `scripts/fixture/`, not through `JsonlTrace.layer`.
-  It imports `src/format/` and `src/ReceiverClient.ts`, so changes there reach the fixture, but a change to
-  `JsonlSink.ts` or `JsonlTrace.ts` does not until the writer is rebuilt (step 2 of
-  `docs/specs/span-viewer/prompts.md`).
+- The generator writes through its own layer, `scripts/fixture/FixtureWriter.ts`, not through
+  `JsonlTrace.layer`. It is built from `toRecord`, `slimSpan`, `spansOf`, `ReceiverClient` and `withSites` in
+  `src/`, so a change to the record or the tracer hook reaches the fixture. A change to `JsonlSink.ts` or
+  `JsonlTrace.ts` does not, because the fixture needs its own exporter settings, normalisation and write hold.
+- Fiber ids are renumbered in order of first appearance, across `fiber`, `effect.fiberId` and `fiber #n` in
+  text, so `fiber` equals `effect.fiberId` on a span's own logs in the fixture too.
 - It deletes and rewrites the whole variant directory. Uncommitted edits under `sample/` are lost.
 - Counts in this recipe hold for the current scenarios. When `scripts/fixture/scenarios.ts` changes, update
   them here.

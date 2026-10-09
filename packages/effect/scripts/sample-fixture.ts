@@ -5,7 +5,7 @@
 //
 // `sample/` is committed and byte-stable across regenerations; `large/` is gitignored. With no argument, both
 // are rewritten. The scenarios are in `fixture/scenarios.ts`, and how the output is made stable is described in
-// `fixture/VirtualTime.ts` and `makeNormaliser` in `fixture/Writer03.ts`.
+// `fixture/VirtualTime.ts` and `makeNormaliser` in `fixture/FixtureWriter.ts`.
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import {
     Array as Arr,
@@ -21,9 +21,9 @@ import {
     Schema,
 } from "effect";
 
+import * as FixtureWriter from "./fixture/FixtureWriter.ts";
 import { batchJobs, LARGE, SAMPLE, type Scale, shopApi, supportAgent, worker } from "./fixture/scenarios.ts";
 import * as VirtualTime from "./fixture/VirtualTime.ts";
-import * as Writer03 from "./fixture/Writer03.ts";
 
 // 2026-10-06T14:03:27Z, the start of the first run.
 const EPOCH_MILLIS = 1_791_295_407_000;
@@ -51,7 +51,7 @@ const generate = Effect.fnUntraced(function* (name: string, scale: Scale) {
 
     const liveClock = yield* Clock.Clock;
     const time = VirtualTime.make(EPOCH_MILLIS, 1);
-    const normalise = Writer03.makeNormaliser(repoRoot);
+    const normalise = FixtureWriter.makeNormaliser(repoRoot);
 
     yield* Effect.forEach(
         RUNS,
@@ -60,7 +60,7 @@ const generate = Effect.fnUntraced(function* (name: string, scale: Scale) {
                 Effect.sleep(index === 0 ? "0 millis" : "2 minutes"),
                 program(scale).pipe(
                     Effect.provide(
-                        Writer03.layer({
+                        FixtureWriter.layer({
                             file,
                             service,
                             run: `run-${index.toString()}`,
