@@ -10,7 +10,6 @@ export interface JsonlSinkOptions {
     readonly file: string;
     // The `run` value of every record this sink writes.
     readonly runId: string;
-    // The `service` value of every record this sink writes.
     readonly service: string;
     // `true` moves the text of every `<prefix>.body` attribute to `bodies/<sha256>.txt` next to `file`, and
     // replaces the attribute with `<prefix>.sha256`, `<prefix>.bytes` and `<prefix>.preview`. Otherwise the

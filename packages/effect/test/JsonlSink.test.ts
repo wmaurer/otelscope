@@ -4,20 +4,17 @@ import { join } from "node:path";
 
 import { NodeServices } from "@effect/platform-node";
 import { assert, describe, it } from "@effect/vitest";
-import { Array as Arr, Effect } from "effect";
+import { Array as Arr, Effect, Option, Schema } from "effect";
 import { TestConsole } from "effect/testing";
 
+import { JsonlSpanRecord } from "../src/format/Jsonl.ts";
 import * as JsonlSink from "../src/JsonlSink.ts";
 import { otlpSpan, str } from "./support/spans.ts";
 
-import type { JsonlSpanRecord } from "../src/format/Jsonl.ts";
-
-// SAFETY: every line of the file is one JsonlSpanRecord, written by the sink through JSON.stringify of that
-// same interface.
 const records = (file: string): ReadonlyArray<JsonlSpanRecord> =>
     Arr.map(
         Arr.filter(readFileSync(file, "utf8").split("\n"), (l) => l.length > 0),
-        (l) => JSON.parse(l) as JsonlSpanRecord,
+        (l) => Option.getOrThrow(Schema.decodeUnknownOption(JsonlSpanRecord)(JSON.parse(l))),
     );
 
 const open = (file: string, bodies?: boolean) =>

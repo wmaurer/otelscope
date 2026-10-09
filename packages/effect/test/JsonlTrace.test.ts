@@ -38,10 +38,8 @@ const run = <A, E>(effect: Effect.Effect<A, E>, file: string, runId?: string, bo
 const lines = (file: string): ReadonlyArray<string> =>
     existsSync(file) ? Arr.filter(readFileSync(file, "utf8").split("\n"), (l) => l.length > 0) : [];
 
-// SAFETY: every line of the file is one JsonlSpanRecord, written by the sink through JSON.stringify of that
-// same type.
 const records = (file: string): ReadonlyArray<JsonlSpanRecord> =>
-    Arr.map(lines(file), (l) => JSON.parse(l) as JsonlSpanRecord);
+    Arr.map(lines(file), (l) => Option.getOrThrow(Schema.decodeUnknownOption(RecordSchema)(JSON.parse(l))));
 
 const named = (rows: ReadonlyArray<JsonlSpanRecord>, name: string): JsonlSpanRecord | undefined =>
     Option.getOrUndefined(Arr.findFirst(rows, (r) => r.name === name));
@@ -53,7 +51,6 @@ const tempFile = () => join(mkdtempSync(join(tmpdir(), "jsonl-trace-")), "spans.
 
 const source = readFileSync(import.meta.filename, "utf8").split("\n");
 
-// The 1-based line of this file that contains `text`, as a stack trace reports it.
 const lineOf = (text: string): number =>
     Option.getOrThrow(Arr.findFirstIndex(source, (line) => line.includes(text))) + 1;
 
