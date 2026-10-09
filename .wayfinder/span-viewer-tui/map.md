@@ -1,7 +1,7 @@
 ---
 title: Span viewer TUI for otelscope JSONL
 labels: [wayfinder:map]
-status: open
+status: closed
 ---
 
 ## Destination
@@ -121,10 +121,13 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - [Performance budgets and how they are checked](tickets/23-performance-budgets.md) — on the dev machine, over a
   new ~250k-span `huge` fixture: first frame ≤ 400 ms, first rows ≤ 750 ms, full index ≤ 3 s, key presses p95 ≤ 16 ms
   (≤ 50 ms while loading), ≤ 600 MB RSS; checked by `pnpm --filter @wmaurer/otelscope perf`; v1 release criteria.
+- [Assemble the hand-off spec](tickets/24-assemble-spec.md) — the spec is `docs/specs/span-viewer/`, 0.3.0 included
+  as its first step; Atom from `effect/reactivity`, `fiber` and a 1 s export interval added to 0.3.0, a source export
+  condition for the workspace; contradictions between tickets settled and listed in its README.
 
 ## Not yet specified
 
-<!-- nothing left in the fog; Assemble the hand-off spec is the last ticket -->
+<!-- nothing left in the fog: the destination is reached, see docs/specs/span-viewer/ -->
 
 ## Out of scope
 
