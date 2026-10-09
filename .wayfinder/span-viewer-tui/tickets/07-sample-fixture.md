@@ -73,3 +73,7 @@ are given to the microsecond.
     - **Stack traces name the spans.** An `exception.stacktrace` has one frame per enclosing span, named after
       the span, with the call site of its `withSpan`, for example `at payment.attempt (…/sample-fixture.ts:50:20)`.
       The paths are absolute. The fixture's paths point into the worktree it was generated in.
+
+**Amended by** [Testing strategy for packages/tui](21-testing-strategy.md): the `research/sample-fixture` branch,
+commit 69826aa and the files above are lost. [Rebuild the sample-fixture generator](22-rebuild-sample-fixture.md)
+recreates them on main, normalised and in new locations; the scenarios and facts above still stand.
