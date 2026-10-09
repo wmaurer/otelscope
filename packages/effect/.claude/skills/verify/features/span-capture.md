@@ -6,8 +6,10 @@ its events, and `exit` says whether the span succeeded, failed or was interrupte
 
 ## Sub-features
 
-- `capture-record` writes the record shape from README.md: `run`, `trace`, `span`, `parent`, `name`, `ms`,
-  `exit`, `attrs`, `events`.
+- `capture-record` writes the record shape from README.md: `run`, `service`, `trace`, `span`, `parent`, `name`,
+  `startMs`, `ms`, `exit`, `site`, `def`, `fiber`, `attrs`, `events`, in that order.
+- `capture-site` sets `site` to the line and column of each span's `Effect.withSpan` call in `program.ts`.
+- `capture-fiber` sets `fiber` to the fiber that opened the span, equal to `effect.fiberId` on its logs.
 - `capture-append` appends a second run to an existing file instead of replacing it.
 - `capture-run-id` uses `runId` when given, and a sortable UTC timestamp such as
   `2026-10-09T11-57-44-896-db7d` when not.
@@ -30,12 +32,16 @@ Preconditions:
   `stderr.txt` is empty, `files.txt` lists only `out/spans.jsonl`, and stdout shows `loading cart` and
   `charge failed` twice.
 - **Check records.** Run
-  `jq -c '{run, span, name, parent, exit, attrs, ev: [.events[] | [.name, .offsetMs]]}' <run>/out/spans.jsonl`.
+  `jq -c '{run, service, span, name, parent, exit, site, fiber, attrs, ev: [.events[] | [.name, .offsetMs, .attrs["effect.fiberId"]]]}' <run>/out/spans.jsonl`.
   Eight lines: four with `"run":"verify-a"`, then four with `"run":"verify-b"`. In each run, `checkout` has
-  `"parent":null`, `attrs` `{"user.id":"u-42"}` and events `[["loading cart",<0-2>],["charge failed",<20-30>]]`;
+  `"parent":null`, `attrs` `{"user.id":"u-42"}` and events `[["loading cart",<0-2>,<fiber>],["charge failed",<20-30>,<fiber>]]`;
   `load-cart`, `charge` and `abandoned` have `parent` equal to that run's `checkout` `span`; `charge` has
-  `"exit":"Failure"` and one `exception` event; `abandoned` has `"exit":"Interrupted"`. Run
-  `jq -c 'keys' <run>/out/spans.jsonl | sort -u`. One line: the nine keys of the record shape.
+  `"exit":"Failure"` and one `exception` event; `abandoned` has `"exit":"Interrupted"`. Every record has
+  `"service":"verify-capture"` and `"def":null`. `site.file` is the run's `program.ts`, and `site.line` is 13 for
+  `load-cart`, 15 for `charge`, 18 for `abandoned` and 21 for `checkout`. `checkout`, `load-cart` and `charge`
+  share one `fiber`, equal to the `effect.fiberId` of `checkout`'s two log events. `abandoned` has a different
+  `fiber`, the forked one. Run `jq -c 'keys_unsorted' <run>/out/spans.jsonl | sort -u`. One line: the fourteen
+  keys of the record shape, in order.
 - **Default run id.** Run `DEFAULT_RUN_ID=1 $V/drive.sh capture-default $V/programs/capture.ts`, then
   `jq -r .run <run>/out/spans.jsonl | uniq -c`. Two values, four records each, both matching
   `^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}-[0-9a-f]{4}$`. The timestamp is UTC, so it differs from the
@@ -49,6 +55,7 @@ Preconditions:
 
 - Records are written when the exporter flushes, so a child usually appears before its parent. Assert by
   `parent` and `span`, never by line order.
-- `ms` is whole milliseconds. Assert ranges, not exact values.
+- `startMs`, `ms` and `offsetMs` are milliseconds to the microsecond and differ on every run. Assert ranges, not
+  exact values.
 - An interrupted span carries extra attributes from Effect (`span.label`, `status.interrupted`). They are
   Effect's, not this package's.
