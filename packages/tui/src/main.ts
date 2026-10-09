@@ -1,10 +1,10 @@
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
-import { Array as Arr, Cause, Console, Effect, Exit, Option, Runtime } from "effect";
+import { Array as Arr, Cause, Console, Effect, Exit, Option, type PlatformError, Runtime } from "effect";
 
 import * as Args from "./cli/Args.ts";
 import * as Startup from "./cli/Startup.ts";
 
-const report = (cause: Cause.Cause<Args.UsageError | Startup.StartupError>) =>
+const report = (cause: Cause.Cause<Args.UsageError | Startup.StartupError | PlatformError.PlatformError>) =>
     Cause.hasInterruptsOnly(cause)
         ? Effect.void
         : Option.match(Cause.findErrorOption(cause), {
@@ -24,7 +24,7 @@ const program = Effect.gen(function* () {
     }
     yield* Startup.check(args.value, { stdin: process.stdin.isTTY === true, stdout: process.stdout.isTTY === true });
     const app = yield* Effect.promise(() => import("./app.tsx"));
-    yield* app.run;
+    yield* app.run(args.value);
 }).pipe(Effect.tapCause(report), Effect.provide(NodeServices.layer));
 
 NodeRuntime.runMain(program, { disableErrorReporting: true, teardown });
