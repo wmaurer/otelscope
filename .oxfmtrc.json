@@ -42,6 +42,8 @@
         "scripts/lint-types.js",
         // repos
         "scripts/repos.js",
-        ".repos/**"
+        ".repos/**",
+        // claude. Per-user Claude Code settings, never tracked; Claude Code rewrites it in its own style.
+        ".claude/settings.local.json"
     ]
 }
