@@ -22,3 +22,6 @@ packages/tui/test/fixtures/large/
 .DS_Store
 .idea/
 .vscode/
+
+# Verification evidence (packages/effect/.claude/skills/verify)
+.verify/

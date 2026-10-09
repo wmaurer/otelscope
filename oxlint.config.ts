@@ -189,6 +189,18 @@ export default defineConfig({
                 "effecttsgo/process-env": "off",
             },
         },
+        // The verify skill's programs are written the way a user of the package would write them,
+        // as in packages/effect/README.md, not to this repo's standard.
+        {
+            files: ["**/.claude/skills/verify/programs/**"],
+            rules: {
+                "effect-native/native-array-method": "off",
+                "effecttsgo/global-console": "off",
+                "effecttsgo/multiple-effect-provide": "off",
+                "effecttsgo/node-builtin-import": "off",
+                "effecttsgo/process-env": "off",
+            },
+        },
     ],
 
     // Grouped by the scaffold feature each entry belongs to, so a project that took
