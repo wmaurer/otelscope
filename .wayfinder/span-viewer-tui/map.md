@@ -118,10 +118,13 @@ linked from the ticket. Follow the repo's `AGENTS.md`, and read Effect from `pac
 - [Rebuild the sample-fixture generator](tickets/22-rebuild-sample-fixture.md) — `pnpm exec tsx
   packages/effect/scripts/sample-fixture.ts [sample|large]`, via a 0.3.0 stand-in for `JsonlTrace.layer`, run in
   virtual time so the committed sample is byte-stable; sample 511 spans, large 36,059 (250k needs a bigger scale).
+- [Performance budgets and how they are checked](tickets/23-performance-budgets.md) — on the dev machine, over a
+  new ~250k-span `huge` fixture: first frame ≤ 400 ms, first rows ≤ 750 ms, full index ≤ 3 s, key presses p95 ≤ 16 ms
+  (≤ 50 ms while loading), ≤ 600 MB RSS; checked by `pnpm --filter @wmaurer/otelscope perf`; v1 release criteria.
 
 ## Not yet specified
 
-- **Spec assembly.** The final pass that turns the closed tickets into the hand-off spec.
+<!-- nothing left in the fog; Assemble the hand-off spec is the last ticket -->
 
 ## Out of scope
 

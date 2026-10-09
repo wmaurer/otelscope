@@ -108,3 +108,7 @@ The screenshot is `packages/tui/docs/screenshot.png`, a trace view of the sample
 real terminal, referenced by an absolute `raw.githubusercontent.com/wmaurer/otelscope/main/...` URL and left
 out of `files`. `packages/effect/README.md` gains a "View the file" line:
 `npx @wmaurer/otelscope traces/spans.jsonl`.
+
+**Amended by** [Performance budgets and how they are checked](23-performance-budgets.md): `--last-runs` is not a
+performance remedy, because it would still read and decode every line, so it stays out of v1. The `packages/tui`
+release steps add running `pnpm --filter @wmaurer/otelscope perf` on the reference machine.

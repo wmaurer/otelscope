@@ -154,3 +154,8 @@ noted here.
   `Scale`. That means one more entry in `VARIANTS`, for example 20,000 orders; the generator has no other limit.
 - **`site`, `def` and stack-frame line numbers follow `scenarios.ts`**, so editing that file changes the
   sample's bytes. Regenerate the sample and its snapshots together.
+
+**Amended by** [Performance budgets and how they are checked](23-performance-budgets.md): a third `Scale`, `HUGE`
+(about 28,000 orders, set so that 250,000 ≤ spans < 260,000), writes the gitignored
+`packages/tui/test/fixtures/huge/` through `sample-fixture.ts huge`. The perf script generates it when it is
+missing. Running the generator with no argument still writes only `sample` and `large`.

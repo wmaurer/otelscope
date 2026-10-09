@@ -86,3 +86,8 @@ and builds with `tsc -p tsconfig.build.json`.
   required, and `bun-ffi-structs` declares a `typescript: ^5` peer.
 - **To do, when wmaurer chooses:** report both upstream as two issues on anomalyco/opentui. No existing
   issue was found on 2026-10-07.
+
+**Amended by** [Performance budgets and how they are checked](23-performance-budgets.md): the shim calls
+`module.enableCompileCache()` between the warning step and the start. Bundling our code and Effect with esbuild
+(`@opentui/*` external) is the approved startup remedy, but only if module loading is more than half of a missed
+startup budget.
