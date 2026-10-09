@@ -68,6 +68,26 @@ All measured on `huge`.
 - **Output**: a table on stdout with each metric, its budget, its median/p95/max and pass or fail; `--json` for
   machine-readable output; exit 1 on any miss. Nothing is committed.
 
+## Data-layer measurements
+
+`pnpm --filter @wmaurer/otelscope perf:publish live|full` runs `perf/publish.ts` in process from source, with no
+renderer. It measures the store's `freeze` (the publish without the re-render) on `huge`. Step 7's `perf/run.ts` can
+absorb it. Measured on the reference machine on 2026-10-09, five runs of each mode, alternated, at load 1.2 to 3.3:
+
+| Mode   | Scenario                                                                                                                                             | Result                                                                                                             |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `live` | `huge` indexed, then 300 publishes of 500 records each, half into new traces of about 9 spans, half into existing traces; first 20 publishes dropped | `freeze` p50 3.4–3.6 ms, p95 6.1–6.7 ms; copying the previous traces map (28.5k to 36.3k entries) p50 about 2.1 ms |
+| `full` | `huge` through the real `SpanSource` and `SpanStore` under `--no-follow`                                                                             | 1.52–1.61 s to phase `done`; 17–19 freezes totalling 71–98 ms                                                      |
+
+- **The trace-map copy is most of a live publish**, about 60 to 70 %. Each publish copies the `traces` map whole and
+  replaces the touched traces. `new Map(previous)` plus a `set` per touched trace measured about 0.45 ms faster at p50
+  than spreading both into a new `Map`, and is what `Index` would use if this needs trimming. Only a persistent map
+  would remove the copy, and the numbers do not call for one: `freeze` leaves about 10 ms of the 16 ms p95 for the
+  re-render.
+- **Open: rare long publishes.** About one publish in 280 per run took 40 to 150 ms, in the copy as well as in
+  `freeze`. Garbage collection with about 400k records on the heap is the guess; it is not profiled. It threatens the
+  50 ms max, so profile it when the live-publish scenario lands in `perf/run.ts`.
+
 ## The compile cache
 
 The bin shim calls `module.enableCompileCache()` before importing `main`, always
