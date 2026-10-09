@@ -1,6 +1,6 @@
 {
     "name": "@wmaurer/otelscope-effect",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "Write the spans of an Effect program to a JSONL file.",
     "keywords": [
         "effect",
@@ -23,10 +23,12 @@
     "type": "module",
     "exports": {
         ".": {
+            "@otelscope/source": "./src/index.ts",
             "types": "./dist/index.d.ts",
             "default": "./dist/index.js"
         },
         "./format": {
+            "@otelscope/source": "./src/format/index.ts",
             "types": "./dist/format/index.d.ts",
             "default": "./dist/format/index.js"
         }

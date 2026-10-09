@@ -37,7 +37,7 @@ program.pipe(
 
 | Option        | Description                                                                                                         |
 | ------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `serviceName` | The OTLP resource service name.                                                                                     |
+| `serviceName` | The OTLP resource service name, and the `service` value of every record.                                            |
 | `file`        | The JSONL file. Created with its parent directories if missing; each batch is appended.                             |
 | `runId`       | Optional. The `run` value of every record. Defaults to a sortable timestamp such as `2026-10-06T14-03-27-412-9f3a`. |
 | `bodies`      | Optional. `true` moves the text of every `.body` attribute to a file in `bodies/`. See [Bodies](#bodies).           |
@@ -46,24 +46,62 @@ Because batches are appended, several runs can share one file and stay apart by 
 
 ## Record format
 
-Each line is a `JsonlSpanRecord`:
+Each line is a `JsonlSpanRecord`. The writer emits the fields in this order, but a reader must not depend on the
+order:
 
 ```ts
 interface JsonlSpanRecord {
     run: string;
+    service: string;
     trace: string;
     span: string;
     parent: string | null;
     name: string;
-    ms: number; // duration in whole milliseconds
+    startMs: number; // wall-clock start, milliseconds since the Unix epoch, to the microsecond
+    ms: number; // duration in milliseconds, to the microsecond
     exit: "Success" | "Failure" | "Interrupted";
+    site: Location | null;
+    def: Location | null;
+    fiber: number | null;
     attrs: Record<string, AttributeValue>;
     events: Array<{ name: string; offsetMs: number; attrs: Record<string, AttributeValue> }>;
 }
+
+interface Location {
+    file: string; // absolute path
+    line: number;
+    col: number;
+}
 ```
 
-Every `Effect.log*` call made inside a span is recorded as an event on it, with `offsetMs` measured from the
-start of the span.
+Every field is always present. `parent`, `site`, `def` and `fiber` are `null` when they have no value.
+
+`startMs` is a wall-clock time, such as `1791295407070.068`. `ms` is a duration, such as `2.355`, so the span ends at
+`startMs + ms`. Both are exact to the microsecond.
+
+Every `Effect.log*` call made inside a span is recorded as an event on it. An event's `offsetMs` is measured from
+the span's `startMs`, to the microsecond.
+
+`service` is the `serviceName` given to `JsonlTrace.layer`. An empty `serviceName` is written as an empty string.
+
+`site` is where the span was opened: the call to `Effect.withSpan`, or the call to a function made with `Effect.fn`.
+`def` is set only for an `Effect.fn` span, and is where that function is defined. Both come from the stack trace
+that Effect captures when the span opens, and are `null` when Effect captured none:
+
+- `captureStackTrace: false` in a span's options turns capture off for that span. Effect sets it on its own HTTP
+  client, RPC, SQL, AI and workflow spans, so those spans never have a location.
+- `Error.stackTraceLimit = 0` turns capture off for the whole process, and also saves its cost.
+- A position is what Node's stack trace reports. Under `tsx` or `--enable-source-maps` that is the TypeScript
+  position. Otherwise it is the position in the compiled JavaScript.
+
+`fiber` is the id of the fiber that opened the span. It is the same number as `effect.fiberId` on the span's log
+events. It is `null` when no fiber ran with the span as its current span.
+
+### Changes in 0.3
+
+- `ms` is no longer a whole number. It is exact to the microsecond, as are `offsetMs` and the new `startMs`.
+- `startMs`, `service`, `site`, `def` and `fiber` are new. A record without `startMs` comes from an earlier version.
+- Spans are written about every second. Earlier versions wrote them every five seconds.
 
 ## Bodies
 
@@ -92,11 +130,24 @@ Without `bodies: true`, `.body` attributes stay inline like any other attribute.
 ## Reading the format
 
 `@wmaurer/otelscope-effect/format` exports the record format without the writer's layers, for a program that
-reads the JSONL file: `JsonlSpanRecord` and its parts, the OTLP `TraceData` schema, and the bodies convention
-(`slimSpan`, `SlimSpan`, `BODY_SUFFIX`). The main entry re-exports the same names.
+reads the JSONL file. It exports the `JsonlSpanRecord` Schema and its parts, the OTLP `TraceData` schema, and the
+bodies convention (`slimSpan`, `SlimSpan`, `BODY_SUFFIX`). The main entry re-exports the same names.
+
+Decode each line with the `JsonlSpanRecord` Schema:
 
 ```ts
-import type { JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
+import { Schema } from "effect";
+import { JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
+
+const record = Schema.decodeUnknownExit(JsonlSpanRecord)(JSON.parse(line));
+```
+
+Decoding drops keys the Schema does not know, so a line from a newer version with extra fields still decodes.
+
+## View the file
+
+```sh
+npx @wmaurer/otelscope traces/spans.jsonl
 ```
 
 ## Failure behaviour
