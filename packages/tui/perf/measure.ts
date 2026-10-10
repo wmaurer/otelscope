@@ -898,6 +898,9 @@ const program = Effect.gen(function* () {
     if (missed.length > 0) {
         return yield* new BudgetsMissed({ metrics: missed });
     }
-}).pipe(Effect.provide(NodeServices.layer));
+}).pipe(
+    Effect.tapError((error) => Console.error(`perf: ${error._tag}: ${error.message}`)),
+    Effect.provide(NodeServices.layer),
+);
 
-NodeRuntime.runMain(program);
+NodeRuntime.runMain(program, { disableErrorReporting: true });
