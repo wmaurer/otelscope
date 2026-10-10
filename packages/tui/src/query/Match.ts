@@ -2,7 +2,8 @@ import { Array as Arr, Predicate } from "effect";
 
 import { termKey } from "./Query.ts";
 
-import type { Run, RunId, SpanId, Trace, TraceId } from "../data/Snapshot.ts";
+import type { Exit, Run, RunId, SpanId, Trace, TraceId } from "../data/Snapshot.ts";
+import type { LogLevel } from "../model/levels.ts";
 import type { Needle, Query, Term } from "./Query.ts";
 import type { AttributeValue, Attributes, JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
 
@@ -253,3 +254,15 @@ export const runMatches = (query: Query, run: Run, traces: ReadonlyMap<TraceId, 
     }
     return true;
 };
+
+/** What a log line is matched on: 08's log-line level. */
+export interface LogLine {
+    readonly message: string;
+    readonly level: LogLevel;
+    /** `#7`, or "" when the log carries no fiber. */
+    readonly fiber: string;
+    readonly spanName: string;
+    readonly annotations: ReadonlyArray<readonly [key: string, value: string]>;
+    /** The exit of the log's span, for `is:failed` and the like. */
+    readonly exit: Exit;
+}
