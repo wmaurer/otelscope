@@ -6,57 +6,66 @@ import { initialKeyState, initialShell, modeOf, Shell, ShellEffect, stepShell } 
 import * as Nav from "../../src/nav/Nav.ts";
 import { activeQuery } from "../../src/nav/Query.ts";
 import { runs, runsFiltered, traces } from "../support/keys.ts";
+import { listFor } from "../support/lists.ts";
+import { record } from "../support/records.ts";
 import { indexed } from "../support/store.ts";
 
 import type { Snapshot } from "../../src/data/Snapshot.ts";
 import type { EditOp } from "../../src/keys/Input.ts";
-import type { Extent, KeyState } from "../../src/keys/Shell.ts";
+import type { Extent, KeyContext, KeyState } from "../../src/keys/Shell.ts";
 
 const clean = indexed([]);
 const withBadLines: Snapshot = { ...clean, badLines: { legacy: 2, malformed: 0, samples: [] } };
 const extent: Extent = { total: 30, viewport: 10 };
 const help = (scroll = 0) => Shell.Overlay({ kind: "help", scroll });
 const at = (shell: Shell): KeyState => ({ ...initialKeyState, shell });
+const twoRuns = indexed([record({ span: "a", run: "run-1" }), record({ span: "b", run: "run-2", startMs: 2000 })]);
+const ctx = (nav: Nav.Nav, snapshot: Snapshot, overlay: Extent): KeyContext => ({
+    nav,
+    snapshot,
+    overlay,
+    list: listFor(nav, snapshot),
+    listRows: 10,
+});
 
 describe("stepShell", () => {
     it("quits and suspends through effects, leaving the rest alone", () => {
-        const quit = stepShell(initialKeyState, runs, clean, extent, Action.Quit());
-        expect(quit).toEqual({
-            state: initialKeyState,
-            nav: runs,
-            effects: [ShellEffect.Quit()],
-            forward: Option.none(),
-        });
-        expect(stepShell(initialKeyState, runs, clean, extent, Action.Suspend()).effects).toEqual([
+        const quit = stepShell(initialKeyState, ctx(runs, clean, extent), Action.Quit());
+        expect(quit).toEqual({ state: initialKeyState, nav: runs, effects: [ShellEffect.Quit()] });
+        expect(stepShell(initialKeyState, ctx(runs, clean, extent), Action.Suspend()).effects).toEqual([
             ShellEffect.Suspend(),
         ]);
     });
 
     it("opens and closes the overlays", () => {
-        expect(stepShell(initialKeyState, runs, clean, extent, Action.OpenHelp()).state.shell).toEqual(help());
-        expect(stepShell(at(help(4)), runs, clean, extent, Action.CloseOverlay()).state.shell).toEqual(Shell.Screen());
-        expect(stepShell(initialKeyState, runs, withBadLines, extent, Action.OpenBadLines()).state.shell).toEqual(
+        expect(stepShell(initialKeyState, ctx(runs, clean, extent), Action.OpenHelp()).state.shell).toEqual(help());
+        expect(stepShell(at(help(4)), ctx(runs, clean, extent), Action.CloseOverlay()).state.shell).toEqual(
+            Shell.Screen(),
+        );
+        expect(stepShell(initialKeyState, ctx(runs, withBadLines, extent), Action.OpenBadLines()).state.shell).toEqual(
             Shell.Overlay({ kind: "badLines", scroll: 0 }),
         );
     });
 
     it("says there are no bad lines instead of opening an empty overlay", () => {
-        const step = stepShell(initialKeyState, runs, clean, extent, Action.OpenBadLines());
+        const step = stepShell(initialKeyState, ctx(runs, clean, extent), Action.OpenBadLines());
         expect(step.state.shell).toEqual(initialShell);
         expect(step.effects).toEqual([ShellEffect.Say({ text: "no bad lines" })]);
     });
 
     it("goes back and clears the query on the stack", () => {
-        expect(stepShell(initialKeyState, traces, clean, extent, Action.Back()).nav.stack).toEqual(Nav.initial.stack);
-        expect(Nav.top(stepShell(initialKeyState, runsFiltered, clean, extent, Action.ClearQuery()).nav)).toMatchObject(
-            { view: { filter: "" } },
+        expect(stepShell(initialKeyState, ctx(traces, clean, extent), Action.Back()).nav.stack).toEqual(
+            Nav.initial.stack,
         );
-        expect(stepShell(initialKeyState, runs, clean, extent, Action.OpenHelp()).nav, "the same Nav").toBe(runs);
+        expect(
+            Nav.top(stepShell(initialKeyState, ctx(runsFiltered, clean, extent), Action.ClearQuery()).nav),
+        ).toMatchObject({ view: { filter: "" } });
+        expect(stepShell(initialKeyState, ctx(runs, clean, extent), Action.OpenHelp()).nav, "the same Nav").toBe(runs);
     });
 
     it("scrolls an open overlay with the movement keys, within its lines", () => {
         const scroll = (from: number, action: Action) =>
-            stepShell(at(help(from)), runs, clean, extent, action).state.shell;
+            stepShell(at(help(from)), ctx(runs, clean, extent), action).state.shell;
         expect(scroll(0, Action.Move({ by: "row", dir: "next" }))).toEqual(help(1));
         expect(scroll(0, Action.Move({ by: "row", dir: "prev" }))).toEqual(help(0));
         expect(scroll(0, Action.Move({ by: "halfPage", dir: "next" }))).toEqual(help(5));
@@ -64,18 +73,20 @@ describe("stepShell", () => {
         expect(scroll(0, Action.Jump({ to: "end" }))).toEqual(help(20));
         expect(scroll(12, Action.Jump({ to: "start" }))).toEqual(help(0));
         expect(
-            stepShell(at(help()), runs, clean, { total: 3, viewport: 10 }, Action.Jump({ to: "end" })).state.shell,
+            stepShell(at(help()), ctx(runs, clean, { total: 3, viewport: 10 }), Action.Jump({ to: "end" })).state.shell,
         ).toEqual(help(0));
         expect(
-            stepShell(at(help()), runs, clean, extent, Action.Open()).forward,
+            stepShell(at(help()), ctx(traces, twoRuns, extent), Action.Open()).nav,
             "no screen action under an overlay",
-        ).toEqual(Option.none());
+        ).toBe(traces);
     });
 
-    it("hands screen actions to the screens", () => {
-        const step = stepShell(initialKeyState, runs, clean, extent, Action.Move({ by: "row", dir: "next" }));
-        expect(step.forward).toEqual(Option.some(Action.Move({ by: "row", dir: "next" })));
+    it("hands screen actions to the top screen's reducer and says what it says", () => {
+        const step = stepShell(initialKeyState, ctx(runs, twoRuns, extent), Action.Move({ by: "row", dir: "next" }));
+        expect(Nav.top(step.nav)).toMatchObject({ view: { selected: Option.some("run-1") } });
         expect(step.state).toBe(initialKeyState);
+        const none = stepShell(initialKeyState, ctx(runs, twoRuns, extent), Action.NextProblem({ dir: "next" }));
+        expect(none.effects).toEqual([ShellEffect.Say({ text: "no problems" })]);
     });
 
     it("derives the dispatch mode from what is open", () => {
@@ -88,7 +99,7 @@ describe("stepShell", () => {
 
 const run = (actions: ReadonlyArray<Action>, nav: Nav.Nav = runs, state: KeyState = initialKeyState) =>
     Arr.reduce(actions, { state, nav }, (current, action) => {
-        const step = stepShell(current.state, current.nav, clean, extent, action);
+        const step = stepShell(current.state, ctx(current.nav, clean, extent), action);
         return { state: step.state, nav: step.nav };
     });
 const type = (text: string) => Action.InsertText({ text });
@@ -153,8 +164,7 @@ describe("the / input", () => {
 
     it("ignores screen actions while the input is open", () => {
         const open = run([Action.OpenQuery()]);
-        const step = stepShell(open.state, open.nav, clean, extent, Action.Move({ by: "row", dir: "next" }));
-        expect(step.forward).toEqual(Option.none());
+        const step = stepShell(open.state, ctx(open.nav, twoRuns, extent), Action.Move({ by: "row", dir: "next" }));
         expect(step.nav).toBe(open.nav);
     });
 });

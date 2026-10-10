@@ -2,11 +2,12 @@ import { Data, Option } from "effect";
 
 import { back } from "../nav/Nav.ts";
 import { activeQuery, clearQuery, setQuery } from "../nav/Query.ts";
-import { isShellAction } from "./Action.ts";
+import { stepScreen } from "../nav/Step.ts";
+import { isShellAction, moveRows } from "./Action.ts";
 import { edit, insert, recall, remember } from "./Input.ts";
 
-import type { Snapshot } from "../data/Snapshot.ts";
 import type { Nav } from "../nav/Nav.ts";
+import type { StepContext } from "../nav/ScreenStep.ts";
 import type { Action, ScreenAction } from "./Action.ts";
 import type { Mode } from "./Bindings.ts";
 import type { History, LineEdit, Recall } from "./Input.ts";
@@ -46,12 +47,16 @@ export type ShellEffect = Data.TaggedEnum<{
 }>;
 export const ShellEffect = Data.taggedEnum<ShellEffect>();
 
+export interface KeyContext extends StepContext {
+    readonly nav: Nav;
+    readonly overlay: Extent;
+}
+
 export interface ShellStep {
     readonly state: KeyState;
     /** The same Nav when the action did not change it. */
     readonly nav: Nav;
     readonly effects: ReadonlyArray<ShellEffect>;
-    readonly forward: Option.Option<ScreenAction>;
 }
 
 const scrolled = (scroll: number, action: ScreenAction, extent: Extent): Option.Option<number> => {
@@ -59,11 +64,7 @@ const scrolled = (scroll: number, action: ScreenAction, extent: Extent): Option.
     const clamp = (n: number) => Math.min(last, Math.max(0, n));
     switch (action._tag) {
         case "Move": {
-            const by = {
-                row: 1,
-                halfPage: Math.max(1, Math.floor(extent.viewport / 2)),
-                page: Math.max(1, extent.viewport),
-            }[action.by];
+            const by = moveRows(action.by, extent.viewport);
             return Option.some(clamp(scroll + (action.dir === "next" ? by : -by)));
         }
         case "Jump":
@@ -87,24 +88,31 @@ const editInput = (
     };
 };
 
-export const stepShell = (state: KeyState, nav: Nav, snapshot: Snapshot, extent: Extent, action: Action): ShellStep => {
+export const stepShell = (state: KeyState, context: KeyContext, action: Action): ShellStep => {
     const { shell } = state;
+    const { nav, snapshot } = context;
     const step = (next: Partial<ShellStep>): ShellStep => ({
         state,
         nav,
         effects: [],
-        forward: Option.none(),
         ...next,
     });
     const withShell = (next: Shell): KeyState => ({ ...state, shell: next });
     if (!isShellAction(action)) {
         if (shell._tag === "Overlay") {
-            return Option.match(scrolled(shell.scroll, action, extent), {
+            return Option.match(scrolled(shell.scroll, action, context.overlay), {
                 onNone: () => step({}),
                 onSome: (scroll) => step({ state: withShell(Shell.Overlay({ kind: shell.kind, scroll })) }),
             });
         }
-        return shell._tag === "Input" ? step({}) : step({ forward: Option.some(action) });
+        if (shell._tag === "Input") {
+            return step({});
+        }
+        const screen = stepScreen(nav, context, action);
+        return step({
+            nav: screen.nav,
+            effects: Option.toArray(Option.map(screen.say, (text) => ShellEffect.Say({ text }))),
+        });
     }
     switch (action._tag) {
         case "Quit":

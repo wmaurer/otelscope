@@ -6,14 +6,8 @@ import { isPropagated } from "./failure.ts";
 import { GROUP_MIN } from "./traceList.ts";
 
 import type { SpanId, Trace } from "../data/Snapshot.ts";
-import type { GroupKey } from "../nav/Screen.ts";
+import type { GroupKey, Opening } from "../nav/Screen.ts";
 import type { Query } from "../query/Query.ts";
-
-/** Where a trace opens, and the same-name groups that must be open for that row to show. Folds start empty. */
-export interface Opening {
-    readonly selected: TreeRow;
-    readonly openGroups: HashSet.HashSet<GroupKey>;
-}
 
 export function* treeOrder(trace: Trace): Generator<SpanId> {
     function* below(id: SpanId): Generator<SpanId> {

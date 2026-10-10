@@ -5,6 +5,8 @@ import type { EditOp } from "./Input.ts";
 
 export type Dir = "next" | "prev";
 
+type MoveBy = "row" | "halfPage" | "page";
+
 export type Action = Data.TaggedEnum<{
     Quit: {};
     Suspend: {};
@@ -20,7 +22,7 @@ export type Action = Data.TaggedEnum<{
     EditInput: { readonly op: EditOp };
     RecallQuery: { readonly dir: "older" | "newer" };
 
-    Move: { readonly by: "row" | "halfPage" | "page"; readonly dir: Dir };
+    Move: { readonly by: MoveBy; readonly dir: Dir };
     Jump: { readonly to: "start" | "end" };
 
     Open: {};
@@ -28,6 +30,7 @@ export type Action = Data.TaggedEnum<{
     NextProblem: { readonly dir: Dir };
     CycleSort: {};
     Reverse: {};
+    Pick: { readonly key: string };
 
     FocusPane: { readonly pane: Pane };
     CyclePane: { readonly dir: Dir };
@@ -55,6 +58,17 @@ export type Action = Data.TaggedEnum<{
 }>;
 export const Action = Data.taggedEnum<Action>();
 
+export const moveRows = (by: MoveBy, viewport: number): number => {
+    switch (by) {
+        case "row":
+            return 1;
+        case "halfPage":
+            return Math.max(1, Math.floor(viewport / 2));
+        case "page":
+            return Math.max(1, viewport);
+    }
+};
+
 const shellTags = [
     "Quit",
     "Suspend",
@@ -77,6 +91,14 @@ export type ScreenAction = Exclude<Action, ShellAction>;
 const shellTagSet: ReadonlySet<string> = new Set(shellTags);
 
 export const isShellAction = (action: Action): action is ShellAction => shellTagSet.has(action._tag);
+
+const listTags = ["Move", "Jump", "Open", "ToggleGroup", "NextProblem", "CycleSort", "Reverse", "Pick"] as const;
+
+export type ListAction = Extract<ScreenAction, { readonly _tag: (typeof listTags)[number] }>;
+
+const listTagSet: ReadonlySet<string> = new Set(listTags);
+
+export const isListAction = (action: ScreenAction): action is ListAction => listTagSet.has(action._tag);
 
 /**
  * `Esc` on a screen: clear the focused query, else go back, else nothing. Only the binding table holds it, and

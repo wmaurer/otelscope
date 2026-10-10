@@ -3,7 +3,7 @@ import { Action, Peel } from "./Action.ts";
 
 import type { Nav } from "../nav/Nav.ts";
 import type { Pane } from "../nav/Screen.ts";
-import type { BindingAction } from "./Action.ts";
+import type { BindingAction, ListAction } from "./Action.ts";
 import type { Key } from "./Key.ts";
 import type { Array as Arr } from "effect";
 
@@ -69,14 +69,21 @@ const bind = (
     extra: Extra = {},
 ): Binding => ({ scope, keys, action, label, ...extra });
 
-const lists = (
+const onLists = (
     keys: Arr.NonEmptyReadonlyArray<Key>,
     action: BindingAction,
     label: string,
     extra: Extra = {},
 ): ReadonlyArray<Binding> => [bind("Runs", keys, action, label, extra), bind("Traces", keys, action, label, extra)];
 
-const onLists = (rank: number) => ({ Runs: rank, Traces: rank });
+const lists = (
+    keys: Arr.NonEmptyReadonlyArray<Key>,
+    action: ListAction,
+    label: string,
+    extra: Extra = {},
+): ReadonlyArray<Binding> => onLists(keys, action, label, extra);
+
+const listRank = (rank: number) => ({ Runs: rank, Traces: rank });
 
 /** The whole v1 keymap. Dispatch, the hint line and the help overlay all read this table and nothing else. */
 export const BINDINGS: ReadonlyArray<Binding> = [
@@ -126,12 +133,12 @@ export const BINDINGS: ReadonlyArray<Binding> = [
     bind("movement", ["home"], Action.Jump({ to: "start" }), "ends"),
     bind("movement", ["end"], Action.Jump({ to: "end" }), "ends"),
 
-    ...lists(["return"], Action.Open(), "open, or toggle a group", { hint: { label: "open", rank: onLists(1) } }),
+    ...lists(["return"], Action.Open(), "open, or toggle a group", { hint: { label: "open", rank: listRank(1) } }),
     ...lists(["space"], Action.ToggleGroup(), "toggle a group"),
-    ...lists(["/"], Action.OpenQuery(), "filter", { hint: { rank: onLists(2) } }),
-    ...lists(["n"], Action.NextProblem({ dir: "next" }), "problem", { hint: { rank: onLists(3) } }),
+    ...onLists(["/"], Action.OpenQuery(), "filter", { hint: { rank: listRank(2) } }),
+    ...lists(["n"], Action.NextProblem({ dir: "next" }), "problem", { hint: { rank: listRank(3) } }),
     ...lists(["N"], Action.NextProblem({ dir: "prev" }), "problem"),
-    ...lists(["S"], Action.CycleSort(), "sort", { hint: { rank: onLists(4) } }),
+    ...lists(["S"], Action.CycleSort(), "sort", { hint: { rank: listRank(4) } }),
     ...lists(["r"], Action.Reverse(), "reverse"),
 
     bind("Trace", ["1"], Action.FocusPane({ pane: "tree" }), "focus tree", {

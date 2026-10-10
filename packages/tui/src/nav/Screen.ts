@@ -126,18 +126,28 @@ export type RunsScreen = ScreenOf<"Runs">;
 export const tracesFor = (runId: RunId, runs: RunsView): ScreenOf<"Traces"> =>
     Screen.Traces({ runId, idIsPrefix: false, view: { ...defaultTracesView, filter: runs.filter } });
 
+export interface Opening {
+    readonly selected: TreeRow;
+    readonly openGroups: HashSet.HashSet<GroupKey>;
+}
+
 /** Traces ⏎. The Traces filter seeds the tree search once; `opening` is None when the trace is not loaded yet. */
 export const traceFor = (
     traceId: TraceId,
     viaRun: Option.Option<RunId>,
     traces: TracesView,
-    opening: Option.Option<TreeRow>,
+    opening: Option.Option<Opening>,
 ): ScreenOf<"Trace"> =>
     Screen.Trace({
         traceId,
         idIsPrefix: false,
         viaRun,
-        view: { ...defaultTraceView, selected: opening, search: traces.filter },
+        view: {
+            ...defaultTraceView,
+            selected: Option.map(opening, (o) => o.selected),
+            openGroups: Option.match(opening, { onNone: HashSet.empty<GroupKey>, onSome: (o) => o.openGroups }),
+            search: traces.filter,
+        },
     });
 
 export const bodyFor = (traceId: TraceId, spanId: SpanId, prefix: string): ScreenOf<"Body"> =>
