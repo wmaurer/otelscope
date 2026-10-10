@@ -6,10 +6,12 @@ import { SpanStore } from "../data/SpanStore.ts";
 import { defaultPanes } from "../model/panes.ts";
 import { resolvePrefixes } from "../nav/Resolve.ts";
 import { initialReadDone, openArrivedTrace, openSingleRun } from "../nav/Seed.ts";
+import { bodyModelAtom } from "./Body.ts";
 import { listAtom, settledFilter } from "./Lists.ts";
 import { bodyStatsAtom, traceModelAtom } from "./Trace.ts";
 
 import type { Snapshot } from "../data/Snapshot.ts";
+import type { BodyModel } from "../model/bodyModel.ts";
 import type { Panes } from "../model/panes.ts";
 import type { ScreenList } from "../model/screenList.ts";
 import type { BodyStats } from "../model/traceFrame.ts";
@@ -42,6 +44,8 @@ export class Atoms extends Context.Service<
         readonly trace: Atom.Atom<Option.Option<TraceModel>>;
         /** `Bodies.stat` for the bodies of the span the Trace screen shows. */
         readonly bodyStats: Atom.Atom<BodyStats>;
+        /** The top Body screen's body, None elsewhere or while its span does not carry the prefix. */
+        readonly bodyModel: Atom.Atom<Option.Option<BodyModel>>;
         /** Setting `Some(text)` shows it for 5 s, even when the text is the same as the one showing. */
         readonly message: Atom.Writable<Option.Option<string>>;
         /**
@@ -111,6 +115,7 @@ export class Atoms extends Context.Service<
                 const filter = settledFilter(nav);
                 const bodyStat = Atom.family((sha256: string) => Atom.make(bodies.stat(sha256)));
                 const trace = Atom.keepAlive(traceModelAtom(snapshot, nav, filter));
+                const body = Atom.family((key: BodyKey) => Atom.make(bodies.read(key.sha256, key.bytes)));
                 return Atoms.of({
                     registry,
                     snapshot,
@@ -120,9 +125,10 @@ export class Atoms extends Context.Service<
                     list: Atom.keepAlive(listAtom(snapshot, nav, now, filter)),
                     trace,
                     bodyStats: Atom.keepAlive(bodyStatsAtom(trace, bodyStat)),
+                    bodyModel: Atom.keepAlive(bodyModelAtom(snapshot, nav, body)),
                     message,
                     keyPressed: () => MutableRef.set(singleRunArmed, false),
-                    body: Atom.family((key: BodyKey) => Atom.make(bodies.read(key.sha256, key.bytes))),
+                    body,
                     bodyStat,
                 });
             }),
