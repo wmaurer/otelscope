@@ -131,9 +131,15 @@ alternated, at load 1.2 to 3.3:
       the whole publish's p95 sat at 16 ms. `Index` now keeps the frozen traces in a `LayeredMap`
       (`src/data/LayeredMap.ts`): a large base and a small layer of newer traces, copied on each publish and folded
       into a new base once it holds a quarter as many entries. `freeze` fell from 3.1 to 1.0 ms at p50.
-- **Open: rare long publishes.** About one publish in 280 per run took 40 to 150 ms, in the copy as well as in
-  `freeze`. Garbage collection with about 400k records on the heap is the guess; it is not profiled. It threatens the
-  50 ms max, so profile it when the live-publish scenario lands in `perf/run.ts`.
+- **Rare long publishes, profiled.** `perf/publish.ts` saw about one publish in 280 take 40 to 150 ms. In
+  `perf/run.ts`'s live section none reached 40 ms: the slowest of each full run took 25 to 36 ms. With `--trace-gc`,
+  each publish over 18 ms coincided with a young-generation scavenge (2 to 3 ms) during a Traces-list rebuild, or
+  with the `LayeredMap` folding its layer into a new base (`freeze` 7.5 ms).
+- **Where the live publish stands**, after the remedies in the git log of step 7: p95 14.6 to 15.4 ms against 16, at
+  load 1.5 to 3. Its p95 is set on the Traces screen, by the publishes that add traces. Each one rebuilds the list
+  over every trace of the run (32k by the end of the 30 s), at about 250 ns per trace, mostly the first read of each
+  `Trace` object and of the `Option`s it holds; skipping a pass or a lookup did not move it. A list updated from the
+  traces a publish changed, rather than rebuilt, is the remedy if the budget needs more room.
 
 ## The compile cache
 
