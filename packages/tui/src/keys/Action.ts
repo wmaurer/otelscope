@@ -1,6 +1,7 @@
 import { Data } from "effect";
 
 import type { Pane } from "../nav/Screen.ts";
+import type { EditOp } from "./Input.ts";
 
 export type Dir = "next" | "prev";
 
@@ -15,6 +16,9 @@ export type Action = Data.TaggedEnum<{
     OpenQuery: {};
     SubmitInput: {};
     CancelInput: {};
+    InsertText: { readonly text: string };
+    EditInput: { readonly op: EditOp };
+    RecallQuery: { readonly dir: "older" | "newer" };
 
     Move: { readonly by: "row" | "halfPage" | "page"; readonly dir: Dir };
     Jump: { readonly to: "start" | "end" };
@@ -62,6 +66,9 @@ const shellTags = [
     "OpenQuery",
     "SubmitInput",
     "CancelInput",
+    "InsertText",
+    "EditInput",
+    "RecallQuery",
 ] as const;
 
 export type ShellAction = Extract<Action, { readonly _tag: (typeof shellTags)[number] }>;

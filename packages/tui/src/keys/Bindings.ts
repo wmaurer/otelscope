@@ -103,6 +103,15 @@ export const BINDINGS: ReadonlyArray<Binding> = [
 
     bind("input", ["return"], Action.SubmitInput(), "keep the query"),
     bind("input", ["escape"], Action.CancelInput(), "restore the query"),
+    bind("input", ["left"], Action.EditInput({ op: "left" }), "cursor left"),
+    bind("input", ["right"], Action.EditInput({ op: "right" }), "cursor right"),
+    bind("input", ["ctrl+a"], Action.EditInput({ op: "home" }), "start of the line"),
+    bind("input", ["ctrl+e"], Action.EditInput({ op: "end" }), "end of the line"),
+    bind("input", ["backspace"], Action.EditInput({ op: "backspace" }), "delete a character"),
+    bind("input", ["ctrl+w"], Action.EditInput({ op: "deleteWord" }), "delete a word"),
+    bind("input", ["ctrl+u"], Action.EditInput({ op: "deleteToStart" }), "delete to the start"),
+    bind("input", ["up"], Action.RecallQuery({ dir: "older" }), "older query"),
+    bind("input", ["down"], Action.RecallQuery({ dir: "newer" }), "newer query"),
 
     bind("movement", ["j"], Action.Move({ by: "row", dir: "next" }), "row"),
     bind("movement", ["k"], Action.Move({ by: "row", dir: "prev" }), "row"),

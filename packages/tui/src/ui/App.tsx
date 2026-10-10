@@ -4,12 +4,12 @@ import { Array as Arr, Option } from "effect";
 import { useRef, useState } from "react";
 
 import { dispatch } from "../keys/Dispatch.ts";
-import { initialShell, modeOf, ShellEffect, stepShell } from "../keys/Shell.ts";
+import { initialKeyState, modeOf, ShellEffect, stepShell } from "../keys/Shell.ts";
 import { overlayContent, overlayExtent } from "../model/overlays.ts";
 import { Frame } from "./Frame.tsx";
 
 import type { Atoms } from "../bridge/Atoms.ts";
-import type { Shell } from "../keys/Shell.ts";
+import type { KeyState } from "../keys/Shell.ts";
 import type { ReactNode } from "react";
 
 export interface AppProps {
@@ -28,27 +28,27 @@ export const App = (props: AppProps): ReactNode => {
     const message = useAtomValue(atoms.message);
     const list = useAtomValue(atoms.list);
     const { width, height } = useTerminalDimensions();
-    const [shell, setShell] = useState<Shell>(initialShell);
+    const [keys, setKeys] = useState<KeyState>(initialKeyState);
     // Two keys can arrive before React renders again, and the second must see what the first opened.
-    const current = useRef<Shell>(initialShell);
+    const current = useRef<KeyState>(initialKeyState);
 
     useKeyboard((key) => {
         atoms.keyPressed();
         const registry = atoms.registry;
         const before = registry.get(atoms.nav);
-        const action = dispatch(modeOf(current.current), before, key);
+        const action = dispatch(modeOf(current.current.shell), before, key);
         if (Option.isNone(action)) {
             return;
         }
         const latest = registry.get(atoms.snapshot);
         const open = current.current;
         const extent =
-            open._tag === "Overlay"
-                ? overlayExtent(overlayContent(open.kind, before, latest), { width, height })
+            open.shell._tag === "Overlay"
+                ? overlayExtent(overlayContent(open.shell.kind, before, latest), { width, height })
                 : { total: 0, viewport: 0 };
         const step = stepShell(open, before, latest, extent, action.value);
-        current.current = step.shell;
-        setShell(step.shell);
+        current.current = step.state;
+        setKeys(step.state);
         if (step.nav !== before) {
             registry.set(atoms.nav, step.nav);
         }
@@ -67,7 +67,7 @@ export const App = (props: AppProps): ReactNode => {
             snapshot={snapshot}
             now={now}
             message={message}
-            shell={shell}
+            shell={keys.shell}
             file={props.file}
             width={width}
             height={height}

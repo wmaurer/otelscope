@@ -187,17 +187,36 @@ describe("dispatch", () => {
         ]);
     });
 
-    it("leaves every key but Enter, Esc and Ctrl-c to an open input", () => {
+    it("leaves every key but the input's own to an open input, as text", () => {
         expectKeys("input", runs, [
             ["return", Action.SubmitInput()],
             ["escape", Action.CancelInput()],
             ["ctrl+c", Action.Quit()],
-            ["q", undefined],
-            ["j", undefined],
-            ["?", undefined],
+            ["left", Action.EditInput({ op: "left" })],
+            ["right", Action.EditInput({ op: "right" })],
+            ["ctrl+a", Action.EditInput({ op: "home" })],
+            ["ctrl+e", Action.EditInput({ op: "end" })],
+            ["backspace", Action.EditInput({ op: "backspace" })],
+            ["ctrl+w", Action.EditInput({ op: "deleteWord" })],
+            ["ctrl+u", Action.EditInput({ op: "deleteToStart" })],
+            ["up", Action.RecallQuery({ dir: "older" })],
+            ["down", Action.RecallQuery({ dir: "newer" })],
+            ["q", Action.InsertText({ text: "q" })],
+            ["j", Action.InsertText({ text: "j" })],
+            ["/", Action.InsertText({ text: "/" })],
+            ["?", Action.InsertText({ text: "?" })],
+            ["G", Action.InsertText({ text: "G" })],
+            ["space", Action.InsertText({ text: " " })],
             ["ctrl+z", undefined],
-            ["up", undefined],
+            ["tab", undefined],
+            ["home", undefined],
         ]);
+    });
+
+    it("types the printable characters of a pasted sequence", () => {
+        expect(
+            dispatch("input", runs, { name: "", sequence: "pay\nment", ctrl: false, meta: false, shift: false }),
+        ).toEqual(Option.some(Action.InsertText({ text: "payment" })));
     });
 
     it("never needs the order of the table to decide between two bindings of one key", () => {
@@ -231,5 +250,10 @@ describe("normalize", () => {
     it("never reads an Alt chord as the bare key", () => {
         const altQ = { name: "q", sequence: "\u001bq", ctrl: false, meta: true, shift: false };
         expect(dispatch("screen", runs, altQ)).toEqual(Option.none());
+    });
+
+    it("never types a chord with Meta held", () => {
+        const metaX = { name: "x", sequence: "x", ctrl: false, meta: true, shift: false };
+        expect(dispatch("input", runs, metaX)).toEqual(Option.none());
     });
 });

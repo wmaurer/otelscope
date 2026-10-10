@@ -6,8 +6,9 @@ import { breadcrumb, segments } from "../model/breadcrumb.ts";
 import { listFrame } from "../model/listFrame.ts";
 import { overlayContent, overlayFrame } from "../model/overlays.ts";
 import { placeholderLines } from "../model/placeholder.ts";
-import { statusBar } from "../model/statusBar.ts";
+import { inputBar, statusBar } from "../model/statusBar.ts";
 import { top } from "../nav/Nav.ts";
+import { activeQuery } from "../nav/Query.ts";
 import { presence } from "../nav/Resolve.ts";
 import { LineText, Overlay, Placeholder } from "./Chrome.tsx";
 import { ListBody } from "./ListBody.tsx";
@@ -44,19 +45,26 @@ export const Frame = (props: FrameProps): ReactNode => {
     const list = Option.isSome(placeholder)
         ? Option.none()
         : listFrame(screen, props.list, { snapshot, now, file: props.file, width });
-    const hints = hintLine(modeOf(shell), nav, hintFacts(nav, snapshot));
-    const bar = statusBar(
-        {
-            hints,
-            message: props.message,
-            query: Option.flatMap(list, (frame) => frame.query),
-            newRows: Option.flatMap(list, (frame) => frame.newRows),
-            snapshot,
-            file: props.file,
-            now,
-        },
-        width,
-    );
+    const bar =
+        shell._tag === "Input"
+            ? inputBar(
+                  activeQuery(nav),
+                  shell.cursor,
+                  Option.match(list, { onNone: () => "", onSome: (frame) => frame.count }),
+                  width,
+              )
+            : statusBar(
+                  {
+                      hints: hintLine(modeOf(shell), nav, hintFacts(nav, snapshot)),
+                      message: props.message,
+                      query: Option.flatMap(list, (frame) => frame.query),
+                      newRows: Option.flatMap(list, (frame) => frame.newRows),
+                      snapshot,
+                      file: props.file,
+                      now,
+                  },
+                  width,
+              );
     const overlay =
         shell._tag === "Overlay"
             ? Option.some({ scroll: shell.scroll, content: overlayContent(shell.kind, nav, snapshot) })

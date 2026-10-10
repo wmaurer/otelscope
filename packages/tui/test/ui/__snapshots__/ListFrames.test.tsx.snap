@@ -216,6 +216,78 @@ exports[`list frames > draws Traces with an open group at wide 1`] = `
 "
 `;
 
+exports[`list frames > draws the input open in place of the status bar at narrow 1`] = `
+"Runs › shop-api · 14:03:27                                                      
+    root span                     started ▾  duration  failed error             
+ ✗  POST /payments                   +2.50s    10.0ms       1 PaymentDeclined: …
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+/ pay▏                                                            1 of 27 traces
+"
+`;
+
+exports[`list frames > draws the input open in place of the status bar at wide 1`] = `
+"Runs › shop-api · 14:03:27                                                                                              
+    root span                                    started ▾  duration   spans  failed   logs error                       
+ ✗  POST /payments                                  +2.50s    10.0ms       1       1        PaymentDeclined: card decli…
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+/ pay▏                                                                                                    1 of 27 traces
+"
+`;
+
 exports[`list frames > says when a filter matches nothing at narrow 1`] = `
 "Runs › shop-api · 14:03:27                                                      
                                                                                 

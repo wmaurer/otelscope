@@ -1,3 +1,5 @@
+import { Array as Arr, Option } from "effect";
+
 /** The fields of OpenTUI's `KeyEvent` that dispatch reads; a `KeyEvent` satisfies it as it is. */
 export interface KeyPress {
     readonly name: string;
@@ -44,6 +46,7 @@ export type Named =
     | "return"
     | "escape"
     | "space"
+    | "backspace"
     | "tab"
     | "shift+tab"
     | "up"
@@ -55,7 +58,7 @@ export type Named =
     | "home"
     | "end";
 
-export type Ctrl = "ctrl+c" | "ctrl+d" | "ctrl+u" | "ctrl+z";
+export type Ctrl = "ctrl+a" | "ctrl+c" | "ctrl+d" | "ctrl+e" | "ctrl+u" | "ctrl+w" | "ctrl+z";
 
 export type Key = Char | Named | Ctrl;
 
@@ -63,6 +66,7 @@ const named: ReadonlySet<string> = new Set<Named>([
     "return",
     "escape",
     "space",
+    "backspace",
     "tab",
     "up",
     "down",
@@ -103,6 +107,7 @@ const labels = {
     return: "⏎",
     escape: "Esc",
     space: "Space",
+    backspace: "Backspace",
     tab: "Tab",
     "shift+tab": "Shift-Tab",
     up: "↑",
@@ -113,12 +118,26 @@ const labels = {
     pagedown: "PgDn",
     home: "Home",
     end: "End",
+    "ctrl+a": "Ctrl-a",
     "ctrl+c": "Ctrl-c",
     "ctrl+d": "Ctrl-d",
+    "ctrl+e": "Ctrl-e",
     "ctrl+u": "Ctrl-u",
+    "ctrl+w": "Ctrl-w",
     "ctrl+z": "Ctrl-z",
 } satisfies Readonly<Record<Named | Ctrl, string>>;
 
 const isChar = (key: Key): key is Char => !(key in labels);
 
 export const keyLabel = (key: Key): string => (isChar(key) ? key : labels[key]);
+
+export const typed = (press: KeyPress): Option.Option<string> => {
+    if (press.ctrl || press.meta || press.sequence.startsWith("\u001b")) {
+        return Option.none();
+    }
+    if (press.name === "space") {
+        return Option.some(" ");
+    }
+    const text = Arr.join(Arr.filter(Array.from(press.sequence), printable), "");
+    return text === "" ? Option.none() : Option.some(text);
+};

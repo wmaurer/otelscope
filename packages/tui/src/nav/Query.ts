@@ -15,17 +15,19 @@ export const activeQuery = (nav: Nav): string =>
         Body: ({ view }) => view.search,
     });
 
-export const clearQuery = (nav: Nav): Nav => {
-    if (activeQuery(nav) === "") {
+export const setQuery = (nav: Nav, text: string): Nav => {
+    if (activeQuery(nav) === text) {
         return nav;
     }
     return Screen.$match(top(nav), {
-        Runs: () => update(nav, "Runs", (view) => ({ ...view, filter: "" })),
-        Traces: () => update(nav, "Traces", (view) => ({ ...view, filter: "" })),
+        Runs: () => update(nav, "Runs", (view) => ({ ...view, filter: text })),
+        Traces: () => update(nav, "Traces", (view) => ({ ...view, filter: text })),
         Trace: () =>
             update(nav, "Trace", (view) =>
-                view.pane === "logs" ? { ...view, logFilter: "" } : { ...view, search: "" },
+                view.pane === "logs" ? { ...view, logFilter: text } : { ...view, search: text },
             ),
-        Body: () => update(nav, "Body", (view) => ({ ...view, search: "" })),
+        Body: () => update(nav, "Body", (view) => ({ ...view, search: text })),
     });
 };
+
+export const clearQuery = (nav: Nav): Nav => setQuery(nav, "");

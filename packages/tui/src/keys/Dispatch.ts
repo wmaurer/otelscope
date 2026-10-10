@@ -4,7 +4,7 @@ import { depth } from "../nav/Nav.ts";
 import { activeQuery } from "../nav/Query.ts";
 import { Action } from "./Action.ts";
 import { BINDINGS, focusOf, holds } from "./Bindings.ts";
-import { normalize } from "./Key.ts";
+import { normalize, typed } from "./Key.ts";
 
 import type { Nav } from "../nav/Nav.ts";
 import type { Binding, Mode, Scope } from "./Bindings.ts";
@@ -53,7 +53,11 @@ export const dispatch = (mode: Mode, nav: Nav, press: KeyPress): Option.Option<A
     if ((mode === "help" || mode === "badLines") && opens(mode, key)) {
         return Option.some(Action.CloseOverlay());
     }
-    return Option.flatMap(lookup(nav, scopesFor(mode, nav), key), ({ action }) => {
+    const found = lookup(nav, scopesFor(mode, nav), key);
+    if (mode === "input" && Option.isNone(found)) {
+        return Option.map(typed(press), (text) => Action.InsertText({ text }));
+    }
+    return Option.flatMap(found, ({ action }) => {
         if (action._tag !== "Peel") {
             return Option.some(action);
         }

@@ -3,7 +3,7 @@ import { Array as Arr, Option } from "effect";
 import { basename, clockTime, count, plural, sizePair } from "./format.ts";
 import { isLive } from "./marks.ts";
 import { chunk } from "./Role.ts";
-import { cut, cutLine, lineCells } from "./text.ts";
+import { cells, cut, cutLine, lineCells } from "./text.ts";
 
 import type { BadLines, ResetReason, Snapshot, Status } from "../data/Snapshot.ts";
 import type { HintItem } from "../keys/Hints.ts";
@@ -152,5 +152,22 @@ export const statusBar = (input: StatusInput, width: number): Line => {
     );
     const left = leftOf(parts);
     const right = rightOf(parts);
+    return [...left, chunk(" ".repeat(Math.max(0, width - lineCells(left) - lineCells(right))), "text"), ...right];
+};
+
+export const CURSOR = "▏";
+
+export const inputBar = (text: string, cursor: number, matches: string, width: number): Line => {
+    const fixed = 2 + cells(CURSOR);
+    const withCount = fixed + cells(text) + GAP + cells(matches) <= width;
+    const room = Math.max(1, width - fixed - (withCount ? GAP + cells(matches) : 0));
+    const start = text.length <= room ? 0 : Math.max(0, Math.min(cursor - room + 1, text.length - room));
+    const shown = text.slice(start, start + room);
+    const at = cursor - start;
+    const before = start > 0 ? `…${shown.slice(1, at)}` : shown.slice(0, at);
+    const rest = shown.slice(at);
+    const after = start + room < text.length && rest.length > 0 ? `${rest.slice(0, -1)}…` : rest;
+    const left = [chunk("/ ", "accent"), chunk(before, "text"), chunk(CURSOR, "accent"), chunk(after, "text")];
+    const right = withCount ? [chunk(matches, "muted")] : [];
     return [...left, chunk(" ".repeat(Math.max(0, width - lineCells(left) - lineCells(right))), "text"), ...right];
 };

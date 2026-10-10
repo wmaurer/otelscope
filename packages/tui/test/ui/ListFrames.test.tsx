@@ -4,7 +4,7 @@ import { testRender } from "@opentui/react/test-utils";
 import { Array as Arr, HashSet, Option } from "effect";
 import { act } from "react";
 
-import { initialShell } from "../../src/keys/Shell.ts";
+import { initialShell, Shell } from "../../src/keys/Shell.ts";
 import * as Nav from "../../src/nav/Nav.ts";
 import { defaultRunsView, tracesFor } from "../../src/nav/Screen.ts";
 import { Frame, listRows } from "../../src/ui/Frame.tsx";
@@ -107,6 +107,18 @@ describe("list frames", () => {
             expect(chars).toMatchSnapshot();
             expect(chars).toContain('No traces match "nothing-matches".');
             expect(chars).toContain("Esc clears the filter");
+        });
+    }
+
+    for (const size of ["wide", "narrow"] as const) {
+        it(`draws the input open in place of the status bar at ${size}`, async () => {
+            const typing = filtered(traces, "pay");
+            const { chars } = await render({
+                ...props(typing, sample, size),
+                shell: Shell.Input({ cursor: 3, original: "", recall: Option.none() }),
+            });
+            expect(chars).toMatchSnapshot();
+            expect(chars.split("\n")[size === "wide" ? 39 : 23]).toMatch(/^\/ pay▏ +1 of 27 traces$/);
         });
     }
 
