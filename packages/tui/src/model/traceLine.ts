@@ -1,4 +1,4 @@
-import { Array as Arr, Option, Order, Record } from "effect";
+import { Array as Arr, Option } from "effect";
 
 import { ranges, shift } from "../query/Highlight.ts";
 import { count, duration, offset } from "./format.ts";
@@ -39,16 +39,14 @@ interface HeadingStats {
 
 const statsCache = new WeakMap<Group, HeadingStats>();
 
-const commonError = (members: ReadonlyArray<Item>): string => {
-    const errors = Arr.getSomes(Arr.map(members, (item) => item.trace.firstError));
-    const byType = Arr.groupBy(errors, (error) => error.type);
-    const top = Arr.reduce(Record.toEntries(byType), Option.none<readonly [string, number]>(), (best, [type, list]) =>
-        Option.exists(best, ([, n]) => n >= list.length) ? best : Option.some([type, list.length] as const),
+const commonError = (errors: ReadonlyMap<string, number>, total: number): string => {
+    const top = Arr.reduce(Arr.fromIterable(errors), Option.none<readonly [string, number]>(), (best, [type, n]) =>
+        Option.exists(best, ([, most]) => most >= n) ? best : Option.some([type, n] as const),
     );
     return Option.match(top, {
         onNone: () => "",
         onSome: ([type, n]) => {
-            const others = errors.length - n;
+            const others = total - n;
             return others === 0
                 ? `${count(n)}× ${type}`
                 : `${count(n)}× ${type} · ${count(others)} other error${others === 1 ? "" : "s"}`;
@@ -56,22 +54,42 @@ const commonError = (members: ReadonlyArray<Item>): string => {
     });
 };
 
+/**
+ * One pass over the members, and their durations sorted as a `Float64Array`, natively: the heading of a group as large
+ * as the run is built again on every publish.
+ */
 export const headingStats = (group: Group): HeadingStats => {
     const cached = statsCache.get(group);
     if (cached !== undefined) {
         return cached;
     }
-    const durations = Arr.sort(
-        Arr.map(group.members, (item) => item.trace.endMs - item.trace.startMs),
-        Order.Number,
-    );
+    const durations = new Float64Array(group.members.length);
+    let spans = 0;
+    let failedTraces = 0;
+    let logs = 0;
+    let errorTotal = 0;
+    // oxlint-disable-next-line effect-native/imperative-collection-build -- counting in the same pass is the point.
+    const errors = new Map<string, number>();
+    for (const [i, item] of group.members.entries()) {
+        const { trace } = item;
+        durations[i] = trace.endMs - trace.startMs;
+        spans += trace.spanCount;
+        failedTraces += item.state === "failed" ? 1 : 0;
+        logs += trace.logs;
+        if (Option.isSome(trace.firstError)) {
+            const type = trace.firstError.value.type;
+            errors.set(type, (errors.get(type) ?? 0) + 1);
+            errorTotal += 1;
+        }
+    }
+    durations.sort();
     const stats: HeadingStats = {
         firstStartMs: group.members[0]?.trace.startMs ?? 0,
         p50Ms: durations[Math.floor((durations.length - 1) / 2)] ?? 0,
-        spans: Arr.reduce(group.members, 0, (sum, item) => sum + item.trace.spanCount),
-        failedTraces: Arr.reduce(group.members, 0, (sum, item) => (item.state === "failed" ? sum + 1 : sum)),
-        logs: Arr.reduce(group.members, 0, (sum, item) => sum + item.trace.logs),
-        error: commonError(group.members),
+        spans,
+        failedTraces,
+        logs,
+        error: commonError(errors, errorTotal),
     };
     statsCache.set(group, stats);
     return stats;
