@@ -19,6 +19,9 @@ const CLOSED_SHOWN = 5;
 export interface Item {
     readonly trace: Trace;
     readonly state: TraceState;
+    /** The row's key, and the trace's `headName`: read off the trace once, so laying out the rows reads only items. */
+    readonly key: string;
+    readonly headName: string;
 }
 
 /** The sums a group's heading shows, over its members. */
@@ -106,6 +109,8 @@ export interface Collected {
     readonly total: number;
     readonly matching: ReadonlyArray<Trace>;
     readonly sorted: ReadonlyArray<Item>;
+    /** The matching traces' starts, in `matching` order. */
+    readonly starts: ReadonlyArray<number>;
     readonly sizes: Readonly<Record<string, number>>;
     readonly members: Readonly<Record<string, Members>>;
     readonly sort: TraceSort;
@@ -120,6 +125,7 @@ interface Gathering {
     readonly errors: Map<string, number>;
     errorTotal: number;
     readonly durations: Float64Array;
+    count: number;
 }
 
 const gathering = (size: number): Gathering => ({
@@ -130,14 +136,15 @@ const gathering = (size: number): Gathering => ({
     errors: new Map(),
     errorTotal: 0,
     durations: new Float64Array(size),
+    count: 0,
 });
 
-const gather = (group: Gathering, item: Item): void => {
-    const { trace } = item;
-    group.durations[group.items.length] = trace.endMs - trace.startMs;
-    group.items[group.items.length] = item;
+/** Adds a member's numbers, which do not depend on the order of the members. */
+const total = (group: Gathering, trace: Trace, state: TraceState): void => {
+    group.durations[group.count] = trace.endMs - trace.startMs;
+    group.count += 1;
     group.spans += trace.spanCount;
-    group.failedTraces += item.state === "failed" ? 1 : 0;
+    group.failedTraces += state === "failed" ? 1 : 0;
     group.logs += trace.logs;
     if (Option.isSome(trace.firstError)) {
         const type = trace.firstError.value.type;
@@ -147,9 +154,9 @@ const gather = (group: Gathering, item: Item): void => {
 };
 
 /**
- * It runs over every trace of the run on each publish. So it walks them in plain loops, without an `Option` or a
- * closure per trace, and gathers each group's totals in the same pass. Neighbouring traces mostly share their root's
- * name, so it looks a name up again only when it changes.
+ * It runs over every trace of the run on each publish. So it reads each trace in one pass, without an `Option` or a
+ * closure per trace, and orders the groups' members in a second pass that reads only the items. Neighbouring traces
+ * mostly share their root's name, so it looks a name up again only when it changes.
  */
 export const collect = (
     snapshot: Snapshot,
@@ -184,29 +191,40 @@ export const collect = (
             counts.set(name, (counts.get(name) ?? 0) + named);
         }
         const matching = query.length === 0 ? all : Arr.filter(all, (trace) => traceMatches(query, trace));
+
         const phase = snapshot.status.phase;
-        const items = Arr.map(matching, (trace): Item => ({
-            trace,
-            state: traceState(trace, Option.isSome(liveAt) && isLive(trace.lastArrivalAt, phase, liveAt.value)),
-        }));
-        const ordered = view.sort === "start" ? items : Arr.sort(items, orders[view.sort]);
-        const sorted = view.reverse ? Arr.reverse(ordered) : ordered;
+        const items: Array<Item> = [];
+        const starts: Array<number> = [];
         // oxlint-disable-next-line effect-native/imperative-collection-build -- grouping in the same pass is the point.
         const groups = new Map<string, Gathering>();
         let last: { readonly name: string; readonly group: Gathering | undefined } | undefined;
-        for (const item of sorted) {
-            const headName = item.trace.headName;
-            if (last?.name !== headName) {
-                const size = counts.get(headName) ?? 0;
-                let group = groups.get(headName);
+        for (const trace of matching) {
+            const state = traceState(trace, Option.isSome(liveAt) && isLive(trace.lastArrivalAt, phase, liveAt.value));
+            items[items.length] = { trace, state, key: traceKey(trace.id), headName: trace.headName };
+            starts[starts.length] = trace.startMs;
+            if (last?.name !== trace.headName) {
+                const size = counts.get(trace.headName) ?? 0;
+                let group = groups.get(trace.headName);
                 if (group === undefined && size >= GROUP_MIN) {
                     group = gathering(size);
-                    groups.set(headName, group);
+                    groups.set(trace.headName, group);
                 }
-                last = { name: headName, group };
+                last = { name: trace.headName, group };
             }
             if (last.group !== undefined) {
-                gather(last.group, item);
+                total(last.group, trace, state);
+            }
+        }
+
+        const ordered = view.sort === "start" ? items : Arr.sort(items, orders[view.sort]);
+        const sorted = view.reverse ? Arr.reverse(ordered) : ordered;
+        let previous: { readonly name: string; readonly group: Gathering | undefined } | undefined;
+        for (const item of sorted) {
+            if (previous?.name !== item.headName) {
+                previous = { name: item.headName, group: groups.get(item.headName) };
+            }
+            if (previous.group !== undefined) {
+                previous.group.items[previous.group.items.length] = item;
             }
         }
         return {
@@ -217,11 +235,12 @@ export const collect = (
             total: all.length,
             matching,
             sorted,
+            starts,
             sizes: Object.fromEntries(counts),
             members: Object.fromEntries(
-                Arr.map(Arr.fromIterable(groups), ([name, { items, durations, ...totals }]) => [
-                    name,
-                    { items, totals: { ...totals, durations: durations.subarray(0, items.length) } },
+                Arr.map(Arr.fromIterable(groups), ([groupName, { items: members, durations, count, ...totals }]) => [
+                    groupName,
+                    { items: members, totals: { ...totals, durations: durations.subarray(0, count) } },
                 ]),
             ),
             sort: view.sort,
@@ -280,12 +299,12 @@ export const traceList = (
         if (item.trace === newest) {
             followIndex = rows.length;
         }
-        rows[rows.length] = { _tag: "Trace", key: traceKey(item.trace.id), item, member };
+        rows[rows.length] = { _tag: "Trace", key: item.key, item, member };
     };
     let last: { readonly name: string; readonly group: Group | undefined } | undefined;
     for (const item of collected.sorted) {
-        if (last?.name !== item.trace.headName) {
-            last = { name: item.trace.headName, group: own(groups, item.trace.headName) };
+        if (last?.name !== item.headName) {
+            last = { name: item.headName, group: own(groups, item.headName) };
         }
         const group = last.group;
         if (group === undefined) {
@@ -315,7 +334,7 @@ export const traceList = (
         followIndex,
         timeSort: collected.sort === "start",
         newestEnd: collected.reverse ? "start" : "end",
-        starts: Arr.map(collected.matching, (trace) => trace.startMs),
+        starts: collected.starts,
         filter: collected.filter,
         query: collected.query,
         matched: collected.matching.length,

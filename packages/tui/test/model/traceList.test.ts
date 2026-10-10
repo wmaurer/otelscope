@@ -109,7 +109,7 @@ describe("groups", () => {
         );
         const trace = snapshot.traces.get("h1")!;
         const states = ["ok", "partial", "recovered", "running", "interrupted", "failed"] as const;
-        expect(moreText(Arr.map(states, (state) => ({ trace, state })))).toBe(
+        expect(moreText(Arr.map(states, (state) => ({ trace, state, key: "t:h1", headName: trace.headName })))).toBe(
             "⋯ 1 more failed · 1 interrupted · 1 running · 1 recovered · 1 partial · 1 ok",
         );
     });
