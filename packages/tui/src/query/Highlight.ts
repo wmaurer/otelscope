@@ -1,6 +1,8 @@
 import { Array as Arr, Order } from "effect";
 
-import type { Query } from "./Query.ts";
+import { foldedPattern } from "./Match.ts";
+
+import type { Needle, Query } from "./Query.ts";
 
 export type Ranges = ReadonlyArray<readonly [start: number, end: number]>;
 
@@ -21,18 +23,40 @@ export const foldInPlace = (text: string): string => {
     return out;
 };
 
+// oxlint-disable-next-line effect-native/imperative-collection-build -- a cache: filling it is the design.
+const patterns = new WeakMap<Needle, RegExp>();
+
+/** The pattern a search matches a folded needle with, so a row that matches shows where. */
+const patternOf = (needle: Needle & { readonly _tag: "Folded" }): RegExp => {
+    const known = patterns.get(needle);
+    if (known !== undefined) {
+        return known;
+    }
+    const made = foldedPattern(needle.lower, "giu");
+    patterns.set(needle, made);
+    return made;
+};
+
 export const ranges = (query: Query, text: string): Ranges => {
     const found: Array<readonly [number, number]> = [];
-    let folded: string | undefined;
     for (const term of query) {
         if (term._tag !== "Text") {
             continue;
         }
         const { needle } = term;
-        const [hay, sought] =
-            needle._tag === "Exact" ? [text, needle.text] : [(folded ??= foldInPlace(text)), needle.lower];
-        for (let at = hay.indexOf(sought); at >= 0; at = hay.indexOf(sought, at + 1)) {
-            found[found.length] = [at, at + sought.length];
+        if (needle._tag === "Exact") {
+            for (let at = text.indexOf(needle.text); at >= 0; at = text.indexOf(needle.text, at + 1)) {
+                found[found.length] = [at, at + needle.text.length];
+            }
+            continue;
+        }
+        // A folded match may differ in length from the needle. Each search restarts one character on from the last
+        // match, as `indexOf` does above, so overlapping occurrences all count.
+        const pattern = patternOf(needle);
+        pattern.lastIndex = 0;
+        for (let match = pattern.exec(text); match !== null; match = pattern.exec(text)) {
+            found[found.length] = [match.index, match.index + match[0].length];
+            pattern.lastIndex = match.index + ((text.codePointAt(match.index) ?? 0) > 0xffff ? 2 : 1);
         }
     }
     if (found.length === 0) {

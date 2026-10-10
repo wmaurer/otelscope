@@ -1,7 +1,9 @@
 import { describe, expect, it } from "@effect/vitest";
+import { Array as Arr } from "effect";
 
 import { clip, ranges, shift } from "../../src/query/Highlight.ts";
-import { parse } from "../../src/query/Query.ts";
+import { has } from "../../src/query/Match.ts";
+import { needle, parse } from "../../src/query/Query.ts";
 
 describe("ranges", () => {
     it("finds every occurrence and merges overlapping and touching ones", () => {
@@ -17,6 +19,18 @@ describe("ranges", () => {
     it("applies smart case", () => {
         expect(ranges(parse("post"), "POST /orders")).toEqual([[0, 4]]);
         expect(ranges(parse("Post"), "POST /orders")).toEqual([]);
+    });
+
+    it("highlights every match the search finds, folding case as the search does", () => {
+        const cases = [
+            ["status", "ſtatus"],
+            ["μs", "took 12 µs"],
+            ["σοφίας", "ΣΟΦΊΑΣ"],
+        ] as const;
+        for (const [term, text] of cases) {
+            expect(has(text, needle(term)), `${term} matches ${text}`).toBe(true);
+        }
+        expect(Arr.map(cases, ([term, text]) => ranges(parse(term), text))).toEqual([[[0, 6]], [[8, 10]], [[0, 6]]]);
     });
 
     it("keeps indices where lowercasing changes a character's length", () => {

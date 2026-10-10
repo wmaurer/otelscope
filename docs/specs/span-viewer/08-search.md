@@ -88,6 +88,9 @@ and `shop-api` on Runs narrows to one service. On Runs, a span "of the run" is a
 - **Tree**: a matching span has the accent `▌` in the match gutter and its matched text highlighted in the name; bars
   keep their exit colours. A folded span or closed group hiding matches shows ` · 3 matches`.
 - **Logs**: the matched text is highlighted.
+- Highlights fold case exactly as matching does, with the same regular expression, so a column whose text matched
+  always shows where (`status` highlights all of `ſtatus`, `μs` the `µs` of `12 µs`). Lowercasing each character would
+  miss what simple case folding finds.
 
 ## Movement with a query
 

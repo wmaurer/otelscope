@@ -12,13 +12,17 @@ type Test = (haystack: string) => boolean;
 
 const SPECIAL = /[.*+?^${}()|[\]\\]/g;
 
+/** A lowercase needle as a regular expression that folds case: the `iu` flags fold by Unicode's simple case folding. */
+export const foldedPattern = (lower: string, flags: "iu" | "giu"): RegExp =>
+    new RegExp(lower.replace(SPECIAL, "\\$&"), flags);
+
 // oxlint-disable-next-line effect-native/imperative-collection-build -- a cache: filling it is the design.
 const tests = new WeakMap<Needle, Test>();
 
 /**
  * A folded needle is one case-insensitive regular expression. A search tests millions of strings, and lowering each
  * would copy every string that has a capital: on `huge`'s 3.6 million strings, 84 ms against 49 ms for the regular
- * expression. The `u` flag folds case by Unicode's simple case folding.
+ * expression.
  */
 const testOf = (needle: Needle): Test => {
     const known = tests.get(needle);
@@ -31,7 +35,7 @@ const testOf = (needle: Needle): Test => {
             : (
                   (pattern: RegExp) => (haystack: string) =>
                       pattern.test(haystack)
-              )(new RegExp(needle.lower.replace(SPECIAL, "\\$&"), "iu"));
+              )(foldedPattern(needle.lower, "iu"));
     tests.set(needle, made);
     return made;
 };
