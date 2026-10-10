@@ -195,6 +195,11 @@ const spanCaches = new TermCaches((): SpanVerdicts => ({ records: new WeakMap(),
 
 const NO_SPANS: ReadonlySet<SpanId> = new Set();
 
+let spansScanned = 0;
+
+/** How many records `spanHits` has matched a term against so far. */
+export const spanScans = (): number => spansScanned;
+
 /**
  * The spans of the trace that have the term. A trace that grew is matched only on the records it did not have
  * before.
@@ -212,6 +217,7 @@ export const spanHits = (term: Term, trace: Trace): ReadonlySet<SpanId> => {
     for (const span of trace.spans.values()) {
         let verdict = records.get(span);
         if (verdict === undefined) {
+            spansScanned += 1;
             verdict = spanHas(span, term);
             records.set(span, verdict);
         }

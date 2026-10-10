@@ -335,8 +335,8 @@ describe("bar properties", () => {
     );
 
     it.prop(
-        "never starts a child left of its parent, either clamped",
-        [GeneratedBar, GeneratedBar, between(0, 1_500), between(1, 1_000), between(1, 120)],
+        "never starts a child left of its parent, even one a skewed clock starts before it",
+        [GeneratedBar, GeneratedBar, between(-1_500, 1_500), between(1, 1_000), between(1, 120)],
         ([parentSeed, childSeed, after, range, width]) => {
             const scale = scaleOf(0, range / 10, false, width);
             const parent = barOf({
@@ -344,12 +344,8 @@ describe("bar properties", () => {
                 tag: "Span",
                 markers: Arr.map(parentSeed.markers, (m) => ({ ...m, offset: Math.abs(m.offset) })),
             });
-            const child = barOf({
-                ...childSeed,
-                tag: "Span",
-                start: parentSeed.start + after,
-                markers: Arr.map(childSeed.markers, (m) => ({ ...m, offset: Math.abs(m.offset) })),
-            });
+            // Markers keep their own cells, unfloored, so only the child's bar is checked.
+            const child = barOf({ ...childSeed, tag: "Span", start: parentSeed.start + after, markers: [] });
             const first = (segments: ReadonlyArray<Segment>) => segments[0]?.x ?? -1;
             expect(first(barSegments(scale, child, barStart(scale, parent, 0)))).toBeGreaterThanOrEqual(
                 first(barSegments(scale, parent, 0)),

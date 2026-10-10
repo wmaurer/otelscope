@@ -1,13 +1,15 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Array as Arr, HashSet, Option, Order, pipe, Schema } from "effect";
 
+import { Index } from "../../src/data/Index.ts";
 import { anchorOf, flatten, parentRow, pinsOf, visibilityOf, shownIndex } from "../../src/model/tree.ts";
 import { factsOf } from "../../src/model/treeFacts.ts";
 import { defaultTraceView, TreeRow } from "../../src/nav/Screen.ts";
-import { indexed } from "../support/store.ts";
+import { line } from "../support/records.ts";
+import { indexed, status } from "../support/store.ts";
 import { siblings, span, traceOf } from "../support/traces.ts";
 
-import type { Trace } from "../../src/data/Snapshot.ts";
+import type { Snapshot, Trace } from "../../src/data/Snapshot.ts";
 import type { Visibility } from "../../src/model/tree.ts";
 import type { GroupKey, TraceView } from "../../src/nav/Screen.ts";
 import type { JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
@@ -105,31 +107,49 @@ describe("flatten", () => {
     });
 
     const between = (minimum: number, maximum: number) => Schema.Int.check(Schema.isBetween({ minimum, maximum }));
-    const Seed = Schema.Struct({
-        parent: between(-2, 40),
-        name: between(0, 2),
-        startMs: between(0, 9),
-        exit: Schema.Literals(["Success", "Failure", "Interrupted"]),
-        shuffle: between(0, 1000),
+    const Exit = Schema.Literals(["Success", "Failure", "Interrupted"]);
+    /** `parent`: -1 the top level, -2 a missing parent, else an earlier seed (a later one also means the top level). */
+    const Seed = Schema.Struct({ parent: between(-2, 40), name: between(0, 2), startMs: between(0, 9), exit: Exit });
+    const Forest = Schema.Struct({
+        seeds: Schema.Array(Seed).check(Schema.isMaxLength(60)),
+        /** Same-name siblings, enough to form a group, under the parent a seed's `parent` would pick. */
+        burst: Schema.Struct({ parent: between(-2, 40), size: between(20, 24), startMs: between(0, 9), exit: Exit }),
+        /** Spans under burst members, so a group's members have subtrees. */
+        under: Schema.Array(Schema.Struct({ member: between(0, 23), startMs: between(0, 9), exit: Exit })).check(
+            Schema.isMaxLength(8),
+        ),
+        arrival: Schema.Array(between(0, 1000)),
+        /** The share of records that arrive before a first publish, in percent. */
+        firstPublish: between(0, 100),
     });
+    type Forest = typeof Forest.Type;
 
-    // A parent always comes earlier in the seed list, so the records form a forest; arrival order is shuffled apart.
-    const recordsOf = (seeds: ReadonlyArray<typeof Seed.Type>): ReadonlyArray<JsonlSpanRecord> =>
-        Arr.map(seeds, (seed, i) =>
-            span(
-                `s${String(i).padStart(2, "0")}`,
-                seed.parent === -1 || seed.parent >= i
-                    ? null
-                    : seed.parent === -2
-                      ? "gone"
-                      : `s${String(seed.parent).padStart(2, "0")}`,
-                seed.startMs,
-                { name: `n${seed.name}`, exit: seed.exit },
+    const seedId = (i: number) => `s${String(i).padStart(2, "0")}`;
+    const parentOf = (parent: number, before: number) =>
+        parent === -2 ? "gone" : parent === -1 || parent >= before ? null : seedId(parent);
+
+    const recordsOf = (forest: Forest): ReadonlyArray<JsonlSpanRecord> => {
+        const { seeds, burst, under } = forest;
+        return [
+            ...Arr.map(seeds, (seed, i) =>
+                span(seedId(i), parentOf(seed.parent, i), seed.startMs, { name: `n${seed.name}`, exit: seed.exit }),
             ),
-        );
+            ...Arr.makeBy(burst.size, (i) =>
+                span(`g${String(i).padStart(2, "0")}`, parentOf(burst.parent, seeds.length), burst.startMs + (i % 3), {
+                    name: "burst",
+                    exit: i === 0 ? burst.exit : "Success",
+                }),
+            ),
+            ...Arr.map(under, (child, i) =>
+                span(`u${i}`, `g${String(child.member % burst.size).padStart(2, "0")}`, child.startMs, {
+                    exit: child.exit,
+                }),
+            ),
+        ];
+    };
 
-    const rowsOf = (input: ReadonlyArray<JsonlSpanRecord>, openAll: boolean): ReadonlyArray<string> =>
-        Option.match(Option.fromUndefinedOr(indexed(input).traces.get("trace-1")), {
+    const rowsIn = (snapshot: Snapshot, openAll: boolean): ReadonlyArray<string> =>
+        Option.match(Option.fromUndefinedOr(snapshot.traces.get("trace-1")), {
             onNone: () => [],
             onSome: (trace) => {
                 const facts = factsOf(trace);
@@ -140,31 +160,55 @@ describe("flatten", () => {
             },
         });
 
+    const rowsOf = (input: ReadonlyArray<JsonlSpanRecord>, openAll: boolean) => rowsIn(indexed(input), openAll);
+
+    /** The records in arrival order, published once part-way, with the rows drawn then, and again at the end. */
+    const arrived = (forest: Forest, records: ReadonlyArray<JsonlSpanRecord>): Snapshot => {
+        const shuffled = pipe(
+            Arr.map(
+                records,
+                (record, i) => [record, forest.arrival[i % Math.max(1, forest.arrival.length)] ?? 0] as const,
+            ),
+            Arr.sort(Order.mapInput(Order.Number, ([, key]: readonly [JsonlSpanRecord, number]) => key)),
+            Arr.map(([record]) => record),
+        );
+        const index = new Index();
+        const split = Math.floor((shuffled.length * forest.firstPublish) / 100);
+        Arr.forEach(shuffled, (record, i) => {
+            if (i === split) {
+                const early = index.freeze(status);
+                rowsIn(early, false);
+                rowsIn(early, true);
+            }
+            index.ingest(line(record), i + 1, i * 1000, Option.none());
+        });
+        return index.freeze(status);
+    };
+
     it.prop(
-        "gives the same rows for the same records in any order",
-        [Schema.Array(Seed).check(Schema.isMaxLength(60))],
-        ([seeds]) => {
-            const records = recordsOf(seeds);
-            const shuffled = pipe(
-                Arr.zip(records, seeds),
-                Arr.sort(
-                    Order.mapInput(
-                        Order.Number,
-                        ([, seed]: readonly [JsonlSpanRecord, typeof Seed.Type]) => seed.shuffle,
-                    ),
-                ),
-                Arr.map(([record]) => record),
+        "gives the same rows for the same records in any arrival order, published at any point",
+        [Forest],
+        ([forest]) => {
+            const records = recordsOf(forest);
+            const reference = indexed(records);
+            expect(
+                factsOf(reference.traces.get("trace-1")!).groups().length,
+                "the burst forms a group",
+            ).toBeGreaterThan(0);
+            const final = arrived(forest, records);
+            expect(rowsIn(final, false)).toEqual(rowsIn(reference, false));
+            expect(rowsIn(final, true)).toEqual(rowsIn(reference, true));
+            expect(factsOf(final.traces.get("trace-1")!).order().ids).toEqual(
+                factsOf(reference.traces.get("trace-1")!).order().ids,
             );
-            expect(rowsOf(shuffled, false)).toEqual(rowsOf(records, false));
-            expect(rowsOf(shuffled, true)).toEqual(rowsOf(records, true));
         },
     );
 
     it.prop(
         "shows every span once with groups open, each orphan below its missing-parent row",
-        [Schema.Array(Seed).check(Schema.isMaxLength(60))],
-        ([seeds]) => {
-            const records = recordsOf(seeds);
+        [Forest],
+        ([forest]) => {
+            const records = recordsOf(forest);
             const rows = rowsOf(records, true);
             const spans = Arr.filter(rows, (key) => key.startsWith("s:"));
             expect(Arr.sort(spans, Order.String)).toEqual(

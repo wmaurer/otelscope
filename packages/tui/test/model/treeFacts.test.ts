@@ -5,7 +5,7 @@ import { Index } from "../../src/data/Index.ts";
 import { factsOf } from "../../src/model/treeFacts.ts";
 import { record } from "../support/records.ts";
 import { line } from "../support/records.ts";
-import { indexed, ingestAll, status } from "../support/store.ts";
+import { ingestAll, status } from "../support/store.ts";
 import { siblings, span, traceOf } from "../support/traces.ts";
 
 const tree = traceOf([
@@ -124,16 +124,5 @@ describe("tree order", () => {
         const order = factsOf(tree).order();
         expect(Arr.map(order.problems, (p) => order.ids[p])).toEqual(["charge", "stop"]);
         expect(Arr.map(order.origins, (p) => order.ids[p])).toEqual(["charge"]);
-    });
-
-    it("comes out the same for the same records in any arrival order", () => {
-        const records = [
-            span("root", null, 0),
-            ...siblings("m", "root", "item", 21, 1),
-            span("x", "m-004", 30, { exit: "Failure" }),
-        ];
-        const forward = factsOf(indexed(records).traces.get("trace-1")!).order().ids;
-        const backward = factsOf(indexed(Arr.reverse(records)).traces.get("trace-1")!).order().ids;
-        expect(backward).toEqual(forward);
     });
 });

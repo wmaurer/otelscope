@@ -4,6 +4,7 @@ import { Array as Arr, Option } from "effect";
 import { Index } from "../../src/data/Index.ts";
 import { factsOf } from "../../src/model/treeFacts.ts";
 import { matchText, searchOf } from "../../src/model/treeSearch.ts";
+import { spanScans } from "../../src/query/Match.ts";
 import { line, record } from "../support/records.ts";
 import { ingestAll, status } from "../support/store.ts";
 import { siblings, span, traceOf } from "../support/traces.ts";
@@ -49,9 +50,11 @@ describe("searchOf", () => {
         expect(searchOf(factsOf(before), "beta").positions).toEqual([]);
         index.ingest(line(record({ span: "b", name: "beta", startMs: 2000 })), 2, 999, Option.none());
         const after = index.freeze(status).traces.get("trace-1")!;
+        const scansBefore = spanScans();
         expect(Arr.map(searchOf(factsOf(after), "beta").positions, (p) => factsOf(after).order().ids[p])).toEqual([
             "b",
         ]);
+        expect(spanScans() - scansBefore, "only b was matched").toBe(1);
     });
 });
 
