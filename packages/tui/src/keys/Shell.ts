@@ -2,6 +2,7 @@ import { Data, Option } from "effect";
 
 import { back } from "../nav/Nav.ts";
 import { activeQuery, clearQuery, setQuery } from "../nav/Query.ts";
+import { ShellEffect } from "../nav/ScreenStep.ts";
 import { stepScreen } from "../nav/Step.ts";
 import { isShellAction, moveRows } from "./Action.ts";
 import { edit, insert, recall, remember } from "./Input.ts";
@@ -39,13 +40,6 @@ export interface Extent {
     readonly total: number;
     readonly viewport: number;
 }
-
-export type ShellEffect = Data.TaggedEnum<{
-    Quit: {};
-    Suspend: {};
-    Say: { readonly text: string };
-}>;
-export const ShellEffect = Data.taggedEnum<ShellEffect>();
 
 export interface KeyContext extends StepContext {
     readonly nav: Nav;
@@ -108,11 +102,7 @@ export const stepShell = (state: KeyState, context: KeyContext, action: Action):
         if (shell._tag === "Input") {
             return step({});
         }
-        const screen = stepScreen(nav, context, action);
-        return step({
-            nav: screen.nav,
-            effects: Option.toArray(Option.map(screen.say, (text) => ShellEffect.Say({ text }))),
-        });
+        return step(stepScreen(nav, context, action));
     }
     switch (action._tag) {
         case "Quit":

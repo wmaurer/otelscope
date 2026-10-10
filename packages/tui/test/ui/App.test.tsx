@@ -20,6 +20,7 @@ import { record } from "../support/records.ts";
 import { indexed } from "../support/store.ts";
 
 import type { Snapshot } from "../../src/data/Snapshot.ts";
+import type { EditTarget } from "../../src/editor.ts";
 
 const width = 100;
 const height = 20;
@@ -52,9 +53,18 @@ const start = async (nav: Nav.Nav = Nav.initial, first: Snapshot = twoRuns) => {
     const atoms = Context.get(context, Atoms);
     let quits = 0;
     let suspends = 0;
+    const edits: Array<EditTarget> = [];
     const setup = await testRender(
         <RegistryContext.Provider value={atoms.registry}>
-            <App atoms={atoms} file={file} onQuit={() => (quits += 1)} onSuspend={() => (suspends += 1)} />
+            <App
+                atoms={atoms}
+                file={file}
+                onQuit={() => (quits += 1)}
+                onSuspend={() => (suspends += 1)}
+                onEdit={(target) => {
+                    edits[edits.length] = target;
+                }}
+            />
         </RegistryContext.Provider>,
         { width, height },
     );
@@ -117,6 +127,7 @@ const start = async (nav: Nav.Nav = Nav.initial, first: Snapshot = twoRuns) => {
         publish,
         quits: () => quits,
         suspends: () => suspends,
+        edits: () => edits,
         frame,
         press,
         escape,

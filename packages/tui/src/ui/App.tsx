@@ -5,11 +5,13 @@ import { useRef, useState } from "react";
 
 import { Action } from "../keys/Action.ts";
 import { dispatch } from "../keys/Dispatch.ts";
-import { initialKeyState, modeOf, ShellEffect, stepShell } from "../keys/Shell.ts";
+import { initialKeyState, modeOf, stepShell } from "../keys/Shell.ts";
 import { overlayContent, overlayExtent } from "../model/overlays.ts";
+import { ShellEffect } from "../nav/ScreenStep.ts";
 import { Frame, listRows } from "./Frame.tsx";
 
 import type { Atoms } from "../bridge/Atoms.ts";
+import type { EditTarget } from "../editor.ts";
 import type { KeyState } from "../keys/Shell.ts";
 import type { ReactNode } from "react";
 
@@ -19,6 +21,7 @@ export interface AppProps {
     readonly file: string;
     readonly onQuit: () => void;
     readonly onSuspend: () => void;
+    readonly onEdit: (target: EditTarget) => void;
 }
 
 export const App = (props: AppProps): ReactNode => {
@@ -62,6 +65,8 @@ export const App = (props: AppProps): ReactNode => {
                 Quit: () => props.onQuit(),
                 Suspend: () => props.onSuspend(),
                 Say: ({ text }) => registry.set(atoms.message, Option.some(text)),
+                SetPanes: ({ panes }) => registry.set(atoms.panes, panes),
+                Edit: ({ target }) => props.onEdit(target),
             }),
         );
     };

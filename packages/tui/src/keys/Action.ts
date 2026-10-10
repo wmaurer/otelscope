@@ -7,6 +7,19 @@ export type Dir = "next" | "prev";
 
 type MoveBy = "row" | "halfPage" | "page";
 
+/** What a click on a Trace pane landed on. */
+export type ClickTarget = Data.TaggedEnum<{
+    /** A tree row or a log row, by its key. */
+    Row: { readonly key: string };
+    /** A span's fold mark, or anywhere on a group row. */
+    Mark: { readonly key: string };
+    /** A details Bodies row. */
+    Body: { readonly prefix: string };
+    /** Anywhere else in the pane: it only takes focus. */
+    Pane: {};
+}>;
+export const ClickTarget = Data.taggedEnum<ClickTarget>();
+
 export type Action = Data.TaggedEnum<{
     Quit: {};
     Suspend: {};
@@ -49,6 +62,10 @@ export type Action = Data.TaggedEnum<{
     CollapseAll: {};
 
     GoToLogSpan: {};
+    Click: { readonly pane: Pane; readonly target: ClickTarget };
+    ScrollDetails: { readonly rows: number };
+    /** A divider drag: the tree's share in percent, not yet clamped. */
+    SetSplit: { readonly percent: number };
 
     Sideways: { readonly dir: Dir };
     CycleBody: { readonly dir: Dir };
@@ -99,6 +116,36 @@ export type ListAction = Extract<ScreenAction, { readonly _tag: (typeof listTags
 const listTagSet: ReadonlySet<string> = new Set(listTags);
 
 export const isListAction = (action: ScreenAction): action is ListAction => listTagSet.has(action._tag);
+
+const traceTags = [
+    "Move",
+    "Jump",
+    "NextProblem",
+    "NextMatch",
+    "FocusPane",
+    "CyclePane",
+    "ResizeSplit",
+    "ResizeNameColumn",
+    "CycleLogScope",
+    "OpenBody",
+    "OpenEditor",
+    "ToggleFold",
+    "FoldOrParent",
+    "Unfold",
+    "GoToOrigin",
+    "ExpandAll",
+    "CollapseAll",
+    "GoToLogSpan",
+    "Click",
+    "ScrollDetails",
+    "SetSplit",
+] as const;
+
+export type TraceAction = Extract<ScreenAction, { readonly _tag: (typeof traceTags)[number] }>;
+
+const traceTagSet: ReadonlySet<string> = new Set(traceTags);
+
+export const isTraceAction = (action: ScreenAction): action is TraceAction => traceTagSet.has(action._tag);
 
 /**
  * `Esc` on a screen: clear the focused query, else go back, else nothing. Only the binding table holds it, and

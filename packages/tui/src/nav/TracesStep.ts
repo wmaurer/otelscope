@@ -7,7 +7,7 @@ import { parse } from "../query/Query.ts";
 import { follow, ListOutcome, select, stepList } from "./ListStep.ts";
 import { push, update } from "./Nav.ts";
 import { traceFor, TraceRow } from "./Screen.ts";
-import { stepTo } from "./ScreenStep.ts";
+import { said, stepTo } from "./ScreenStep.ts";
 
 import type { Dir, ListAction } from "../keys/Action.ts";
 import type { Group, TraceList, TraceListRow } from "../model/traceList.ts";
@@ -103,7 +103,7 @@ export const stepTraces = (
             },
             Follow: () => set(follow(view)),
             Activate: ({ index }) => activate(rowAt(index)),
-            Say: ({ text }) => ({ nav, say: Option.some(text) }),
+            Say: ({ text }) => said(nav, text),
             Stay: () => stepTo(nav),
         });
     switch (action._tag) {

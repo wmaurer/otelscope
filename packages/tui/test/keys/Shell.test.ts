@@ -2,9 +2,10 @@ import { describe, expect, it } from "@effect/vitest";
 import { Array as Arr, Option } from "effect";
 
 import { Action } from "../../src/keys/Action.ts";
-import { initialKeyState, initialShell, modeOf, Shell, ShellEffect, stepShell } from "../../src/keys/Shell.ts";
+import { initialKeyState, initialShell, modeOf, Shell, stepShell } from "../../src/keys/Shell.ts";
 import * as Nav from "../../src/nav/Nav.ts";
 import { activeQuery } from "../../src/nav/Query.ts";
+import { ShellEffect } from "../../src/nav/ScreenStep.ts";
 import { runs, runsFiltered, traces } from "../support/keys.ts";
 import { listFor } from "../support/lists.ts";
 import { record } from "../support/records.ts";
