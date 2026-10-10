@@ -66,7 +66,7 @@ The screen lists `run.traceIds`. A trace in two runs appears in both.
   count is over the run's traces, ignoring the filter, so groups don't appear and vanish while typing.
 - The heading uses the same columns: `▸ POST /orders ×3000` (`▾` when open), the first member's offset, the members'
   **p50** duration, total spans, **failed traces**, total logs, and the most common error
-  (`500× PaymentDeclined · 2 other errors`). Under a filter it counts matching members only:
+  (`500× PaymentDeclined · 2 other errors`; on a tie, the type of the member shown first in sort order). Under a filter it counts matching members only:
   `▸ POST /orders ×12 (of 3000)`.
 - **Groups start closed.** A closed group still shows at most **5** of its failed, interrupted or running members, in
   sort order, indented under the heading, then one row for the rest:

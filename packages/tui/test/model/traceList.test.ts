@@ -219,6 +219,21 @@ describe("headings", () => {
         expect(stats).toMatchObject({ p50Ms: 10, failedTraces: 3, error: "2× PaymentDeclined · 1 other error" });
     });
 
+    it("breaks a tie between error types on the type of the member shown first", () => {
+        const source = indexed([
+            rootSpan("e1", "job", 1000, "Failure", { ms: 10, events: [exception("Timeout", "a")] }),
+            rootSpan("e2", "job", 2000, "Failure", { ms: 30, events: [exception("PaymentDeclined", "b")] }),
+            ...namedTraces("j", "job", 18, 10_000),
+        ]);
+        const error = (view: Partial<TracesView>) => {
+            const heading = build(view, "", source).rows[0]!;
+            return heading._tag === "Heading" ? headingStats(heading.group).error : "";
+        };
+        expect(error({})).toBe("1× Timeout · 1 other error");
+        expect(error({ reverse: true })).toBe("1× PaymentDeclined · 1 other error");
+        expect(error({ sort: "duration" })).toBe("1× PaymentDeclined · 1 other error");
+    });
+
     it("takes the lower middle duration as the p50 of an even count", () => {
         const p50 = (count: number) => {
             const source = indexed(

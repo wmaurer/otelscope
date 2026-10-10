@@ -39,7 +39,7 @@ export interface GroupTotals {
     readonly spans: number;
     readonly failedTraces: number;
     readonly logs: number;
-    /** The members' first errors, counted by type, in the order the types first appear. */
+    /** The members' first errors, counted by type, in the order the types first appear among the sorted members. */
     readonly errors: ReadonlyMap<string, number>;
     readonly errorTotal: number;
     /** The members' durations, in no particular order: the heading reorders them to find the median. */
@@ -159,6 +159,11 @@ const total = (group: Gathering, item: Item): void => {
     group.spans += item.spanCount;
     group.failedTraces += item.state === "failed" ? 1 : 0;
     group.logs += item.logs;
+};
+
+/** Adds a member in sort order: the heading's most common error goes to the type shown first on a tie. */
+const addMember = (group: Gathering, item: Item): void => {
+    group.items[group.items.length] = item;
     if (item.errorType !== undefined) {
         group.errors.set(item.errorType, (group.errors.get(item.errorType) ?? 0) + 1);
         group.errorTotal += 1;
@@ -324,7 +329,7 @@ export const collect = (
                 current = { name: item.headName, group: groups.get(item.headName) };
             }
             if (current.group !== undefined) {
-                current.group.items[current.group.items.length] = item;
+                addMember(current.group, item);
             }
         }
         return {
