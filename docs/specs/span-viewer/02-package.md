@@ -180,19 +180,24 @@ so the guard can speak before anything fails. In order:
    undefined, set `process.env.OPENTUI_LIBC = "musl"`.
 3. **Warning.** Replace Node's default `warning` listener with one that drops only the `ExperimentalWarning` about FFI
    and prints every other warning as Node would. No `--disable-warning`.
-4. **React's production build.** If `NODE_ENV` is unset, set it to `production`. React picks its build from it when
-   it is first loaded, and the development build records a `performance.measure`, with a diff of the props, for every
-   component render. Node keeps every measure: on the Traces screen, following `huge` while 5,000 spans/s arrived grew
-   the heap by 15 to 20 MB per publish and reached Node's 4 GB heap limit after about a minute.
-5. **Compile cache.** `module.enableCompileCache()` (through `process.getBuiltinModule("node:module")`).
-6. **Start.** `await import("./main.ts")`, so nothing loads before the guard has passed.
+4. **Compile cache.** `module.enableCompileCache()` (through `process.getBuiltinModule("node:module")`).
+5. **Start.** `await import("./main.ts")`, so nothing loads before the guard has passed.
+
+The shim leaves `NODE_ENV` alone: `main.ts` sets it only while it loads the app (step 3 below), so the editor that
+`e` starts gets the user's environment. Shells and `npm` read `NODE_ENV`, and under `production` an `npm install` run
+from that editor would skip devDependencies.
 
 ## `src/main.ts`
 
 1. Parse arguments with `effect/cli` and run the startup checks ([10-cli.md](10-cli.md)), with no React or OpenTUI
    loaded. Usage errors exit 2, startup errors exit 1, each before the terminal is touched.
 2. Build the initial `Nav` from the arguments ([04-navigation.md](04-navigation.md#seeding-from-the-cli)).
-3. `await import("./app.tsx")` and run it with the parsed arguments and the initial `Nav`.
+3. `await import("./app.tsx")` and run it with the parsed arguments and the initial `Nav`. **React's production
+   build**: if `NODE_ENV` is unset, it is `production` while `app.tsx` loads and unset again after
+   (`src/productionReact.ts`). React picks its build from it when it is first loaded, and nothing before `app.tsx`
+   loads React. The development build records a `performance.measure`, with a diff of the props, for every component
+   render. Node keeps every measure: on the Traces screen, following `huge` while 5,000 spans/s arrived grew the heap
+   by 15 to 20 MB per publish and reached Node's 4 GB heap limit after about a minute.
 
 `main.ts` and the modules it imports before step 3 are `.ts` and must not import `@wmaurer/otelscope-effect` (see
 [11-testing.md](11-testing.md#cli) for why it matters to the spawned tests).

@@ -9,6 +9,7 @@ import type * as AtomsModule from "../src/bridge/Atoms.ts";
 import type * as ArgsModule from "../src/cli/Args.ts";
 import type * as StartupModule from "../src/cli/Startup.ts";
 import type * as SeedModule from "../src/nav/Seed.ts";
+import type * as ProductionReactModule from "../src/productionReact.ts";
 
 if (process.versions.bun === undefined && process.getBuiltinModule?.("node:ffi") === undefined) {
     process.stderr.write(`otelscope needs Node >= 26.9 (found ${process.version}).\n`);
@@ -34,10 +35,6 @@ process.on("warning", (warning) => {
     }
 });
 
-if (process.env.NODE_ENV === undefined) {
-    process.env.NODE_ENV = "production";
-}
-
 process.getBuiltinModule("node:module").enableCompileCache();
 
 const dist = (path: string): string => new URL(`../dist/${path}`, import.meta.url).href;
@@ -51,6 +48,8 @@ const Args = (await import(dist("cli/Args.js"))) as typeof ArgsModule;
 const Startup = (await import(dist("cli/Startup.js"))) as typeof StartupModule;
 // SAFETY: as above.
 const { initialNav } = (await import(dist("nav/Seed.js"))) as typeof SeedModule;
+// SAFETY: as above.
+const { withProductionReact } = (await import(dist("productionReact.js"))) as typeof ProductionReactModule;
 
 const program = Effect.gen(function* () {
     const args = yield* Args.parse(Arr.drop(process.argv, 2));
@@ -60,7 +59,7 @@ const program = Effect.gen(function* () {
     yield* Startup.check(args.value, { stdin: true, stdout: true });
     const nav = initialNav(args.value);
     // SAFETY: as above.
-    const app = (yield* Effect.promise(() => import(dist("app.js")))) as typeof AppModule;
+    const app = (yield* withProductionReact(Effect.promise(() => import(dist("app.js"))))) as typeof AppModule;
     // SAFETY: as above.
     const { Atoms } = (yield* Effect.promise(() => import(dist("bridge/Atoms.js")))) as typeof AtomsModule;
     const { createTestRenderer } = yield* Effect.promise(() => import("@opentui/core/testing"));

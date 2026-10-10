@@ -1,5 +1,5 @@
 // The `perf` entry point. React picks its build when it is first loaded, so this asks for the production build, as
-// src/bin.ts does, before perf/measure.ts imports anything.
+// src/main.ts does while it loads the app, before perf/measure.ts imports anything.
 // @effect-diagnostics processEnv:off
 
 if (process.env.NODE_ENV === undefined) {

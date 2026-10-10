@@ -4,6 +4,7 @@ import { Array as Arr, Cause, Console, Effect, Exit, Option, type PlatformError,
 import * as Args from "./cli/Args.ts";
 import * as Startup from "./cli/Startup.ts";
 import { initialNav } from "./nav/Seed.ts";
+import { withProductionReact } from "./productionReact.ts";
 
 const report = (cause: Cause.Cause<Args.UsageError | Startup.StartupError | PlatformError.PlatformError>) =>
     Cause.hasInterruptsOnly(cause)
@@ -25,7 +26,7 @@ const program = Effect.gen(function* () {
     }
     yield* Startup.check(args.value, { stdin: process.stdin.isTTY === true, stdout: process.stdout.isTTY === true });
     const nav = initialNav(args.value);
-    const app = yield* Effect.promise(() => import("./app.tsx"));
+    const app = yield* withProductionReact(Effect.promise(() => import("./app.tsx")));
     yield* app.run(args.value, nav);
 }).pipe(Effect.tapCause(report), Effect.provide(NodeServices.layer));
 

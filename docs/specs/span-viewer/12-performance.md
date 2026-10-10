@@ -50,8 +50,8 @@ All measured on `huge`.
       group. The harness opens it before it presses.
     - The 10,000 siblings' parent is the trace's root, so "the group's parent" and "the root" are one span. The
       harness folds and unfolds the root with the group open, and closes and opens the group itself.
-- **`flushSync`, not `act`**: React runs its production build, as `src/bin.ts` loads it
-  ([02-package.md](02-package.md#the-bin-shim-srcbints)), and that build has no `act`. `flushSync` from
+- **`flushSync`, not `act`**: React runs its production build, as `src/main.ts` loads it
+  ([02-package.md](02-package.md#srcmaints)), and that build has no `act`. `flushSync` from
   `@opentui/react` commits the key's updates before `renderOnce` draws, which is what `act` did.
 - **The UI stays interactive while loading and following**: indexing yields at least every 16–30 ms
   ([03-data-layer.md](03-data-layer.md#chunked-indexing)).
@@ -62,7 +62,7 @@ All measured on `huge`.
 
 - **`pnpm --filter @wmaurer/otelscope perf`** builds both packages' `dist/`, then runs `perf/run.ts` under `tsx`
   with `--expose-gc` and the `@otelscope/source` condition on Node 26. It is a plain script, not `vitest bench`,
-  outside `pre-push` and `pnpm test`. `perf/run.ts` asks for React's production build, as the bin does, and loads
+  outside `pre-push` and `pnpm test`. `perf/run.ts` asks for React's production build, as `main` does, and loads
   `perf/measure.ts`. `--only startup,index,idle,loading,following,search` runs some of the sections.
     - In process, it builds the app's own `servicesLayer` (the real `SpanSource`, `SpanStore`, `Bodies` and `Atoms`)
       and mounts the real `App` on OpenTUI's test renderer at 120×40. It mounts with `createTestRenderer` and
@@ -76,8 +76,9 @@ All measured on `huge`.
       loader in the way.
 - **`perf/startup.ts`** handles startup, which needs a TTY. It is plain `.ts` (no JSX), run with `node` under type
   stripping, and imports only from `../dist/`. It goes through the same shim steps as `dist/bin.js`, parses the
-  arguments and runs the startup checks as `main` does (all but the TTY check), and mounts the app on the test
-  renderer at 120×40 with `runOn` from `dist/app.js`, which the bin path calls with the real renderer.
+  arguments and runs the startup checks as `main` does (all but the TTY check), loads the app under React's
+  production build as `main` does, and mounts it on the test renderer at 120×40 with `runOn` from `dist/app.js`,
+  which the bin path calls with the real renderer.
     - The renderer draws on demand, as the real one does, and the child forces no frame. On every frame it reads the
       clock and the frame's text. The first frame is the first one drawn. The first rows are the first frame whose
       text contains the id of a run in the snapshot, so the mark is what the user sees, not what the atoms hold.

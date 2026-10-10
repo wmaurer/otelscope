@@ -32,6 +32,17 @@ describe("otelscope bin", () => {
         expect(otelscope("--version")).toEqual({ status: 0, stdout: "otelscope 0.1.0\n", stderr: "" });
     });
 
+    it("leaves NODE_ENV as the user had it, for every process it starts", () => {
+        const { NODE_ENV: _, ...env } = process.env;
+        const atExit = 'process.on("exit", () => process.stdout.write(`NODE_ENV=${process.env.NODE_ENV}`))';
+        const { stdout } = spawnSync(
+            process.execPath,
+            ["--conditions=@otelscope/source", "--import", `data:text/javascript,${atExit}`, bin, sample],
+            { encoding: "utf8", env },
+        );
+        expect(stdout).toBe("NODE_ENV=undefined");
+    });
+
     it("exits 1 for a readable file, because it needs a terminal", () => {
         expect(otelscope(sample)).toEqual({
             status: 1,
