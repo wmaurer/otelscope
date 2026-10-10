@@ -80,6 +80,11 @@ describe("groups", () => {
         expect(lineText(traceLine(heading!, context(list, true), false))).toContain("▸ POST /orders ×5 (of 25)");
     });
 
+    it("filters on an attribute named like an Object.prototype member without throwing", () => {
+        expect(build({}, "constructor=x").rows).toEqual([]);
+        expect(build({}, "constructor=").matched).toBe(0);
+    });
+
     it("places a group at its first member in sort order, and drops a group with no matching member", () => {
         expect(labels(build({ reverse: true }))).toEqual([
             "h3",

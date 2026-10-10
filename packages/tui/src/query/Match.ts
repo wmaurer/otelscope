@@ -95,8 +95,9 @@ const textHas = (span: JsonlSpanRecord, test: Test): boolean => {
     return false;
 };
 
+/** The key is typed by the user, and `constructor` must not find `Object.prototype`'s. */
 const attrHas = (attrs: Attributes, key: string, value: Test | undefined): boolean => {
-    const found = attrs[key];
+    const found = Object.hasOwn(attrs, key) ? attrs[key] : undefined;
     return found !== undefined && (value === undefined || valueHas(found, value));
 };
 

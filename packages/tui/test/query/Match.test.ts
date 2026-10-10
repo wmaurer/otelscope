@@ -96,6 +96,15 @@ describe("spanMatches", () => {
         expect(matches("zürich", odd)).toBe(true);
     });
 
+    it("looks a key=value key up among the span's own attributes only", () => {
+        for (const query of ["constructor=x", "constructor=", "toString=", "__proto__=", "hasOwnProperty=own"]) {
+            expect(matches(query), query).toBe(false);
+        }
+        const own = record({ span: "own", attrs: { constructor: "x" } });
+        expect(matches("constructor=x", own)).toBe(true);
+        expect(matches("constructor=", own)).toBe(true);
+    });
+
     it("matches is: against the exit, and never a log level or an unknown value", () => {
         expect(matches("is:failed")).toBe(true);
         expect(matches("is:ok")).toBe(false);
