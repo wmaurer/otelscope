@@ -149,6 +149,9 @@ Decoding drops keys the Schema does not know, so a line from a newer version wit
 
 ## View the file
 
+[`@wmaurer/otelscope`](https://www.npmjs.com/package/@wmaurer/otelscope) is a terminal viewer for the file. It needs
+Node >= 26.9.
+
 ```sh
 npx @wmaurer/otelscope traces/spans.jsonl
 ```
