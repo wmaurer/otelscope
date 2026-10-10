@@ -2,7 +2,7 @@ import { describe, expect, it } from "@effect/vitest";
 import { Array as Arr, Effect, HashSet, Option } from "effect";
 import { Atom, AtomRegistry } from "effect/reactivity";
 
-import { listAtom, SEARCH_DEBOUNCE_MILLIS } from "../../src/bridge/Lists.ts";
+import { listAtom, SEARCH_DEBOUNCE_MILLIS, settledFilter } from "../../src/bridge/Lists.ts";
 import { Index } from "../../src/data/Index.ts";
 import * as Nav from "../../src/nav/Nav.ts";
 import { defaultRunsView, TraceRow, tracesFor } from "../../src/nav/Screen.ts";
@@ -24,7 +24,7 @@ const setup = (nav: Nav.Nav = Nav.initial, source: Snapshot = snapshot, at = 0) 
     const registry = AtomRegistry.make();
     const navAtom = Atom.make(nav);
     const now = Atom.make(at);
-    const list = listAtom(Atom.make(source), navAtom, now);
+    const list = listAtom(Atom.make(source), navAtom, now, settledFilter(navAtom));
     registry.mount(list);
     return { registry, navAtom, now, list: () => registry.get(list) };
 };

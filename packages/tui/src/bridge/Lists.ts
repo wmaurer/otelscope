@@ -24,16 +24,17 @@ const typedOf = (nav: Nav): Typed => {
         case "Traces":
             return { screen: `${depth}:${screen.runId}`, filter: screen.view.filter };
         case "Trace":
+            return { screen: `${depth}:${screen.traceId}`, filter: screen.view.logFilter };
         case "Body":
             return { screen: `${depth}`, filter: "" };
     }
 };
 
 /**
- * The filter the list is built with. Typing on one screen settles once it pauses; a push, a Back or an emptied filter
- * applies at once, so a screen never shows a filter typed on an earlier visit.
+ * The filter a list (or the Trace screen's logs) is built with. Typing on one screen settles once it pauses; a push, a
+ * Back or an emptied filter applies at once, so a screen never shows a filter typed on an earlier visit.
  */
-const settledFilter = (nav: Atom.Atom<Nav>): Atom.Atom<string> => {
+export const settledFilter = (nav: Atom.Atom<Nav>): Atom.Atom<string> => {
     const typed = Atom.map(nav, typedOf).pipe(Atom.withEquality(Equal.equals));
     const settled = Atom.make((get) => {
         const next = get(typed);
@@ -51,8 +52,8 @@ export const listAtom = (
     snapshot: Atom.Atom<Snapshot>,
     nav: Atom.Atom<Nav>,
     now: Atom.Atom<number>,
+    filter: Atom.Atom<string>,
 ): Atom.Atom<ScreenList> => {
-    const filter = settledFilter(nav);
     const key = Atom.make((get) => listKey(top(get(nav)), get(filter), get(snapshot), get(now))).pipe(
         Atom.withEquality(Equal.equals),
     );

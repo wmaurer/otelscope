@@ -5,12 +5,15 @@ import { Bodies, type BodyMissing, type BodyReadFailed, type BodyText } from "..
 import { SpanStore } from "../data/SpanStore.ts";
 import { defaultPanes } from "../model/panes.ts";
 import { resolvePrefixes } from "../nav/Resolve.ts";
-import { initialReadDone, openSingleRun } from "../nav/Seed.ts";
-import { listAtom } from "./Lists.ts";
+import { initialReadDone, openArrivedTrace, openSingleRun } from "../nav/Seed.ts";
+import { listAtom, settledFilter } from "./Lists.ts";
+import { bodyStatsAtom, traceModelAtom } from "./Trace.ts";
 
 import type { Snapshot } from "../data/Snapshot.ts";
 import type { Panes } from "../model/panes.ts";
 import type { ScreenList } from "../model/screenList.ts";
+import type { BodyStats } from "../model/traceFrame.ts";
+import type { TraceModel } from "../model/traceModel.ts";
 import type { Nav } from "../nav/Nav.ts";
 
 export const NOW_MILLIS = 1000;
@@ -35,6 +38,10 @@ export class Atoms extends Context.Service<
         readonly nav: Atom.Writable<Nav>;
         readonly panes: Atom.Writable<Panes>;
         readonly list: Atom.Atom<ScreenList>;
+        /** The top Trace screen's model, None elsewhere or while its trace is absent. */
+        readonly trace: Atom.Atom<Option.Option<TraceModel>>;
+        /** `Bodies.stat` for the bodies of the span the Trace screen shows. */
+        readonly bodyStats: Atom.Atom<BodyStats>;
         /** Setting `Some(text)` shows it for 5 s, even when the text is the same as the one showing. */
         readonly message: Atom.Writable<Option.Option<string>>;
         /**
@@ -87,7 +94,9 @@ export class Atoms extends Context.Service<
                         registry.subscribe(
                             snapshot,
                             (next) => {
-                                registry.update(nav, (current) => resolvePrefixes(current, next));
+                                registry.update(nav, (current) =>
+                                    openArrivedTrace(resolvePrefixes(current, next), next),
+                                );
                                 if (MutableRef.get(singleRunArmed) && initialReadDone(next)) {
                                     MutableRef.set(singleRunArmed, false);
                                     registry.update(nav, (current) => openSingleRun(current, next));
@@ -99,17 +108,22 @@ export class Atoms extends Context.Service<
                     (unsubscribe) => Effect.sync(unsubscribe),
                 );
 
+                const filter = settledFilter(nav);
+                const bodyStat = Atom.family((sha256: string) => Atom.make(bodies.stat(sha256)));
+                const trace = Atom.keepAlive(traceModelAtom(snapshot, nav, filter));
                 return Atoms.of({
                     registry,
                     snapshot,
                     now,
                     nav,
                     panes: Atom.keepAlive(Atom.make(defaultPanes)),
-                    list: Atom.keepAlive(listAtom(snapshot, nav, now)),
+                    list: Atom.keepAlive(listAtom(snapshot, nav, now, filter)),
+                    trace,
+                    bodyStats: Atom.keepAlive(bodyStatsAtom(trace, bodyStat)),
                     message,
                     keyPressed: () => MutableRef.set(singleRunArmed, false),
                     body: Atom.family((key: BodyKey) => Atom.make(bodies.read(key.sha256, key.bytes))),
-                    bodyStat: Atom.family((sha256: string) => Atom.make(bodies.stat(sha256))),
+                    bodyStat,
                 });
             }),
         );

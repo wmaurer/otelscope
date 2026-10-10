@@ -7,6 +7,7 @@ import { Action } from "../keys/Action.ts";
 import { dispatch } from "../keys/Dispatch.ts";
 import { initialKeyState, modeOf, stepShell } from "../keys/Shell.ts";
 import { overlayContent, overlayExtent } from "../model/overlays.ts";
+import { traceContext } from "../model/traceFrame.ts";
 import { ShellEffect } from "../nav/ScreenStep.ts";
 import { Frame, listRows } from "./Frame.tsx";
 
@@ -48,6 +49,15 @@ export const App = (props: AppProps): ReactNode => {
                 snapshot: latest,
                 list: registry.get(atoms.list),
                 listRows: listRows(height),
+                trace: Option.map(registry.get(atoms.trace), (model) =>
+                    traceContext(model, {
+                        size: { width, height },
+                        panes: registry.get(atoms.panes),
+                        now: registry.get(atoms.now),
+                        snapshot: latest,
+                        bodyStats: registry.get(atoms.bodyStats),
+                    }),
+                ),
                 overlay:
                     state.shell._tag === "Overlay"
                         ? overlayExtent(overlayContent(state.shell.kind, before, latest), { width, height })

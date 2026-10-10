@@ -1,6 +1,6 @@
 import { Atom, AtomRegistry } from "effect/reactivity";
 
-import { listAtom } from "../../src/bridge/Lists.ts";
+import { listAtom, settledFilter } from "../../src/bridge/Lists.ts";
 import { record } from "./records.ts";
 
 import type { Exit, Snapshot } from "../../src/data/Snapshot.ts";
@@ -36,7 +36,8 @@ export const namedTraces = (
 export const listFor = (nav: Nav, snapshot: Snapshot, now = 0): ScreenList => {
     const registry = AtomRegistry.make();
     try {
-        return registry.get(listAtom(Atom.make(snapshot), Atom.make(nav), Atom.make(now)));
+        const navAtom = Atom.make(nav);
+        return registry.get(listAtom(Atom.make(snapshot), navAtom, Atom.make(now), settledFilter(navAtom)));
     } finally {
         registry.dispose();
     }

@@ -1,12 +1,13 @@
 import { Data, Option } from "effect";
 
 import { back } from "../nav/Nav.ts";
-import { activeQuery, clearQuery, setQuery } from "../nav/Query.ts";
+import { activeQuery, clearQuery, setQuery, typeQuery } from "../nav/Query.ts";
 import { ShellEffect } from "../nav/ScreenStep.ts";
 import { stepScreen } from "../nav/Step.ts";
 import { isShellAction, moveRows } from "./Action.ts";
 import { edit, insert, recall, remember } from "./Input.ts";
 
+import type { Snapshot } from "../data/Snapshot.ts";
 import type { Nav } from "../nav/Nav.ts";
 import type { StepContext } from "../nav/ScreenStep.ts";
 import type { Action, ScreenAction } from "./Action.ts";
@@ -71,6 +72,7 @@ const scrolled = (scroll: number, action: ScreenAction, extent: Extent): Option.
 const editInput = (
     state: KeyState,
     nav: Nav,
+    snapshot: Snapshot,
     input: Extract<Shell, { readonly _tag: "Input" }>,
     change: (line: LineEdit) => LineEdit,
 ): Pick<ShellStep, "state" | "nav"> => {
@@ -78,7 +80,7 @@ const editInput = (
     const line = change({ text, cursor: Math.min(input.cursor, text.length) });
     return {
         state: { ...state, shell: Shell.Input({ ...input, cursor: line.cursor }) },
-        nav: setQuery(nav, line.text),
+        nav: typeQuery(nav, line.text, snapshot),
     };
 };
 
@@ -141,11 +143,11 @@ export const stepShell = (state: KeyState, context: KeyContext, action: Action):
                 : step({ state: withShell(Shell.Screen()) });
         case "InsertText":
             return shell._tag === "Input"
-                ? step(editInput(state, nav, shell, (line) => insert(line, action.text)))
+                ? step(editInput(state, nav, snapshot, shell, (line) => insert(line, action.text)))
                 : step({});
         case "EditInput":
             return shell._tag === "Input"
-                ? step(editInput(state, nav, shell, (line) => edit(line, action.op)))
+                ? step(editInput(state, nav, snapshot, shell, (line) => edit(line, action.op)))
                 : step({});
         case "RecallQuery": {
             if (shell._tag !== "Input") {
@@ -154,7 +156,7 @@ export const stepShell = (state: KeyState, context: KeyContext, action: Action):
             const recalled = recall(state.history, activeQuery(nav), shell.recall, action.dir);
             return step({
                 state: withShell(Shell.Input({ ...shell, cursor: recalled.text.length, recall: recalled.recall })),
-                nav: setQuery(nav, recalled.text),
+                nav: typeQuery(nav, recalled.text, snapshot),
             });
         }
     }

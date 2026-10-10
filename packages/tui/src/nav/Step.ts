@@ -1,8 +1,11 @@
-import { isListAction } from "../keys/Action.ts";
+import { Option } from "effect";
+
+import { isListAction, isTraceAction } from "../keys/Action.ts";
 import { top } from "./Nav.ts";
 import { stepRuns } from "./RunsStep.ts";
 import { stepTo } from "./ScreenStep.ts";
 import { stepTraces } from "./TracesStep.ts";
+import { stepTrace } from "./TraceStep.ts";
 
 import type { ScreenAction } from "../keys/Action.ts";
 import type { Nav } from "./Nav.ts";
@@ -11,6 +14,11 @@ import type { ScreenStep, StepContext } from "./ScreenStep.ts";
 export const stepScreen = (nav: Nav, context: StepContext, action: ScreenAction): ScreenStep => {
     const screen = top(nav);
     const { list } = context;
+    if (screen._tag === "Trace") {
+        return isTraceAction(action) && Option.isSome(context.trace)
+            ? stepTrace(nav, screen, context.trace.value, action)
+            : stepTo(nav);
+    }
     if (!isListAction(action)) {
         return stepTo(nav);
     }

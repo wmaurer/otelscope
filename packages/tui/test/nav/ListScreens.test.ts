@@ -24,7 +24,7 @@ const snapshot: Snapshot = indexed([
 ]);
 
 const step = (nav: Nav.Nav, action: ScreenAction) =>
-    stepScreen(nav, { snapshot, list: listFor(nav, snapshot), listRows: 10 }, action);
+    stepScreen(nav, { snapshot, list: listFor(nav, snapshot), listRows: 10, trace: Option.none() }, action);
 
 const runs = Nav.initial;
 const traces = (view: Partial<TracesView> = {}) =>
@@ -65,7 +65,11 @@ describe("the Runs reducer", () => {
         const before = indexed(two);
         const after = indexed([...two, rootSpan("c", "z", 3000, "Success", { run: "r3", service: "c" })]);
         const stepBefore = (nav: Nav.Nav, action: ScreenAction) =>
-            stepScreen(nav, { snapshot: before, list: listFor(nav, before), listRows: 10 }, action).nav;
+            stepScreen(
+                nav,
+                { snapshot: before, list: listFor(nav, before), listRows: 10, trace: Option.none() },
+                action,
+            ).nav;
         const byService = Nav.update(runs, "Runs", (view) => ({ ...view, sort: "service" }));
         const moved = stepBefore(byService, Action.Move({ by: "row", dir: "next" }));
         const newest = Arr.reduce(Arr.replicate(Action.CycleSort(), 3), moved, stepBefore);
