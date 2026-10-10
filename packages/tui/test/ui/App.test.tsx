@@ -1,27 +1,18 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { RegistryContext } from "@effect/atom-react";
-import { NodeServices } from "@effect/platform-node";
 import { describe, expect, it } from "@effect/vitest";
-import { testRender } from "@opentui/react/test-utils";
-import { Array as Arr, Context, Effect, Exit, Layer, Option, Scope, SubscriptionRef } from "effect";
-import { act } from "react";
+import { Array as Arr, Effect, Layer, Option, SubscriptionRef } from "effect";
 
-import { Atoms } from "../../src/bridge/Atoms.ts";
-import { SEARCH_DEBOUNCE_MILLIS } from "../../src/bridge/Lists.ts";
-import { Bodies } from "../../src/data/Bodies.ts";
-import { InputFile } from "../../src/data/InputFile.ts";
 import { SpanStore } from "../../src/data/SpanStore.ts";
 import * as Nav from "../../src/nav/Nav.ts";
 import { initialNav } from "../../src/nav/Seed.ts";
-import { App } from "../../src/ui/App.tsx";
+import { mount } from "../support/app.tsx";
 import { tempDir } from "../support/files.ts";
 import { record } from "../support/records.ts";
 import { indexed } from "../support/store.ts";
 
 import type { Snapshot } from "../../src/data/Snapshot.ts";
-import type { EditTarget } from "../../src/editor.ts";
 
 const width = 100;
 const height = 20;
@@ -42,113 +33,20 @@ const start = async (
     bodies: Readonly<Record<string, string>> = {},
 ) => {
     const dir = tempDir();
-    const file = join(dir, "spans.jsonl");
     mkdirSync(join(dir, "bodies"));
     for (const [sha256, text] of Object.entries(bodies)) {
         writeFileSync(join(dir, "bodies", `${sha256}.txt`), text);
     }
-    const scope = Scope.makeUnsafe();
     const ref = Effect.runSync(SubscriptionRef.make(first));
-    const context = await Effect.runPromise(
-        Layer.buildWithScope(
-            Atoms.layer(nav).pipe(
-                Layer.provide(Layer.succeed(SpanStore, SpanStore.of({ snapshot: ref }))),
-                Layer.provide(Bodies.layer),
-                Layer.provide(InputFile.layer({ file, follow: true })),
-                Layer.provide(NodeServices.layer),
-            ),
-            scope,
-        ),
-    );
-    const atoms = Context.get(context, Atoms);
-    let quits = 0;
-    let suspends = 0;
-    const edits: Array<EditTarget> = [];
-    const copies: Array<string> = [];
-    const setup = await testRender(
-        <RegistryContext.Provider value={atoms.registry}>
-            <App
-                atoms={atoms}
-                file={file}
-                onQuit={() => (quits += 1)}
-                onSuspend={() => (suspends += 1)}
-                onEdit={(target) => {
-                    edits[edits.length] = target;
-                }}
-                onCopy={(text) => {
-                    copies[copies.length] = text;
-                    return true;
-                }}
-            />
-        </RegistryContext.Provider>,
-        { width, height },
-    );
-    const frame = async () => {
-        await setup.renderOnce();
-        return setup.captureCharFrame();
-    };
-    const press = async (key: string, modifiers?: { readonly ctrl?: boolean }) => {
-        act(() => setup.mockInput.pressKey(key, modifiers));
-        return frame();
-    };
-    const escape = async () => {
-        act(() => setup.mockInput.pressEscape());
-        // A lone ESC byte could start an escape sequence, so the input parser waits 20 ms before it reports the key.
-        await act(() => Effect.runPromise(Effect.sleep(50)));
-        return frame();
-    };
-    const stop = async () => {
-        // The renderer unmounts the React root when it is destroyed, and React wants that inside act().
-        act(() => setup.renderer.destroy());
-        await Effect.runPromise(Scope.close(scope, Exit.void));
-    };
-    const click = async (x: number, y: number) => {
-        await act(() => setup.mockMouse.click(x, y));
-        return frame();
-    };
-    const drag = async (from: number, to: number) => {
-        await act(() => setup.mockMouse.drag(10, from, 10, to));
-        return frame();
-    };
-    const wheel = async (x: number, y: number, direction: "up" | "down") => {
-        await act(() => setup.mockMouse.scroll(x, y, direction));
-        return frame();
-    };
-    const enter = async () => {
-        act(() => setup.mockInput.pressEnter());
-        return frame();
-    };
-    const type = async (text: string) => {
-        await act(() => setup.mockInput.typeText(text));
-        return frame();
-    };
-    const settle = async () => {
-        await act(() => Effect.runPromise(Effect.sleep(SEARCH_DEBOUNCE_MILLIS + 50)));
-        return frame();
-    };
-    const publish = async (next: Snapshot) => {
-        await act(() => Effect.runPromise(SubscriptionRef.set(ref, next)));
-        return frame();
-    };
-    return {
-        atoms,
-        ref,
-        click,
-        drag,
-        wheel,
-        enter,
-        type,
-        settle,
-        publish,
-        quits: () => quits,
-        suspends: () => suspends,
-        edits: () => edits,
-        copies: () => copies,
-        frame,
-        press,
-        escape,
-        stop,
-    };
+    const app = await mount({
+        file: join(dir, "spans.jsonl"),
+        follow: true,
+        store: Layer.succeed(SpanStore, SpanStore.of({ snapshot: ref })),
+        nav,
+        width,
+        height,
+    });
+    return { ...app, publish: (next: Snapshot) => app.after(SubscriptionRef.set(ref, next)) };
 };
 
 const lineIndex = (frame: string, text: string): number =>
@@ -228,19 +126,14 @@ describe("App", () => {
         const app = await start();
         try {
             expect(line(await app.frame(), height - 1)).toMatch(/2 runs · 2 spans$/);
-            await act(() =>
-                Effect.runPromise(
-                    SubscriptionRef.set(
-                        app.ref,
-                        indexed([
-                            record({ span: "a", run: "run-1" }),
-                            record({ span: "b", run: "run-2" }),
-                            record({ span: "c", run: "run-3" }),
-                        ]),
-                    ),
-                ),
+            const updated = await app.publish(
+                indexed([
+                    record({ span: "a", run: "run-1" }),
+                    record({ span: "b", run: "run-2" }),
+                    record({ span: "c", run: "run-3" }),
+                ]),
             );
-            expect(line(await app.frame(), height - 1)).toMatch(/3 runs · 3 spans$/);
+            expect(line(updated, height - 1)).toMatch(/3 runs · 3 spans$/);
         } finally {
             await app.stop();
         }
