@@ -5,6 +5,7 @@ import { Array as Arr, Option } from "effect";
 import { act } from "react";
 
 import { initialShell, Shell } from "../../src/keys/Shell.ts";
+import { defaultPanes } from "../../src/model/panes.ts";
 import * as Nav from "../../src/nav/Nav.ts";
 import { initialNav } from "../../src/nav/Seed.ts";
 import { Frame } from "../../src/ui/Frame.tsx";
@@ -67,7 +68,10 @@ const props = (over: Partial<FrameProps>): FrameProps => {
         width: 120,
         height: 40,
         list: listFor(nav, snapshot, now),
-        onPick: () => undefined,
+        trace: Option.none(),
+        panes: defaultPanes,
+        bodyStats: new Map(),
+        onAction: () => undefined,
         ...over,
     };
 };

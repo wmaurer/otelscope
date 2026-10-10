@@ -1,0 +1,40 @@
+Runs › POST /orders 6072d474                                                                                            
+POST /orders  6072d474  ✗ Failure  114ms  5 spans · 3 failed · 3 logs                                                   
+┌─ 1 Tree ─────────────────────────────────────────────────┐┌─ 2 Details ──────────────────────────────────────────────┐
+│                                            │0          │ ││payment.attempt  ✗ Failure                                │
+│ ✗ ▾ POST /orders                     114ms ◆████████████✗││102ms · +12.1ms · 14:03:27.292                            │
+│   ├   order.validate                1.93ms ◆             ││span ef0c8332199d744a · parent 293ca2d3adb0b115 · #5      │
+│   ├   db.query                      10.1ms █▌            ││at fixture/scenarios.ts:113:16                            │
+│ ✗ └ ▾ payment.charge                 102ms  ████████████✗││                                                          │
+│ ✗   └   payment.attempt              102ms  ████████████✗││Cause                                                     │
+│                                                          ││PaymentDeclined                                           │
+│                                                          ││(no message)                                              │
+│                                                          ││thrown at fixture/scenarios.ts:110:46                     │
+│                                                          ││in span payment.attempt  fixture/scenarios.ts:113:16      │
+│                                                          ││in span payment.charge  fixture/scenarios.ts:158:16       │
+│                                                          ││  defined at fixture/scenarios.ts:117:30                  │
+│                                                          ││in span POST /orders  fixture/scenarios.ts:179:22         │
+│                                                          ││  defined at fixture/scenarios.ts:147:28                  │
+│                                                          ││                                                          │
+│                                                          ││Attributes                                                │
+│                                                          ││payment.attempt  1                                        │
+│                                                          ││                                                          │
+│                                                          ││Events (1)                                                │
+│                                                          ││+102ms  exception  PaymentDeclined                        │
+│                                                          ││                                                          │
+│                                                          ││                                                          │
+│                                                          ││                                                          │
+│                                                          ││                                                          │
+└──────────────────────────────────────────────────────────┘└──────────────────────────────────────────────────────────┘
+┌─ 3 Logs · 0 · subtree ───────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+⏎ fold · / search · n problem · b body · ? help                               spans.jsonl  read once  4 runs · 511 spans

@@ -1,5 +1,6 @@
 import { Option } from "effect";
 
+import { Action } from "../keys/Action.ts";
 import { hintFacts, hintLine } from "../keys/Hints.ts";
 import { modeOf } from "../keys/Shell.ts";
 import { breadcrumb, segments } from "../model/breadcrumb.ts";
@@ -7,15 +8,21 @@ import { listFrame } from "../model/listFrame.ts";
 import { overlayContent, overlayFrame } from "../model/overlays.ts";
 import { placeholderLines } from "../model/placeholder.ts";
 import { inputBar, statusBar } from "../model/statusBar.ts";
+import { traceFrame } from "../model/traceFrame.ts";
 import { top } from "../nav/Nav.ts";
 import { activeQuery } from "../nav/Query.ts";
 import { presence } from "../nav/Resolve.ts";
 import { LineText, Overlay, Placeholder } from "./Chrome.tsx";
 import { ListBody } from "./ListBody.tsx";
+import { TraceBody } from "./TraceBody.tsx";
 
 import type { Snapshot } from "../data/Snapshot.ts";
+import type { ScreenAction } from "../keys/Action.ts";
 import type { Shell } from "../keys/Shell.ts";
+import type { Panes } from "../model/panes.ts";
 import type { ScreenList } from "../model/screenList.ts";
+import type { BodyStats } from "../model/traceFrame.ts";
+import type { TraceModel } from "../model/traceModel.ts";
 import type { Nav } from "../nav/Nav.ts";
 import type { ReactNode } from "react";
 
@@ -30,7 +37,10 @@ export interface FrameProps {
     readonly width: number;
     readonly height: number;
     readonly list: ScreenList;
-    readonly onPick: (key: string) => void;
+    readonly trace: Option.Option<TraceModel>;
+    readonly panes: Panes;
+    readonly bodyStats: BodyStats;
+    readonly onAction: (action: ScreenAction) => void;
 }
 
 /** The breadcrumb, the table header and the status bar. */
@@ -45,19 +55,38 @@ export const Frame = (props: FrameProps): ReactNode => {
     const list = Option.isSome(placeholder)
         ? Option.none()
         : listFrame(screen, props.list, { snapshot, now, file: props.file, width });
+    const trace =
+        screen._tag === "Trace" && Option.isNone(placeholder)
+            ? Option.map(props.trace, (model) =>
+                  traceFrame(model, screen.view, {
+                      size: { width, height },
+                      panes: props.panes,
+                      now,
+                      snapshot,
+                      bodyStats: props.bodyStats,
+                  }),
+              )
+            : Option.none();
+    const counted = Option.orElse(
+        Option.map(list, (frame) => frame.count),
+        () => Option.map(trace, (frame) => frame.count),
+    );
     const bar =
         shell._tag === "Input"
             ? inputBar(
                   activeQuery(nav),
                   shell.cursor,
-                  Option.match(list, { onNone: () => "", onSome: (frame) => frame.count }),
+                  Option.getOrElse(counted, () => ""),
                   width,
               )
             : statusBar(
                   {
                       hints: hintLine(modeOf(shell), nav, hintFacts(nav, snapshot)),
                       message: props.message,
-                      query: Option.flatMap(list, (frame) => frame.query),
+                      query: Option.orElse(
+                          Option.flatMap(list, (frame) => frame.query),
+                          () => Option.flatMap(trace, (frame) => frame.query),
+                      ),
                       newRows: Option.flatMap(list, (frame) => frame.newRows),
                       snapshot,
                       file: props.file,
@@ -76,13 +105,24 @@ export const Frame = (props: FrameProps): ReactNode => {
                 onSome: (lines) => <Placeholder lines={lines} />,
                 onNone: () =>
                     Option.match(list, {
-                        onNone: () => <box flexGrow={1} />,
+                        onNone: () =>
+                            Option.match(trace, {
+                                onNone: () => <box flexGrow={1} />,
+                                onSome: (frame) => (
+                                    <TraceBody
+                                        key={`${nav.stack.length}:${screen._tag === "Trace" ? screen.traceId : ""}`}
+                                        frame={frame}
+                                        size={{ width, height }}
+                                        onAction={props.onAction}
+                                    />
+                                ),
+                            }),
                         onSome: ({ body }) => (
                             <ListBody
                                 key={nav.stack.length}
                                 body={body}
                                 rows={listRows(height)}
-                                onPick={props.onPick}
+                                onPick={(key) => props.onAction(Action.Pick({ key }))}
                             />
                         ),
                     }),

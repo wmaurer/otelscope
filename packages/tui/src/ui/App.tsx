@@ -3,7 +3,6 @@ import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { Array as Arr, Option } from "effect";
 import { useRef, useState } from "react";
 
-import { Action } from "../keys/Action.ts";
 import { dispatch } from "../keys/Dispatch.ts";
 import { initialKeyState, modeOf, stepShell } from "../keys/Shell.ts";
 import { overlayContent, overlayExtent } from "../model/overlays.ts";
@@ -13,6 +12,7 @@ import { Frame, listRows } from "./Frame.tsx";
 
 import type { Atoms } from "../bridge/Atoms.ts";
 import type { EditTarget } from "../editor.ts";
+import type { Action } from "../keys/Action.ts";
 import type { KeyState } from "../keys/Shell.ts";
 import type { ReactNode } from "react";
 
@@ -32,6 +32,9 @@ export const App = (props: AppProps): ReactNode => {
     const now = useAtomValue(atoms.now);
     const message = useAtomValue(atoms.message);
     const list = useAtomValue(atoms.list);
+    const trace = useAtomValue(atoms.trace);
+    const panes = useAtomValue(atoms.panes);
+    const bodyStats = useAtomValue(atoms.bodyStats);
     const { width, height } = useTerminalDimensions();
     const [keys, setKeys] = useState<KeyState>(initialKeyState);
     // Two keys can arrive before React renders again, and the second must see what the first opened.
@@ -100,9 +103,12 @@ export const App = (props: AppProps): ReactNode => {
             width={width}
             height={height}
             list={list}
-            onPick={(key) => {
+            trace={trace}
+            panes={panes}
+            bodyStats={bodyStats}
+            onAction={(action) => {
                 atoms.keyPressed();
-                apply(Action.Pick({ key }));
+                apply(action);
             }}
         />
     );

@@ -316,4 +316,77 @@ describe("App", () => {
             await app.stop();
         }
     });
+
+    const orders = [
+        record({ span: "root", trace: "t1", name: "POST /orders", startMs: 1000, ms: 40, exit: "Failure" }),
+        record({ span: "auth", trace: "t1", parent: "root", name: "auth.check", startMs: 1001, ms: 2 }),
+        record({
+            span: "pay",
+            trace: "t1",
+            parent: "root",
+            name: "payment.charge",
+            startMs: 1003,
+            ms: 30,
+            exit: "Failure",
+        }),
+        record({
+            span: "try",
+            trace: "t1",
+            parent: "pay",
+            name: "payment.attempt",
+            startMs: 1004,
+            ms: 20,
+            exit: "Failure",
+        }),
+        record({ span: "mail", trace: "t1", parent: "root", name: "email.send", startMs: 1035, ms: 4 }),
+    ];
+
+    it("opens a trace on its failure origin, moves and folds in the tree, and goes back on Esc", async () => {
+        const app = await start(initialNav({ run: Option.some("run-1"), trace: Option.none() }), indexed(orders));
+        try {
+            const trace = await app.enter();
+            expect(line(trace, 0)).toMatch(/ › POST \/orders t1$/);
+            expect(trace).toContain("1 Tree");
+            expect(trace, "the origin's details").toMatch(/payment\.attempt +✗ Failure/);
+            const up = await app.press("k");
+            expect(up).toMatch(/payment\.charge +✗ Failure/);
+            const folded = await app.enter();
+            expect(folded, "the child's tree row is gone").not.toMatch(/└ +payment\.attempt/);
+            expect(folded).toContain("▸ payment.charge");
+            expect(line(await app.escape(), 0), "Esc goes back to the traces").toMatch(/^Runs › api · /);
+        } finally {
+            await app.stop();
+        }
+    });
+
+    it("moves the tree selection to the first match as a search is typed", async () => {
+        const app = await start(initialNav({ run: Option.some("run-1"), trace: Option.none() }), indexed(orders));
+        try {
+            await app.enter();
+            await app.press("g");
+            await app.press("/");
+            const typed = await app.type("email");
+            expect(typed).toMatch(/email\.send +Success/);
+            expect(line(typed, height - 1)).toMatch(/^\/ email▏ +match 1\/1$/);
+        } finally {
+            await app.stop();
+        }
+    });
+
+    it("keeps the selected span on its screen line when spans arrive above it", async () => {
+        const app = await start(initialNav({ run: Option.some("run-1"), trace: Option.none() }), indexed(orders));
+        try {
+            const before = await app.enter();
+            const row = lineIndex(before, "payment.attempt ");
+            const early = Arr.makeBy(3, (i) =>
+                record({ span: `early${i}`, trace: "t1", parent: "root", name: `early.${i}`, startMs: 1000.5, ms: 1 }),
+            );
+            const after = await app.publish(indexed([...orders, ...early]));
+            expect(after).toContain("early.2");
+            expect(lineIndex(after, "payment.attempt "), "the selected row held its line").toBe(row);
+            expect(after, "the selection did not move").toMatch(/payment\.attempt +✗ Failure/);
+        } finally {
+            await app.stop();
+        }
+    });
 });

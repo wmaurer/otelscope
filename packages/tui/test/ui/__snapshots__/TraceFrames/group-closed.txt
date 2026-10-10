@@ -1,0 +1,40 @@
+Runs › rows.process c61ad8b5                                                                                            
+rows.process  c61ad8b5  Success  77.9ms  401 spans · 6 failed · 6 logs                                                  
+┌─ 1 Tree ─────────────────────────────────────────────────┐┌─ 2 Details ──────────────────────────────────────────────┐
+│                                            │0            ││row.process  ✗ Failure                                    │
+│   ▾ rows.process                    77.9ms ██████████████││1.75ms · +6.18ms · 14:07:34.720                           │
+│   └ ▸ row.process ×400 · 6 failed   77.9ms ░░░░░░░░░░░░░░││span 7c8184fda0554894 · parent d35d73b5f1cc2d78 · #69     │
+│ ✗   ├   row.process                 1.75ms  ✗            ││at fixture/scenarios.ts:300:16                            │
+│ ✗   ├   row.process                 1.44ms    ✗          ││                                                          │
+│ ✗   ├   row.process                 1.35ms      █✗       ││Cause                                                     │
+│ ✗   ├   row.process                 1.57ms         ✗     ││RowInvalid                                                │
+│ ✗   ├   row.process                 1.47ms           ✗   ││(no message)                                              │
+│ ✗   └   row.process                 1.48ms             ✗ ││thrown at fixture/scenarios.ts:297:55                     │
+│                                                          ││in span row.process  fixture/scenarios.ts:300:16          │
+│                                                          ││in span rows.process  fixture/scenarios.ts:314:23         │
+│                                                          ││                                                          │
+│                                                          ││Attributes                                                │
+│                                                          ││row.index  36                                             │
+│                                                          ││                                                          │
+│                                                          ││Events (2)                                                │
+│                                                          ││+1.73ms  ERROR  row rejected  row.index=36 effect.cause=R…│
+│                                                          ││+1.75ms  exception  RowInvalid                            │
+│                                                          ││                                                          │
+│                                                          ││                                                          │
+│                                                          ││                                                          │
+│                                                          ││                                                          │
+│                                                          ││                                                          │
+│                                                          ││                                                          │
+└──────────────────────────────────────────────────────────┘└──────────────────────────────────────────────────────────┘
+┌─ 3 Logs · 1 · subtree ───────────────────────────────────────────────────────────────────────────────────────────────┐
+│ +7.91ms  ERROR  #69   row.process           row rejected  row.index=36                                               │
+│                                             ↳ RowInvalid: (no message)                                               │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+⏎ fold · / search · n problem · b body · ? help                               spans.jsonl  read once  4 runs · 511 spans

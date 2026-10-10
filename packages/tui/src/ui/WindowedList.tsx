@@ -2,9 +2,7 @@ import { Option } from "effect";
 import { useRef, useState } from "react";
 
 import { deriveScroll, initialScroll, visibleOffset, wheeled } from "../model/scroll.ts";
-import { LineText } from "./Chrome.tsx";
 
-import type { Line } from "../model/Role.ts";
 import type { Scroll, Wheel } from "../model/scroll.ts";
 import type { MouseEvent } from "@opentui/core";
 import type { ReactNode } from "react";
@@ -15,9 +13,10 @@ interface WindowedListProps {
     readonly size: number;
     readonly selected: number;
     readonly keyAt: (index: number) => string;
-    readonly line: (index: number, selected: boolean) => Line;
+    readonly row: (index: number, selected: boolean) => ReactNode;
     readonly height: number;
-    readonly onPick: (key: string) => void;
+    /** A press and release on one row; `x` is the release's screen column. */
+    readonly onPick: (key: string, x: number) => void;
 }
 
 export const WindowedList = (props: WindowedListProps): ReactNode => {
@@ -36,6 +35,7 @@ export const WindowedList = (props: WindowedListProps): ReactNode => {
     }
     const offset = visibleOffset(derived, wheel);
     const onScroll = (event: MouseEvent) => {
+        event.stopPropagation();
         const direction = event.scroll?.direction;
         if (direction === "up" || direction === "down") {
             setWheel(
@@ -51,17 +51,19 @@ export const WindowedList = (props: WindowedListProps): ReactNode => {
             <box
                 key={key}
                 height={1}
-                onMouseDown={() => {
+                onMouseDown={(event: MouseEvent) => {
+                    event.stopPropagation();
                     pressed.current = key;
                 }}
-                onMouseUp={() => {
+                onMouseUp={(event: MouseEvent) => {
+                    event.stopPropagation();
                     if (pressed.current === key) {
-                        props.onPick(key);
+                        props.onPick(key, event.x);
                     }
                     pressed.current = undefined;
                 }}
             >
-                <LineText line={props.line(i, i === selected)} />
+                {props.row(i, i === selected)}
             </box>
         );
     }

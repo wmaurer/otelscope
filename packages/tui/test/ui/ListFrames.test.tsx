@@ -5,6 +5,7 @@ import { Array as Arr, HashSet, Option } from "effect";
 import { act } from "react";
 
 import { initialShell, Shell } from "../../src/keys/Shell.ts";
+import { defaultPanes } from "../../src/model/panes.ts";
 import * as Nav from "../../src/nav/Nav.ts";
 import { defaultRunsView, tracesFor } from "../../src/nav/Screen.ts";
 import { Frame, listRows } from "../../src/ui/Frame.tsx";
@@ -65,7 +66,10 @@ const props = (nav: Nav.Nav, snapshot: Snapshot, size: "wide" | "narrow" = "wide
     width: size === "wide" ? 120 : 80,
     height: size === "wide" ? 40 : 24,
     list: listFor(nav, snapshot, now),
-    onPick: () => undefined,
+    trace: Option.none(),
+    panes: defaultPanes,
+    bodyStats: new Map(),
+    onAction: () => undefined,
 });
 
 const render = async (frame: FrameProps) => {

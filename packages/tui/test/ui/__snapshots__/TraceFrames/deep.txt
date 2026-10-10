@@ -1,0 +1,40 @@
+Runs › import.schema b82a6a72                                                                                           
+import.schema  b82a6a72  Success  12.9ms  41 spans · 0 failed · 0 logs                                                  
+┌─ 1 Tree ─────────────────────────────────────────────────┐┌─ 2 Details ──────────────────────────────────────────────┐
+│                                            │0        │   ││schema.resolve  Success                                   │
+│   ⋯18       └ ▾ schema.resolve      8.81ms     █████████▋││3.74ms · +8.51ms · 14:07:34.271                           │
+│   ⋯19       └ ▾ schema.resolve      8.57ms     █████████▋││span f25d82298e84f6bc · parent 66ae08a13801ae75 · #29     │
+│   ⋯20       └ ▾ schema.resolve      8.36ms     █████████▋││at fixture/scenarios.ts:288:16                            │
+│   ⋯21       └ ▾ schema.resolve      8.11ms     █████████▋││                                                          │
+│   ⋯22       └ ▾ schema.resolve      7.92ms      ████████▋││Attributes                                                │
+│   ⋯23       └ ▾ schema.resolve      7.70ms      ████████▋││schema.depth  40                                          │
+│   ⋯24       └ ▾ schema.resolve      7.43ms      ████████▋││                                                          │
+│   ⋯25       └ ▾ schema.resolve      7.22ms      ████████▌││                                                          │
+│   ⋯26       └ ▾ schema.resolve      6.92ms       ███████▌││                                                          │
+│   ⋯27       └ ▾ schema.resolve      6.66ms       ███████▌││                                                          │
+│   ⋯28       └ ▾ schema.resolve      6.44ms       ███████▌││                                                          │
+│   ⋯29       └ ▾ schema.resolve      6.23ms       ███████▌││                                                          │
+│   ⋯30       └ ▾ schema.resolve      6.01ms       ███████▌││                                                          │
+│   ⋯31       └ ▾ schema.resolve      5.84ms        ██████▍││                                                          │
+│   ⋯32       └ ▾ schema.resolve      5.60ms        ██████▍││                                                          │
+│   ⋯33       └ ▾ schema.resolve      5.39ms        ██████▍││                                                          │
+│   ⋯34       └ ▾ schema.resolve      5.14ms        ██████▍││                                                          │
+│   ⋯35       └ ▾ schema.resolve      4.89ms         █████▍││                                                          │
+│   ⋯36       └ ▾ schema.resolve      4.67ms         █████▍││                                                          │
+│   ⋯37       └ ▾ schema.resolve      4.46ms         █████▍││                                                          │
+│   ⋯38       └ ▾ schema.resolve      4.21ms         █████▍││                                                          │
+│   ⋯39       └ ▾ schema.resolve      4.02ms         █████▍││                                                          │
+│   ⋯40       └   schema.resolve      3.74ms          ████▎││                                                          │
+└──────────────────────────────────────────────────────────┘└──────────────────────────────────────────────────────────┘
+┌─ 3 Logs · 0 · subtree ───────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+⏎ fold · / search · n problem · b body · ? help                               spans.jsonl  read once  4 runs · 511 spans

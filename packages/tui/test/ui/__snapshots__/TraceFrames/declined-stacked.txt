@@ -1,0 +1,24 @@
+Runs › POST /orders 6072d474                                                    
+POST /orders  6072d474  ✗ Failure  114ms  5 spans · 3 failed · 3 logs           
+┌─ 1 Tree ─────────────────────────────────────────────────────────────────────┐
+│                                            │0            │50.0ms        │    │
+│ ✗ ▾ POST /orders                     114ms ◆████████████████████████████████✗│
+│   ├   order.validate                1.93ms ◆                                 │
+│   ├   db.query                      10.1ms ███▋                              │
+│ ✗ └ ▾ payment.charge                 102ms    ██████████████████████████████✗│
+│ ✗   └   payment.attempt              102ms    ██████████████████████████████✗│
+│                                                                              │
+│                                                                              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+┌─ 2 Details ──────────────────────────┐┌─ 3 Logs · 0 · subtree ───────────────┐
+│payment.attempt  ✗ Failure            ││                                      │
+│102ms · +12.1ms · 14:03:27.292        ││                                      │
+│span ef0c8332199d744a · parent 293ca2…││                                      │
+│at fixture/scenarios.ts:113:16        ││                                      │
+│                                      ││                                      │
+│Cause                                 ││                                      │
+│PaymentDeclined                       ││                                      │
+│(no message)                          ││                                      │
+└──────────────────────────────────────┘└──────────────────────────────────────┘
+⏎ fold · / search · ? help            spans.jsonl  read once  4 runs · 511 spans

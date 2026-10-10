@@ -8,19 +8,21 @@ export const ListBody = (props: {
     readonly body: Body;
     readonly rows: number;
     readonly onPick: (key: string) => void;
-}): ReactNode =>
-    props.body._tag === "Message" ? (
-        <Placeholder lines={props.body.lines} />
+}): ReactNode => {
+    const { body } = props;
+    return body._tag === "Message" ? (
+        <Placeholder lines={body.lines} />
     ) : (
         <box flexGrow={1} flexDirection="column">
-            <LineText line={props.body.header} />
+            <LineText line={body.header} />
             <WindowedList
-                size={props.body.size}
-                selected={props.body.selected}
-                keyAt={props.body.keyAt}
-                line={props.body.line}
+                size={body.size}
+                selected={body.selected}
+                keyAt={body.keyAt}
+                row={(index, selected) => <LineText line={body.line(index, selected)} />}
                 height={props.rows}
-                onPick={props.onPick}
+                onPick={(key) => props.onPick(key)}
             />
         </box>
     );
+};
