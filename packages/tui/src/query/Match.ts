@@ -17,8 +17,8 @@ const tests = new WeakMap<Needle, Test>();
 
 /**
  * A folded needle is one case-insensitive regular expression. A search tests millions of strings, and lowering each
- * one first allocated a copy of every string that had a capital: on `huge`, a plain term took 84 ms that way against
- * 49 ms as a regular expression. The `u` flag folds case by Unicode's simple case folding.
+ * would copy every string that has a capital: on `huge`'s 3.6 million strings, 84 ms against 49 ms for the regular
+ * expression. The `u` flag folds case by Unicode's simple case folding.
  */
 const testOf = (needle: Needle): Test => {
     const known = tests.get(needle);
