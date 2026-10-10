@@ -54,42 +54,54 @@ const commonError = (errors: ReadonlyMap<string, number>, total: number): string
     });
 };
 
-/**
- * One pass over the members, and their durations sorted as a `Float64Array`, natively: the heading of a group as large
- * as the run is built again on every publish.
- */
+/** The kth smallest of `values`, which it reorders: Hoare's selection, linear on average where a sort is not. */
+const select = (values: Float64Array, k: number): number => {
+    let low = 0;
+    let high = values.length - 1;
+    while (low < high) {
+        const pivot = values[(low + high) >>> 1] ?? 0;
+        let i = low;
+        let j = high;
+        while (i <= j) {
+            while ((values[i] ?? 0) < pivot) {
+                i++;
+            }
+            while ((values[j] ?? 0) > pivot) {
+                j--;
+            }
+            if (i <= j) {
+                const swap = values[i] ?? 0;
+                values[i] = values[j] ?? 0;
+                values[j] = swap;
+                i++;
+                j--;
+            }
+        }
+        if (k <= j) {
+            high = j;
+        } else if (k >= i) {
+            low = i;
+        } else {
+            break;
+        }
+    }
+    return values[k] ?? 0;
+};
+
+/** The totals come from `collect`, which gathers them in its pass over the run; this adds the median and the error. */
 export const headingStats = (group: Group): HeadingStats => {
     const cached = statsCache.get(group);
     if (cached !== undefined) {
         return cached;
     }
-    const durations = new Float64Array(group.members.length);
-    let spans = 0;
-    let failedTraces = 0;
-    let logs = 0;
-    let errorTotal = 0;
-    // oxlint-disable-next-line effect-native/imperative-collection-build -- counting in the same pass is the point.
-    const errors = new Map<string, number>();
-    for (const [i, item] of group.members.entries()) {
-        const { trace } = item;
-        durations[i] = trace.endMs - trace.startMs;
-        spans += trace.spanCount;
-        failedTraces += item.state === "failed" ? 1 : 0;
-        logs += trace.logs;
-        if (Option.isSome(trace.firstError)) {
-            const type = trace.firstError.value.type;
-            errors.set(type, (errors.get(type) ?? 0) + 1);
-            errorTotal += 1;
-        }
-    }
-    durations.sort();
+    const { durations } = group.totals;
     const stats: HeadingStats = {
         firstStartMs: group.members[0]?.trace.startMs ?? 0,
-        p50Ms: durations[Math.floor((durations.length - 1) / 2)] ?? 0,
-        spans,
-        failedTraces,
-        logs,
-        error: commonError(errors, errorTotal),
+        p50Ms: durations.length === 0 ? 0 : select(durations, Math.floor((durations.length - 1) / 2)),
+        spans: group.totals.spans,
+        failedTraces: group.totals.failedTraces,
+        logs: group.totals.logs,
+        error: commonError(group.totals.errors, group.totals.errorTotal),
     };
     statsCache.set(group, stats);
     return stats;

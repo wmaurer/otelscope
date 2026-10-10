@@ -8,24 +8,24 @@ import type { Chunk, Line } from "./Role.ts";
 const LIVE_MILLIS = 5000;
 
 export const isLive = (lastArrivalAt: Option.Option<number>, phase: Phase, now: number): boolean =>
-    phase === "following" && Option.exists(lastArrivalAt, (at) => now - at < LIVE_MILLIS);
+    phase === "following" && Option.isSome(lastArrivalAt) && now - lastArrivalAt.value < LIVE_MILLIS;
 
 export type TraceState = "failed" | "recovered" | "interrupted" | "running" | "partial" | "ok";
 
-export const traceState = (trace: Trace, live: boolean): TraceState =>
-    Option.match(trace.rootExit, {
-        onNone: () => (live ? "running" : "partial"),
-        onSome: (exit) => {
-            switch (exit) {
-                case "Failure":
-                    return "failed";
-                case "Interrupted":
-                    return "interrupted";
-                case "Success":
-                    return trace.failedSpans > 0 ? "recovered" : "ok";
-            }
-        },
-    });
+// It and `isLive` run for every trace of a run on each publish, so they allocate no closures.
+export const traceState = (trace: Trace, live: boolean): TraceState => {
+    if (Option.isNone(trace.rootExit)) {
+        return live ? "running" : "partial";
+    }
+    switch (trace.rootExit.value) {
+        case "Failure":
+            return "failed";
+        case "Interrupted":
+            return "interrupted";
+        case "Success":
+            return trace.failedSpans > 0 ? "recovered" : "ok";
+    }
+};
 
 export const isProblem = (state: TraceState): boolean => state === "failed" || state === "interrupted";
 

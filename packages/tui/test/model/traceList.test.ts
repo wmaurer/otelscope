@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, HashSet, Option } from "effect";
+import { Array as Arr, HashSet, Option, Order, Schema } from "effect";
 
 import { Index } from "../../src/data/Index.ts";
 import { lineText } from "../../src/model/text.ts";
@@ -231,6 +231,21 @@ describe("headings", () => {
         expect(p50(20)).toBe(10);
         expect(p50(21)).toBe(11);
     });
+
+    it.prop(
+        "takes the lower middle of the sorted durations, ties and any order included",
+        [Schema.Array(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 40 }))).check(Schema.isMinLength(20))],
+        ([durations]) => {
+            const source = indexed(
+                Arr.map(durations, (ms, i) => rootSpan(`d${i}`, "job", 1000 + i, "Success", { ms })),
+            );
+            const heading = build({}, "", source).rows[0]!;
+            const sorted = Arr.sort(durations, Order.Number);
+            expect(heading._tag === "Heading" ? headingStats(heading.group).p50Ms : -1).toBe(
+                sorted[Math.floor((sorted.length - 1) / 2)],
+            );
+        },
+    );
 });
 
 describe("highlights", () => {

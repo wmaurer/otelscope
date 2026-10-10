@@ -21,10 +21,28 @@ export interface Item {
     readonly state: TraceState;
 }
 
+/** The sums a group's heading shows, over its members. */
+export interface GroupTotals {
+    readonly spans: number;
+    readonly failedTraces: number;
+    readonly logs: number;
+    /** The members' first errors, counted by type, in the order the types first appear. */
+    readonly errors: ReadonlyMap<string, number>;
+    readonly errorTotal: number;
+    /** The members' durations, in no particular order: the heading reorders them to find the median. */
+    readonly durations: Float64Array;
+}
+
+export interface Members {
+    readonly items: ReadonlyArray<Item>;
+    readonly totals: GroupTotals;
+}
+
 export interface Group {
     readonly name: string;
     readonly all: number;
     readonly members: ReadonlyArray<Item>;
+    readonly totals: GroupTotals;
     readonly open: boolean;
     readonly shown: ReadonlyArray<Item>;
     readonly hidden: ReadonlyArray<Item>;
@@ -89,11 +107,50 @@ export interface Collected {
     readonly matching: ReadonlyArray<Trace>;
     readonly sorted: ReadonlyArray<Item>;
     readonly sizes: Readonly<Record<string, number>>;
-    readonly members: Readonly<Record<string, ReadonlyArray<Item>>>;
+    readonly members: Readonly<Record<string, Members>>;
     readonly sort: TraceSort;
     readonly reverse: boolean;
 }
 
+interface Gathering {
+    readonly items: Array<Item>;
+    spans: number;
+    failedTraces: number;
+    logs: number;
+    readonly errors: Map<string, number>;
+    errorTotal: number;
+    readonly durations: Float64Array;
+}
+
+const gathering = (size: number): Gathering => ({
+    items: [],
+    spans: 0,
+    failedTraces: 0,
+    logs: 0,
+    errors: new Map(),
+    errorTotal: 0,
+    durations: new Float64Array(size),
+});
+
+const gather = (group: Gathering, item: Item): void => {
+    const { trace } = item;
+    group.durations[group.items.length] = trace.endMs - trace.startMs;
+    group.items[group.items.length] = item;
+    group.spans += trace.spanCount;
+    group.failedTraces += item.state === "failed" ? 1 : 0;
+    group.logs += trace.logs;
+    if (Option.isSome(trace.firstError)) {
+        const type = trace.firstError.value.type;
+        group.errors.set(type, (group.errors.get(type) ?? 0) + 1);
+        group.errorTotal += 1;
+    }
+};
+
+/**
+ * It runs over every trace of the run on each publish. So it walks them in plain loops, without an `Option` or a
+ * closure per trace, and gathers each group's totals in the same pass. Neighbouring traces mostly share their root's
+ * name, so it looks a name up again only when it changes.
+ */
 export const collect = (
     snapshot: Snapshot,
     runId: RunId,
@@ -103,22 +160,55 @@ export const collect = (
 ): Option.Option<Collected> =>
     Option.map(Option.fromUndefinedOr(snapshot.runs.get(runId)), (run) => {
         const query = parse(filter);
-        const all = Arr.getSomes(Arr.map(run.traceIds, (id) => Option.fromUndefinedOr(snapshot.traces.get(id))));
-        const sizes = Record.map(
-            Arr.groupBy(all, (trace) => trace.headName),
-            (traces) => traces.length,
-        );
+        const all: Array<Trace> = [];
+        // oxlint-disable-next-line effect-native/imperative-collection-build -- counting in the same pass is the point.
+        const counts = new Map<string, number>();
+        let name: string | undefined;
+        let named = 0;
+        for (const id of run.traceIds) {
+            const trace = snapshot.traces.get(id);
+            if (trace !== undefined) {
+                all[all.length] = trace;
+                if (trace.headName === name) {
+                    named += 1;
+                } else {
+                    if (name !== undefined) {
+                        counts.set(name, (counts.get(name) ?? 0) + named);
+                    }
+                    name = trace.headName;
+                    named = 1;
+                }
+            }
+        }
+        if (name !== undefined) {
+            counts.set(name, (counts.get(name) ?? 0) + named);
+        }
         const matching = query.length === 0 ? all : Arr.filter(all, (trace) => traceMatches(query, trace));
-        const items = Arr.map(matching, (trace) => ({
+        const phase = snapshot.status.phase;
+        const items = Arr.map(matching, (trace): Item => ({
             trace,
-            state: traceState(
-                trace,
-                Option.exists(liveAt, (now) => isLive(trace.lastArrivalAt, snapshot.status.phase, now)),
-            ),
+            state: traceState(trace, Option.isSome(liveAt) && isLive(trace.lastArrivalAt, phase, liveAt.value)),
         }));
         const ordered = view.sort === "start" ? items : Arr.sort(items, orders[view.sort]);
         const sorted = view.reverse ? Arr.reverse(ordered) : ordered;
-        const grouped = (item: Item) => (own(sizes, item.trace.headName) ?? 0) >= GROUP_MIN;
+        // oxlint-disable-next-line effect-native/imperative-collection-build -- grouping in the same pass is the point.
+        const groups = new Map<string, Gathering>();
+        let last: { readonly name: string; readonly group: Gathering | undefined } | undefined;
+        for (const item of sorted) {
+            const headName = item.trace.headName;
+            if (last?.name !== headName) {
+                const size = counts.get(headName) ?? 0;
+                let group = groups.get(headName);
+                if (group === undefined && size >= GROUP_MIN) {
+                    group = gathering(size);
+                    groups.set(headName, group);
+                }
+                last = { name: headName, group };
+            }
+            if (last.group !== undefined) {
+                gather(last.group, item);
+            }
+        }
         return {
             snapshot,
             run,
@@ -127,8 +217,13 @@ export const collect = (
             total: all.length,
             matching,
             sorted,
-            sizes,
-            members: Arr.groupBy(Arr.filter(sorted, grouped), (item) => item.trace.headName),
+            sizes: Object.fromEntries(counts),
+            members: Object.fromEntries(
+                Arr.map(Arr.fromIterable(groups), ([name, { items, durations, ...totals }]) => [
+                    name,
+                    { items, totals: { ...totals, durations: durations.subarray(0, items.length) } },
+                ]),
+            ),
             sort: view.sort,
             reverse: view.reverse,
         };
@@ -145,12 +240,12 @@ const notableShown = (members: ReadonlyArray<Item>): ReadonlySet<Item> =>
 const groupOf = (
     collected: Collected,
     name: string,
-    members: ReadonlyArray<Item>,
+    { items: members, totals }: Members,
     open: boolean,
     pinned: Option.Option<TraceId>,
 ): Group => {
     if (open) {
-        return { name, all: own(collected.sizes, name) ?? 0, members, open, shown: [], hidden: [] };
+        return { name, all: own(collected.sizes, name) ?? 0, members, totals, open, shown: [], hidden: [] };
     }
     const notable = notableShown(members);
     const shown = Arr.filter(members, (item) => notable.has(item) || Option.contains(pinned, item.trace.id));
@@ -159,6 +254,7 @@ const groupOf = (
         name,
         all: own(collected.sizes, name) ?? 0,
         members,
+        totals,
         open,
         shown,
         hidden: Arr.filter(members, (item) => !isShown.has(item)),
@@ -186,8 +282,12 @@ export const traceList = (
         }
         rows[rows.length] = { _tag: "Trace", key: traceKey(item.trace.id), item, member };
     };
+    let last: { readonly name: string; readonly group: Group | undefined } | undefined;
     for (const item of collected.sorted) {
-        const group = own(groups, item.trace.headName);
+        if (last?.name !== item.trace.headName) {
+            last = { name: item.trace.headName, group: own(groups, item.trace.headName) };
+        }
+        const group = last.group;
         if (group === undefined) {
             addTrace(item, false);
         } else if (group.members[0] === item) {
@@ -238,7 +338,7 @@ export const pinnedBy = (
         if (trace === undefined || HashSet.has(openGroups, trace.headName)) {
             return Option.none();
         }
-        const members = own(collected.members, trace.headName);
+        const members = own(collected.members, trace.headName)?.items;
         if (members === undefined) {
             return Option.none();
         }
