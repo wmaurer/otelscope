@@ -4,6 +4,7 @@ import { Array as Arr, HashSet, Option } from "effect";
 import { Action, ClickTarget } from "../../src/keys/Action.ts";
 import { defaultPanes } from "../../src/model/panes.ts";
 import { traceContext } from "../../src/model/traceFrame.ts";
+import { matchText } from "../../src/model/treeSearch.ts";
 import * as Nav from "../../src/nav/Nav.ts";
 import { bodyFor, defaultTraceView, Screen, TreeRow } from "../../src/nav/Screen.ts";
 import { ShellEffect } from "../../src/nav/ScreenStep.ts";
@@ -12,6 +13,7 @@ import { log } from "../support/records.ts";
 import { indexed } from "../support/store.ts";
 import { siblings, span, traceModelFor } from "../support/traces.ts";
 
+import type { Snapshot } from "../../src/data/Snapshot.ts";
 import type { TraceAction } from "../../src/keys/Action.ts";
 import type { Panes } from "../../src/model/panes.ts";
 import type { GroupKey, TraceView } from "../../src/nav/Screen.ts";
@@ -73,22 +75,23 @@ const viewOf = (nav: Nav.Nav): TraceView => {
     return screen.view;
 };
 
-const step = (
-    nav: Nav.Nav,
-    action: TraceAction,
-    panes: Panes = defaultPanes,
-    size = { width: 120, height: 40 },
-): ScreenStep => {
+interface StepEnv {
+    readonly panes?: Panes;
+    readonly size?: { readonly width: number; readonly height: number };
+    readonly source?: Snapshot;
+}
+
+const step = (nav: Nav.Nav, action: TraceAction, env: StepEnv = {}): ScreenStep => {
     const screen = Nav.top(nav);
     if (screen._tag !== "Trace") {
         throw new Error("not on a Trace screen");
     }
-    const model = Option.getOrThrow(traceModelFor(nav, snapshot));
-    const context = traceContext(model, {
-        size,
-        panes,
+    const source = env.source ?? snapshot;
+    const context = traceContext(Option.getOrThrow(traceModelFor(nav, source)), {
+        size: env.size ?? { width: 120, height: 40 },
+        panes: env.panes ?? defaultPanes,
         now: 0,
-        snapshot,
+        snapshot: source,
         bodyStats: new Map(),
     });
     return stepTrace(nav, screen, context, action);
@@ -119,7 +122,7 @@ describe("moving", () => {
 
     it("scrolls details and moves the logs cursor when they have focus", () => {
         const details = navOf({ selected: spanRow("pay"), pane: "details" });
-        expect(viewOf(step(details, down, defaultPanes, small).nav).detailsTop).toBe(1);
+        expect(viewOf(step(details, down, { size: small }).nav).detailsTop).toBe(1);
         expect(step(details, down).nav, "everything fits at 120×40").toBe(details);
         const logs = navOf({ selected: spanRow("root"), pane: "logs" });
         const moved = viewOf(step(logs, down).nav);
@@ -140,7 +143,7 @@ describe("panes", () => {
         const wider = step(nav, Action.ResizeSplit({ delta: 5 }));
         expect(wider.nav).toBe(nav);
         expect(wider.effects).toEqual([ShellEffect.SetPanes({ panes: { split: 55, nameColumn: 32 } })]);
-        expect(step(nav, Action.ResizeSplit({ delta: -5 }), { split: 25, nameColumn: 32 }).effects).toEqual([
+        expect(step(nav, Action.ResizeSplit({ delta: -5 }), { panes: { split: 25, nameColumn: 32 } }).effects).toEqual([
             ShellEffect.SetPanes({ panes: { split: 25, nameColumn: 32 } }),
         ]);
         expect(step(nav, Action.SetSplit({ percent: 93 })).effects).toEqual([
@@ -150,9 +153,9 @@ describe("panes", () => {
 
     it("widens the name column from the width it is drawn at", () => {
         const nav = navOf({ selected: spanRow("root") });
-        expect(step(nav, Action.ResizeNameColumn({ delta: 5 }), { split: 50, nameColumn: 500 }).effects).toEqual([
-            ShellEffect.SetPanes({ panes: { split: 50, nameColumn: 42 } }),
-        ]);
+        expect(
+            step(nav, Action.ResizeNameColumn({ delta: 5 }), { panes: { split: 50, nameColumn: 500 } }).effects,
+        ).toEqual([ShellEffect.SetPanes({ panes: { split: 50, nameColumn: 42 } })]);
     });
 
     it("cycles the log scope", () => {
@@ -191,20 +194,7 @@ describe("n and N", () => {
 
     it("says so when there are no problems", () => {
         const clean = indexed([span("root", null, 0)]);
-        const nav = navOf();
-        const model = Option.getOrThrow(traceModelFor(nav, clean));
-        const screen = Nav.top(nav);
-        if (screen._tag !== "Trace") {
-            throw new Error("not on a Trace screen");
-        }
-        const context = traceContext(model, {
-            size: { width: 120, height: 40 },
-            panes: defaultPanes,
-            now: 0,
-            snapshot: clean,
-            bodyStats: new Map(),
-        });
-        expect(stepTrace(nav, screen, context, Action.NextProblem({ dir: "next" })).effects).toEqual([
+        expect(step(navOf(), Action.NextProblem({ dir: "next" }), { source: clean }).effects).toEqual([
             ShellEffect.Say({ text: "no problems" }),
         ]);
     });
@@ -311,9 +301,29 @@ describe("clicks", () => {
 
     it("scrolls details with the wheel without moving focus", () => {
         const view = viewOf(
-            step(navOf({ selected: spanRow("pay") }), Action.ScrollDetails({ rows: 3 }), defaultPanes, small).nav,
+            step(navOf({ selected: spanRow("pay") }), Action.ScrollDetails({ rows: 3 }), { size: small }).nav,
         );
         expect([view.detailsTop, view.pane]).toEqual([3, "tree"]);
+    });
+});
+
+describe("a span no row can show", () => {
+    const looped = indexed([span("root", null, 0), span("self", "self", 1, { name: "loop" })]);
+    const nav = navOf({ selected: spanRow("root"), search: "loop" });
+
+    it("is no search match", () => {
+        const model = Option.getOrThrow(traceModelFor(nav, looped));
+        expect(model.search.positions).toEqual([]);
+        expect(matchText(model.search, model.facts, model.entry)).toEqual(Option.some("no matches"));
+    });
+
+    it("is never selected by n, N or typing", () => {
+        Arr.forEach(["next", "prev"] as const, (dir) => {
+            const stepped = step(nav, Action.NextMatch({ dir }), { source: looped });
+            expect(stepped.nav).toBe(nav);
+            expect(stepped.effects).toEqual([ShellEffect.Say({ text: "no matches" })]);
+        });
+        expect(seekMatch(nav, looped)).toBe(nav);
     });
 });
 

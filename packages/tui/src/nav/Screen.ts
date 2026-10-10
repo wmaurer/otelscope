@@ -127,7 +127,7 @@ export const tracesFor = (runId: RunId, runs: RunsView): ScreenOf<"Traces"> =>
     Screen.Traces({ runId, idIsPrefix: false, view: { ...defaultTracesView, filter: runs.filter } });
 
 export interface Opening {
-    readonly selected: TreeRow;
+    readonly selected: Option.Option<TreeRow>;
     readonly openGroups: HashSet.HashSet<GroupKey>;
 }
 
@@ -144,7 +144,7 @@ export const traceFor = (
         viaRun,
         view: {
             ...defaultTraceView,
-            selected: Option.map(opening, (o) => o.selected),
+            selected: Option.flatMap(opening, (o) => o.selected),
             openGroups: Option.match(opening, { onNone: HashSet.empty<GroupKey>, onSome: (o) => o.openGroups }),
             search: traces.filter,
         },

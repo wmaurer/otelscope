@@ -22,7 +22,8 @@ export const groupsToOpen = (facts: TreeFacts, spanId: SpanId): ReadonlyArray<Gr
 
 /**
  * 06's opening selection: the first span matching every term of the seeded search (its groups opened), else the first
- * failure origin, else the first interrupted span, else the root or the first row of a partial trace.
+ * failure origin, else the first interrupted span, else the root or the first row of a partial trace. None when the
+ * tree has no row: every span's parent chain loops.
  */
 export const openingFor = (trace: Trace, search: Query): Opening => {
     const facts = factsOf(trace);
@@ -36,7 +37,7 @@ export const openingFor = (trace: Trace, search: Query): Opening => {
               });
     if (Option.isSome(matched)) {
         return {
-            selected: TreeRow.Span({ spanId: matched.value }),
+            selected: Option.some(TreeRow.Span({ spanId: matched.value })),
             openGroups: HashSet.fromIterable(groupsToOpen(facts, matched.value)),
         };
     }
@@ -51,14 +52,10 @@ export const openingFor = (trace: Trace, search: Query): Opening => {
         () => Arr.head(trace.topLevel),
     );
     return {
-        selected: Option.match(chosen, {
-            onSome: (spanId) => TreeRow.Span({ spanId }),
-            onNone: () =>
-                Option.match(Arr.head(trace.missingParents), {
-                    onSome: (parentId) => TreeRow.Missing({ parentId }),
-                    onNone: () => TreeRow.Span({ spanId: "" }),
-                }),
-        }),
+        selected: Option.orElse(
+            Option.map(chosen, (spanId) => TreeRow.Span({ spanId })),
+            () => Option.map(Arr.head(trace.missingParents), (parentId) => TreeRow.Missing({ parentId })),
+        ),
         openGroups: HashSet.empty(),
     };
 };

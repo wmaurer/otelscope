@@ -1,6 +1,6 @@
 import { Array as Arr, Option, Order } from "effect";
 
-import { spanHits, traceMatches } from "../query/Match.ts";
+import { spanHits } from "../query/Match.ts";
 import { parse } from "../query/Query.ts";
 import { count } from "./format.ts";
 import { countIn, indexIn } from "./stops.ts";
@@ -27,6 +27,8 @@ export interface SpanSearch {
     readonly acrossSpans: boolean;
 }
 
+const NONE: ReadonlySet<SpanId> = new Set();
+
 const inactive = (text: string, query: Query): SpanSearch => ({
     text,
     query,
@@ -38,19 +40,15 @@ const inactive = (text: string, query: Query): SpanSearch => ({
     acrossSpans: false,
 });
 
-const NONE: ReadonlySet<SpanId> = new Set();
-
-const allTerms = (facts: TreeFacts, query: Query): ReadonlySet<SpanId> => {
-    const sets = Arr.map(query, (term) => spanHits(term, facts.trace));
+/** The spans in every one of `sets` that `placed` accepts. */
+const allTerms = (sets: ReadonlyArray<ReadonlySet<SpanId>>, placed: (id: SpanId) => boolean): ReadonlySet<SpanId> => {
     const smallest = Arr.reduce(sets, Arr.head(sets), (best, set) =>
         Option.exists(best, (b) => b.size <= set.size) ? best : Option.some(set),
     );
     return Option.match(smallest, {
         onNone: () => NONE,
         onSome: (base) =>
-            sets.length === 1
-                ? base
-                : new Set(Arr.filter(Array.from(base), (id) => Arr.every(sets, (set) => set.has(id)))),
+            new Set(Arr.filter(Array.from(base), (id) => placed(id) && Arr.every(sets, (set) => set.has(id)))),
     });
 };
 
@@ -59,8 +57,11 @@ const build = (facts: TreeFacts, text: string): SpanSearch => {
     if (query.length === 0) {
         return inactive(text, query);
     }
-    const matched = allTerms(facts, query);
     const order = facts.order();
+    // A span whose parent chain loops has no row, so it is not part of the tree's search.
+    const placed = (id: SpanId) => order.position(id) >= 0;
+    const sets = Arr.map(query, (term) => spanHits(term, facts.trace));
+    const matched = allTerms(sets, placed);
     const positions = Arr.sort(
         Arr.map(Array.from(matched), (id) => order.position(id)),
         Order.Number,
@@ -85,7 +86,7 @@ const build = (facts: TreeFacts, text: string): SpanSearch => {
             const all = countIn(positions, first, order.end(last));
             return all - Arr.reduce(shown, 0, (sum, id) => sum + subtree(id));
         },
-        acrossSpans: positions.length === 0 && traceMatches(query, facts.trace),
+        acrossSpans: positions.length === 0 && Arr.every(sets, (set) => Arr.some(Array.from(set), placed)),
     };
 };
 

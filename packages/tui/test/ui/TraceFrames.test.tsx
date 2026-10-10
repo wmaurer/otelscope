@@ -76,7 +76,7 @@ const render = async (frame: FrameProps) => {
 /** As Traces ⏎ opens it: the opening selection, with the seeded search. */
 const opened = (traceId: TraceId, over: Partial<TraceView> = {}): Nav.Nav => {
     const opening = openingFor(sample.traces.get(traceId)!, parse(over.search ?? ""));
-    return navFor(traceId, { selected: Option.some(opening.selected), openGroups: opening.openGroups, ...over });
+    return navFor(traceId, { selected: opening.selected, openGroups: opening.openGroups, ...over });
 };
 
 const factsFor = (traceId: TraceId) => factsOf(sample.traces.get(traceId)!);

@@ -43,8 +43,8 @@ export const openSingleRun = (nav: Nav, snapshot: Snapshot): Nav => {
 };
 
 /**
- * 04 "Pushes": a Trace screen pushed before its trace was loaded gets its opening selection the first time the trace is
- * present, seeded search included. It runs once: afterwards the selection is set.
+ * 04 "Pushes": a Trace screen pushed before its trace was loaded gets its opening selection the first time the trace has
+ * a row, seeded search included. It runs once: afterwards the selection is set.
  */
 export const openArrivedTrace = (nav: Nav, snapshot: Snapshot): Nav => {
     const screen = top(nav);
@@ -58,7 +58,7 @@ export const openArrivedTrace = (nav: Nav, snapshot: Snapshot): Nav => {
     const opening = openingFor(trace, parse(screen.view.search));
     return update(nav, "Trace", (view) => ({
         ...view,
-        selected: Option.some(opening.selected),
+        selected: opening.selected,
         openGroups: HashSet.union(view.openGroups, opening.openGroups),
     }));
 };

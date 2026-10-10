@@ -77,6 +77,15 @@ export const stepTrace = (
                 bodyFor(facts.trace.id, spanId, prefix),
             ),
         );
+    /** Reveals the span at a stop of `n`/`N`: a position in tree order. */
+    const revealStop = (stop: Option.Option<number>, empty: string, openGroups: boolean): ScreenStep =>
+        Option.match(
+            Option.flatMap(stop, (at) => Option.fromUndefinedOr(facts.order().ids[at])),
+            {
+                onNone: () => said(nav, empty),
+                onSome: (spanId) => set(reveal(view, facts, spanId, openGroups)),
+            },
+        );
     const focused = (pane: Pane): TraceView => (view.pane === pane ? view : { ...view, pane });
 
     switch (action._tag) {
@@ -141,18 +150,10 @@ export const stepTrace = (
             return set(expandAll(view, facts));
         case "CollapseAll":
             return set(collapseAll(view, facts));
-        case "NextProblem": {
-            const { problems, ids } = facts.order();
-            return Option.match(nextStop(problems, anchor(), action.dir), {
-                onNone: () => said(nav, "no problems"),
-                onSome: (stop) => set(reveal(view, facts, ids[stop] ?? "", false)),
-            });
-        }
+        case "NextProblem":
+            return revealStop(nextStop(facts.order().problems, anchor(), action.dir), "no problems", false);
         case "NextMatch":
-            return Option.match(nextStop(model.search.positions, anchor(), action.dir), {
-                onNone: () => said(nav, "no matches"),
-                onSome: (stop) => set(reveal(view, facts, facts.order().ids[stop] ?? "", true)),
-            });
+            return revealStop(nextStop(model.search.positions, anchor(), action.dir), "no matches", true);
         case "GoToOrigin":
             return Option.match(
                 Option.flatMap(selectedSpan, (span) => originOf(facts, span.span)),
@@ -215,8 +216,13 @@ export const seekMatch = (nav: Nav, snapshot: Snapshot): Nav => {
     }
     const facts = factsOf(trace);
     const search = searchOf(facts, screen.view.search);
-    return Option.match(firstAtOrAfter(search.positions, anchorOf(facts, screen.view.selected)), {
-        onNone: () => nav,
-        onSome: (stop) => update(nav, "Trace", (view) => reveal(view, facts, facts.order().ids[stop] ?? "", true)),
-    });
+    return Option.match(
+        Option.flatMap(firstAtOrAfter(search.positions, anchorOf(facts, screen.view.selected)), (stop) =>
+            Option.fromUndefinedOr(facts.order().ids[stop]),
+        ),
+        {
+            onNone: () => nav,
+            onSome: (spanId) => update(nav, "Trace", (view) => reveal(view, facts, spanId, true)),
+        },
+    );
 };
