@@ -1,12 +1,11 @@
 import { Array as Arr, HashSet, Option } from "effect";
 
 import { TreeRow } from "../nav/Screen.ts";
-import { spanMatches } from "../query/Match.ts";
 import { factsOf } from "./treeFacts.ts";
+import { searchOf } from "./treeSearch.ts";
 
 import type { SpanId, Trace } from "../data/Snapshot.ts";
 import type { GroupKey, Opening } from "../nav/Screen.ts";
-import type { Query } from "../query/Query.ts";
 import type { TreeFacts } from "./treeFacts.ts";
 
 /** The groups to open so `spanId` shows: those holding a span of its lineage that a closed group would not show. */
@@ -25,23 +24,17 @@ export const groupsToOpen = (facts: TreeFacts, spanId: SpanId): ReadonlyArray<Gr
  * failure origin, else the first interrupted span, else the root or the first row of a partial trace. None when the
  * tree has no row: every span's parent chain loops.
  */
-export const openingFor = (trace: Trace, search: Query): Opening => {
+export const openingFor = (trace: Trace, search: string): Opening => {
     const facts = factsOf(trace);
     const order = facts.order();
-    const matched =
-        search.length === 0
-            ? Option.none()
-            : Arr.findFirst(order.ids, (id) => {
-                  const span = trace.spans.get(id);
-                  return span !== undefined && spanMatches(search, span);
-              });
+    const at = (position: number | undefined) => Option.fromUndefinedOr(order.ids[position ?? -1]);
+    const matched = at(searchOf(facts, search).positions[0]);
     if (Option.isSome(matched)) {
         return {
             selected: Option.some(TreeRow.Span({ spanId: matched.value })),
             openGroups: HashSet.fromIterable(groupsToOpen(facts, matched.value)),
         };
     }
-    const at = (position: number | undefined) => Option.fromUndefinedOr(order.ids[position ?? -1]);
     const chosen = Option.orElse(
         Option.orElse(at(order.origins[0]), () =>
             Option.flatMap(

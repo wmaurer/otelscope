@@ -3,7 +3,6 @@ import { HashSet, Option } from "effect";
 
 import { openingFor } from "../../src/model/opening.ts";
 import { TreeRow } from "../../src/nav/Screen.ts";
-import { parse } from "../../src/query/Query.ts";
 import { record } from "../support/records.ts";
 import { indexed } from "../support/store.ts";
 
@@ -24,32 +23,32 @@ const tree = traceOf([
 
 describe("openingFor", () => {
     it("opens on the first span matching every term of the seeded search", () => {
-        expect(openingFor(tree, parse("visa")).selected).toEqual(Option.some(TreeRow.Span({ spanId: "pay" })));
+        expect(openingFor(tree, "visa").selected).toEqual(Option.some(TreeRow.Span({ spanId: "pay" })));
     });
 
     it("falls through when no single span matches every term", () => {
-        const opening = openingFor(tree, parse("visa is:interrupted"));
+        const opening = openingFor(tree, "visa is:interrupted");
         expect(opening.selected, "the failure origin").toEqual(Option.some(TreeRow.Span({ spanId: "charge" })));
     });
 
     it("opens on the failure origin, not a span the failure only passed through", () => {
-        expect(openingFor(tree, []).selected).toEqual(Option.some(TreeRow.Span({ spanId: "charge" })));
+        expect(openingFor(tree, "").selected).toEqual(Option.some(TreeRow.Span({ spanId: "charge" })));
     });
 
     it("opens on the first interrupted span, then the root", () => {
         const interrupted = traceOf([span("root", null, 1000), span("a", "root", 1001, { exit: "Interrupted" })]);
-        expect(openingFor(interrupted, []).selected).toEqual(Option.some(TreeRow.Span({ spanId: "a" })));
+        expect(openingFor(interrupted, "").selected).toEqual(Option.some(TreeRow.Span({ spanId: "a" })));
         const clean = traceOf([span("root", null, 1000), span("a", "root", 1001)]);
-        expect(openingFor(clean, []).selected).toEqual(Option.some(TreeRow.Span({ spanId: "root" })));
+        expect(openingFor(clean, "").selected).toEqual(Option.some(TreeRow.Span({ spanId: "root" })));
     });
 
     it("has no opening selection for a trace without a row", () => {
-        expect(openingFor(traceOf([span("loop", "loop", 1000)]), []).selected).toEqual(Option.none());
+        expect(openingFor(traceOf([span("loop", "loop", 1000)]), "").selected).toEqual(Option.none());
     });
 
     it("opens a partial trace on its missing-parent row", () => {
         const partial = traceOf([span("lost", "absent", 1001)]);
-        expect(openingFor(partial, []).selected).toEqual(Option.some(TreeRow.Missing({ parentId: "absent" })));
+        expect(openingFor(partial, "").selected).toEqual(Option.some(TreeRow.Missing({ parentId: "absent" })));
     });
 
     describe("same-name groups", () => {
@@ -67,7 +66,7 @@ describe("openingFor", () => {
         const grouped = traceOf([span("root", null, 1000), ...batches, importing, ...rows]);
 
         it("opens the groups that would hide a seeded search's span or its ancestors, and no other", () => {
-            const opening = openingFor(grouped, parse("row.index=12"));
+            const opening = openingFor(grouped, "row.index=12");
             expect(opening.selected).toEqual(Option.some(TreeRow.Span({ spanId: "row12" })));
             expect(opening.openGroups, "the failed batch3 shows under its closed group").toEqual(
                 HashSet.make("import|import.row"),
@@ -75,7 +74,7 @@ describe("openingFor", () => {
         });
 
         it("leaves groups closed for a failure, whose failed lineage a closed group shows anyway", () => {
-            const opening = openingFor(grouped, []);
+            const opening = openingFor(grouped, "");
             expect(opening.selected).toEqual(Option.some(TreeRow.Span({ spanId: "row7" })));
             expect(opening.openGroups).toEqual(HashSet.empty());
         });

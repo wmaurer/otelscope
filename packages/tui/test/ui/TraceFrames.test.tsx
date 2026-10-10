@@ -15,7 +15,6 @@ import { factsOf } from "../../src/model/treeFacts.ts";
 import { searchOf } from "../../src/model/treeSearch.ts";
 import * as Nav from "../../src/nav/Nav.ts";
 import { defaultTraceView, Screen, TreeRow } from "../../src/nav/Screen.ts";
-import { parse } from "../../src/query/Query.ts";
 import { Frame } from "../../src/ui/Frame.tsx";
 import { theme } from "../../src/ui/theme.ts";
 import { ingestAll, status } from "../support/store.ts";
@@ -75,7 +74,7 @@ const render = async (frame: FrameProps) => {
 
 /** As Traces ⏎ opens it: the opening selection, with the seeded search. */
 const opened = (traceId: TraceId, over: Partial<TraceView> = {}): Nav.Nav => {
-    const opening = openingFor(sample.traces.get(traceId)!, parse(over.search ?? ""));
+    const opening = openingFor(sample.traces.get(traceId)!, over.search ?? "");
     return navFor(traceId, { selected: opening.selected, openGroups: opening.openGroups, ...over });
 };
 

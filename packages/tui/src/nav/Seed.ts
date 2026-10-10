@@ -1,7 +1,6 @@
 import { HashSet, Option } from "effect";
 
 import { openingFor } from "../model/opening.ts";
-import { parse } from "../query/Query.ts";
 import { push, top, update } from "./Nav.ts";
 import { defaultRunsView, defaultTracesView, defaultTraceView, Screen, TraceRow, tracesFor } from "./Screen.ts";
 
@@ -55,7 +54,7 @@ export const openArrivedTrace = (nav: Nav, snapshot: Snapshot): Nav => {
     if (trace === undefined) {
         return nav;
     }
-    const opening = openingFor(trace, parse(screen.view.search));
+    const opening = openingFor(trace, screen.view.search);
     return update(nav, "Trace", (view) => ({
         ...view,
         selected: opening.selected,

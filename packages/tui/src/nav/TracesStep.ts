@@ -3,7 +3,6 @@ import { Array as Arr, HashSet, Option } from "effect";
 import { selectedIndex } from "../model/list.ts";
 import { isProblem } from "../model/marks.ts";
 import { openingFor } from "../model/opening.ts";
-import { parse } from "../query/Query.ts";
 import { follow, ListOutcome, select, stepList } from "./ListStep.ts";
 import { push, update } from "./Nav.ts";
 import { traceFor, TraceRow } from "./Screen.ts";
@@ -82,7 +81,7 @@ export const stepTraces = (
         }
         const { trace } = row.item;
         const opening = Option.map(Option.fromUndefinedOr(context.snapshot.traces.get(trace.id)), (found) =>
-            openingFor(found, parse(view.filter)),
+            openingFor(found, view.filter),
         );
         return stepTo(push(nav, traceFor(trace.id, Option.some(screen.runId), view, opening)));
     };

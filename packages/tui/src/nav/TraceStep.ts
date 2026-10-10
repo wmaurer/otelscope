@@ -178,14 +178,14 @@ export const stepTrace = (
                 case "Row":
                 case "Mark": {
                     if (action.pane === "logs") {
-                        const index = Arr.findFirstIndex(logs.entries, (entry) => entry.key === target.key);
-                        return Option.match(index, {
-                            onNone: () => set(from),
-                            onSome: (at) =>
-                                at === cursorEntry(logs, facts, view.logCursor)
-                                    ? goToLog(from, at)
-                                    : set({ ...from, logCursor: Option.some(logs.entries[at]?.key ?? target.key) }),
-                        });
+                        const at = logs.entryIndex(target.key);
+                        const log = logs.entries[at];
+                        if (log === undefined) {
+                            return set(from);
+                        }
+                        return at === cursorEntry(logs, facts, view.logCursor)
+                            ? goToLog(from, at)
+                            : set({ ...from, logCursor: Option.some(log.key) });
                     }
                     const at = tree.indexOf(target.key);
                     const entry = tree.rows[at];

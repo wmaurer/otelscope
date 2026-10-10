@@ -210,12 +210,12 @@ export interface LogList {
     readonly rows: ReadonlyArray<LogRow>;
     /** Row index of each entry's Entry row. */
     readonly entryRow: ReadonlyArray<number>;
-    /** The entry index of a cursor, -1 when it is filtered out or out of scope. */
-    readonly entryIndex: (cursor: LogCursor) => number;
+    /** The entry index of a log's key, -1 when it is filtered out, out of scope or not a log's key. */
+    readonly entryIndex: (key: string) => number;
 }
 
-/** Where the cursor's log sorts, looked up in the trace. None when the trace has no such log. */
-const sortKeyOf = (facts: TreeFacts, cursor: LogCursor): Option.Option<SortKey> => {
+/** Where the log with this key sorts, looked up in the trace. None when the trace has no such log. */
+const sortKeyOf = (facts: TreeFacts, cursor: string): Option.Option<SortKey> => {
     const colon = cursor.lastIndexOf(":");
     const spanId = cursor.slice(0, colon);
     const eventIndex = Number(cursor.slice(colon + 1));
@@ -268,12 +268,12 @@ export const logList = (
         entries,
         rows,
         entryRow,
-        entryIndex: (cursor) =>
-            Option.match(sortKeyOf(facts, cursor), {
+        entryIndex: (key) =>
+            Option.match(sortKeyOf(facts, key), {
                 onNone: () => -1,
-                onSome: (key) => {
-                    const at = lowerBound(entries, key);
-                    return entries[at]?.key === cursor ? at : -1;
+                onSome: (sortKey) => {
+                    const at = lowerBound(entries, sortKey);
+                    return entries[at]?.key === key ? at : -1;
                 },
             }),
     };
