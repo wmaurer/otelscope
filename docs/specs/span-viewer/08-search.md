@@ -29,8 +29,8 @@ A query is a list of **terms** separated by spaces. Every term must match.
 | `is:failed` · `is:interrupted` · `is:ok` | the span's exit (`Failure`, `Interrupted`, `Success`)                                                |
 | `is:<level>`                             | on a log line only: its level (`is:error`, `is:warn`, `is:info`, `is:debug`, `is:trace`, `is:fatal`) |
 
-- **Smart case**: a term in all lowercase ignores case; any capital letter makes it case-sensitive. This applies to
-  plain terms and to the value of `key=value` (keys always match exactly).
+- **Smart case**: a term in all lowercase ignores case (by Unicode's simple case folding); any capital letter makes it
+  case-sensitive. This applies to plain terms and to the value of `key=value` (keys always match exactly).
 - **A query that does not parse** (an unclosed quote) is read as plain terms split on spaces, quotes included. A query
   is never an error.
 - An unknown `is:` value matches nothing.

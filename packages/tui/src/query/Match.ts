@@ -7,20 +7,46 @@ import type { LogLevel } from "../model/levels.ts";
 import type { Needle, Query, Term } from "./Query.ts";
 import type { AttributeValue, Attributes, JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
 
-export const has = (haystack: string, needle: Needle): boolean =>
-    needle._tag === "Exact"
-        ? haystack.includes(needle.text)
-        : haystack.includes(needle.lower) || haystack.toLowerCase().includes(needle.lower);
+/** Whether a string contains a needle. */
+type Test = (haystack: string) => boolean;
 
-const valueHas = (value: AttributeValue, needle: Needle): boolean => {
+const SPECIAL = /[.*+?^${}()|[\]\\]/g;
+
+// oxlint-disable-next-line effect-native/imperative-collection-build -- a cache: filling it is the design.
+const tests = new WeakMap<Needle, Test>();
+
+/**
+ * A folded needle is one case-insensitive regular expression. A search tests millions of strings, and lowering each
+ * one first allocated a copy of every string that had a capital: on `huge`, a plain term took 84 ms that way against
+ * 49 ms as a regular expression. The `u` flag folds case by Unicode's simple case folding.
+ */
+const testOf = (needle: Needle): Test => {
+    const known = tests.get(needle);
+    if (known !== undefined) {
+        return known;
+    }
+    const made: Test =
+        needle._tag === "Exact"
+            ? (haystack) => haystack.includes(needle.text)
+            : (
+                  (pattern: RegExp) => (haystack: string) =>
+                      pattern.test(haystack)
+              )(new RegExp(needle.lower.replace(SPECIAL, "\\$&"), "iu"));
+    tests.set(needle, made);
+    return made;
+};
+
+export const has = (haystack: string, needle: Needle): boolean => testOf(needle)(haystack);
+
+const valueHas = (value: AttributeValue, test: Test): boolean => {
     if (Predicate.isString(value)) {
-        return has(value, needle);
+        return test(value);
     }
     if (value === null || Predicate.isNumber(value) || Predicate.isBoolean(value)) {
-        return has(String(value), needle);
+        return test(String(value));
     }
     for (const item of value) {
-        if (valueHas(item, needle)) {
+        if (valueHas(item, test)) {
             return true;
         }
     }
@@ -34,53 +60,66 @@ const isBodyMeta = (attrs: Attributes, key: string): boolean => {
     return suffix !== undefined && `${key.slice(0, -suffix.length)}${PREVIEW}` in attrs;
 };
 
-const attrsHave = (attrs: Attributes, needle: Needle): boolean => {
+const attrsHave = (attrs: Attributes, test: Test): boolean => {
     for (const key in attrs) {
         const value = attrs[key];
-        if (value !== undefined && !isBodyMeta(attrs, key) && (has(key, needle) || valueHas(value, needle))) {
+        if (value !== undefined && !isBodyMeta(attrs, key) && (test(key) || valueHas(value, test))) {
             return true;
         }
     }
     return false;
 };
 
-const textHas = (span: JsonlSpanRecord, needle: Needle): boolean => {
+const textHas = (span: JsonlSpanRecord, test: Test): boolean => {
     if (
-        has(span.name, needle) ||
-        has(span.span, needle) ||
-        has(span.trace, needle) ||
-        has(span.service, needle) ||
-        (span.site !== null && has(span.site.file, needle)) ||
-        (span.def !== null && has(span.def.file, needle)) ||
-        (span.fiber !== null && has(`#${span.fiber}`, needle)) ||
-        attrsHave(span.attrs, needle)
+        test(span.name) ||
+        test(span.span) ||
+        test(span.trace) ||
+        test(span.service) ||
+        (span.site !== null && test(span.site.file)) ||
+        (span.def !== null && test(span.def.file)) ||
+        (span.fiber !== null && test(`#${span.fiber}`)) ||
+        attrsHave(span.attrs, test)
     ) {
         return true;
     }
     for (const event of span.events) {
-        if (has(event.name, needle) || attrsHave(event.attrs, needle)) {
+        if (test(event.name) || attrsHave(event.attrs, test)) {
             return true;
         }
     }
     return false;
 };
 
-const attrHas = (attrs: Attributes, key: string, value: Needle | undefined): boolean => {
+const attrHas = (attrs: Attributes, key: string, value: Test | undefined): boolean => {
     const found = attrs[key];
     return found !== undefined && (value === undefined || valueHas(found, value));
 };
 
-const spanHas = (span: JsonlSpanRecord, term: Term): boolean => {
+/** The test of a text term's needle or an attribute term's value, looked up once per trace rather than per span. */
+const termTest = (term: Term): Test | undefined => {
     switch (term._tag) {
         case "Text":
-            return textHas(span, term.needle);
+            return testOf(term.needle);
+        case "Attr":
+            return term.value._tag === "Some" ? testOf(term.value.value) : undefined;
+        case "Exit":
+        case "Level":
+        case "Never":
+            return undefined;
+    }
+};
+
+const spanHas = (span: JsonlSpanRecord, term: Term, test: Test | undefined): boolean => {
+    switch (term._tag) {
+        case "Text":
+            return test !== undefined && textHas(span, test);
         case "Attr": {
-            const value = term.value._tag === "Some" ? term.value.value : undefined;
-            if (attrHas(span.attrs, term.key, value)) {
+            if (attrHas(span.attrs, term.key, test)) {
                 return true;
             }
             for (const event of span.events) {
-                if (attrHas(event.attrs, term.key, value)) {
+                if (attrHas(event.attrs, term.key, test)) {
                     return true;
                 }
             }
@@ -96,7 +135,7 @@ const spanHas = (span: JsonlSpanRecord, term: Term): boolean => {
 
 export const spanMatches = (query: Query, span: JsonlSpanRecord): boolean => {
     for (const term of query) {
-        if (!spanHas(span, term)) {
+        if (!spanHas(span, term, termTest(term))) {
             return false;
         }
     }
@@ -154,9 +193,10 @@ export const traceScans = (): number => scanned;
 
 const scan = (term: Term, trace: Trace): ReadonlyArray<RunId> => {
     scanned += 1;
+    const test = termTest(term);
     if (trace.runs.length === 1) {
         for (const span of trace.spans.values()) {
-            if (spanHas(span, term)) {
+            if (spanHas(span, term, test)) {
                 return trace.runs;
             }
         }
@@ -164,7 +204,7 @@ const scan = (term: Term, trace: Trace): ReadonlyArray<RunId> => {
     }
     const runs: Array<RunId> = [];
     for (const span of trace.spans.values()) {
-        if (!Arr.contains(runs, span.run) && spanHas(span, term)) {
+        if (!Arr.contains(runs, span.run) && spanHas(span, term, test)) {
             runs[runs.length] = span.run;
         }
     }
@@ -214,11 +254,12 @@ export const spanHits = (term: Term, trace: Trace): ReadonlySet<SpanId> => {
         return known;
     }
     const hits: Array<SpanId> = [];
+    const test = termTest(term);
     for (const span of trace.spans.values()) {
         let verdict = records.get(span);
         if (verdict === undefined) {
             spansScanned += 1;
-            verdict = spanHas(span, term);
+            verdict = spanHas(span, term, test);
             records.set(span, verdict);
         }
         if (verdict) {

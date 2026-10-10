@@ -84,6 +84,18 @@ describe("spanMatches", () => {
         expect(matches("paymentdeclined")).toBe(true);
     });
 
+    it("takes a lowercase term's characters literally, and folds case beyond ASCII", () => {
+        const odd = record({ span: "odd", name: "f(x) [a+b] 1.5 c\\d", attrs: { city: "ZÜRICH" } });
+        expect(matches("f(x)", odd)).toBe(true);
+        expect(matches("[a+b]", odd)).toBe(true);
+        expect(matches("1.5", odd)).toBe(true);
+        expect(matches("c\\d", odd)).toBe(true);
+        const lookalike = record({ span: "lookalike", name: "1x5 aab" });
+        expect(matches("1.5", lookalike), "a dot is not a wildcard").toBe(false);
+        expect(matches("a+b", lookalike), "a plus is not a repeat").toBe(false);
+        expect(matches("zürich", odd)).toBe(true);
+    });
+
     it("matches is: against the exit, and never a log level or an unknown value", () => {
         expect(matches("is:failed")).toBe(true);
         expect(matches("is:ok")).toBe(false);

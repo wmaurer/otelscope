@@ -148,6 +148,10 @@ Each is applied only after profiling shows its target is the cause.
 - **Memory**: intern repeated strings (`run`, `service`, `name`, `site.file`/`def.file`, attribute keys).
 - **Key presses**: memoise tree flattening per `Trace` identity and fold state.
 - **Search**: the inverted index the data layer deferred.
+    - Not needed so far. The plain term missed (p95 106 ms) because the scan lowered every string it tested, which
+      copies each string that has a capital: 3.6 million tests on `huge` took 84 ms. A folded term now compiles to one
+      case-insensitive regular expression (49 ms for the same tests), and the plain term's p95 fell to 72 ms. An index
+      would cost memory, where RSS after the full index is within 4 % of its budget.
 - **Live publish**: profile first. The 100 ms throttle stays.
 
 ## Changing a budget
