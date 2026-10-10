@@ -1,6 +1,6 @@
 import { Array as Arr, Option, Order } from "effect";
 
-import { isPropagated } from "../model/failure.ts";
+import { factsOf } from "../model/treeFacts.ts";
 import { top } from "../nav/Nav.ts";
 import { BINDINGS, focusOf } from "./Bindings.ts";
 import { lookup, scopesFor } from "./Dispatch.ts";
@@ -24,7 +24,7 @@ export const hintFacts = (nav: Nav, snapshot: Snapshot): HintFacts => {
     return {
         propagated: Option.exists(
             screen.view.selected,
-            (row) => row._tag === "Span" && trace !== undefined && isPropagated(trace, row.spanId),
+            (row) => row._tag === "Span" && trace !== undefined && factsOf(trace).kind(row.spanId) === "propagated",
         ),
     };
 };

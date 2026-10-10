@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, HashSet } from "effect";
+import { HashSet } from "effect";
 
-import { openingFor, treeOrder } from "../../src/model/opening.ts";
+import { openingFor } from "../../src/model/opening.ts";
 import { TreeRow } from "../../src/nav/Screen.ts";
 import { parse } from "../../src/query/Query.ts";
 import { record } from "../support/records.ts";
@@ -21,14 +21,6 @@ const tree = traceOf([
     span("charge", "pay", 1003, { exit: "Failure" }),
     span("stop", "root", 1004, { exit: "Interrupted" }),
 ]);
-
-describe("treeOrder", () => {
-    it("walks depth first from the top, children by start, then the orphan groups", () => {
-        expect(Arr.fromIterable(treeOrder(tree))).toEqual(["root", "auth", "pay", "charge", "stop"]);
-        const orphans = traceOf([span("top", null, 1000), span("lost", "absent", 1001), span("under", "lost", 1002)]);
-        expect(Arr.fromIterable(treeOrder(orphans))).toEqual(["top", "lost", "under"]);
-    });
-});
 
 describe("openingFor", () => {
     it("opens on the first span matching every term of the seeded search", () => {
@@ -70,10 +62,12 @@ describe("openingFor", () => {
         const importing = span("import", "batch3", 1001.5, { exit: "Failure" });
         const grouped = traceOf([span("root", null, 1000), ...batches, importing, ...rows]);
 
-        it("opens the groups that would hide a seeded search's span or its ancestors", () => {
+        it("opens the groups that would hide a seeded search's span or its ancestors, and no other", () => {
             const opening = openingFor(grouped, parse("row.index=12"));
             expect(opening.selected).toEqual(TreeRow.Span({ spanId: "row12" }));
-            expect(opening.openGroups).toEqual(HashSet.make("import|import.row", "root|batch"));
+            expect(opening.openGroups, "the failed batch3 shows under its closed group").toEqual(
+                HashSet.make("import|import.row"),
+            );
         });
 
         it("leaves groups closed for a failure, whose failed lineage a closed group shows anyway", () => {

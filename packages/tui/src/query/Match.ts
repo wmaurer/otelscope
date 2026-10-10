@@ -2,7 +2,7 @@ import { Array as Arr, Predicate } from "effect";
 
 import { termKey } from "./Query.ts";
 
-import type { Run, RunId, Trace, TraceId } from "../data/Snapshot.ts";
+import type { Run, RunId, SpanId, Trace, TraceId } from "../data/Snapshot.ts";
 import type { Needle, Query, Term } from "./Query.ts";
 import type { AttributeValue, Attributes, JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
 
@@ -106,11 +106,17 @@ const NONE: ReadonlyArray<RunId> = [];
 
 const TERM_CACHE_SIZE = 32;
 
-class TermCaches {
-    private readonly caches = new Map<string, WeakMap<Trace, ReadonlyArray<RunId>>>();
-    private readonly byTerm = new WeakMap<Term, WeakMap<Trace, ReadonlyArray<RunId>>>();
+/** One cache per term, for the most recently used terms. A term's caches are found by its key, so equal terms share. */
+class TermCaches<V> {
+    private readonly caches = new Map<string, V>();
+    private readonly byTerm = new WeakMap<Term, V>();
+    private readonly make: () => V;
 
-    forTerm(term: Term): WeakMap<Trace, ReadonlyArray<RunId>> {
+    constructor(make: () => V) {
+        this.make = make;
+    }
+
+    forTerm(term: Term): V {
         const known = this.byTerm.get(term);
         if (known !== undefined) {
             return known;
@@ -120,14 +126,14 @@ class TermCaches {
         return cache;
     }
 
-    private get(key: string): WeakMap<Trace, ReadonlyArray<RunId>> {
+    private get(key: string): V {
         const found = this.caches.get(key);
         if (found !== undefined) {
             this.caches.delete(key);
             this.caches.set(key, found);
             return found;
         }
-        const created = new WeakMap<Trace, ReadonlyArray<RunId>>();
+        const created = this.make();
         this.caches.set(key, created);
         if (this.caches.size > TERM_CACHE_SIZE) {
             const oldest = this.caches.keys().next();
@@ -139,7 +145,7 @@ class TermCaches {
     }
 }
 
-const termCaches = new TermCaches();
+const traceCaches = new TermCaches(() => new WeakMap<Trace, ReadonlyArray<RunId>>());
 
 let scanned = 0;
 
@@ -168,7 +174,7 @@ const traceHits = (term: Term, trace: Trace): ReadonlyArray<RunId> => {
     if (term._tag === "Level" || term._tag === "Never") {
         return NONE;
     }
-    const cache = termCaches.forTerm(term);
+    const cache = traceCaches.forTerm(term);
     const hit = cache.get(trace);
     if (hit !== undefined) {
         return hit;
@@ -176,6 +182,45 @@ const traceHits = (term: Term, trace: Trace): ReadonlyArray<RunId> => {
     const answer = scan(term, trace);
     cache.set(trace, answer);
     return answer;
+};
+
+interface SpanVerdicts {
+    /** Per record: records never change, so a verdict holds for every later `Trace` that keeps the record. */
+    readonly records: WeakMap<JsonlSpanRecord, boolean>;
+    readonly traces: WeakMap<Trace, ReadonlySet<SpanId>>;
+}
+
+const spanCaches = new TermCaches((): SpanVerdicts => ({ records: new WeakMap(), traces: new WeakMap() }));
+
+const NO_SPANS: ReadonlySet<SpanId> = new Set();
+
+/**
+ * The spans of the trace that have the term. A trace that grew is matched only on the records it did not have
+ * before.
+ */
+export const spanHits = (term: Term, trace: Trace): ReadonlySet<SpanId> => {
+    if (term._tag === "Level" || term._tag === "Never") {
+        return NO_SPANS;
+    }
+    const { records, traces } = spanCaches.forTerm(term);
+    const known = traces.get(trace);
+    if (known !== undefined) {
+        return known;
+    }
+    const hits: Array<SpanId> = [];
+    for (const span of trace.spans.values()) {
+        let verdict = records.get(span);
+        if (verdict === undefined) {
+            verdict = spanHas(span, term);
+            records.set(span, verdict);
+        }
+        if (verdict) {
+            hits[hits.length] = span.span;
+        }
+    }
+    const found = new Set(hits);
+    traces.set(trace, found);
+    return found;
 };
 
 export const traceMatches = (query: Query, trace: Trace): boolean => {
