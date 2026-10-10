@@ -1,3 +1,5 @@
+import { leftWidth } from "./treeLine.ts";
+
 import type { Panes } from "./panes.ts";
 
 export const WIDE_MIN = 100;
@@ -5,16 +7,14 @@ export const SPLIT_MIN = 25;
 export const SPLIT_MAX = 80;
 export const NAME_MIN = 16;
 export const LOGS_MIN = 6;
-/** Borders 2 + gutter 1 + glyph 2 + duration 8 + space 1 + a 4-cell bar. */
-export const NAME_SLACK = 18;
 
 /** The breadcrumb and the trace header above the body. */
 const HEADER_ROWS = 2;
 /** The status bar below the body. */
 const FOOTER_ROWS = 1;
 const LOGS_SHARE = 0.3;
-/** Borders 2 + gutter 1 + glyph 2 + duration 8 + space 1: every tree-row cell outside the name and bar columns. */
-const ROW_FIXED = 14;
+/** The narrowest bar column a wider name column may leave. */
+const BAR_MIN = 4;
 
 /** Cells relative to the trace body: x from the screen's left, y from the row under the trace header (screen row 2). Outer, borders included. */
 export interface Rect {
@@ -52,9 +52,9 @@ const clamp = (n: number, low: number, high: number): number => Math.min(high, M
 
 const clampSplit = (split: number): number => clamp(split, SPLIT_MIN, SPLIT_MAX);
 
-const nameMax = (tree: Rect): number => Math.max(NAME_MIN, tree.width - NAME_SLACK);
-
 const inner = (n: number): number => Math.max(0, n - 2);
+
+const nameMax = (tree: Rect): number => Math.max(NAME_MIN, inner(tree.width) - leftWidth(0) - BAR_MIN);
 
 /** The cells either side of the line at `at` along a length of `total`: the last of the first part and the first of the second. */
 const borderPair = (at: number, total: number) => ({
@@ -105,7 +105,7 @@ export const traceLayout = (size: Size, panes: Panes): TraceLayout => {
         logs,
         grip,
         nameColumn,
-        barWidth: Math.max(0, tree.width - ROW_FIXED - nameColumn),
+        barWidth: Math.max(0, inner(tree.width) - leftWidth(nameColumn)),
         treeRows: Math.max(0, tree.height - 3),
         detailsRows: inner(details.height),
         detailsWidth: inner(details.width),

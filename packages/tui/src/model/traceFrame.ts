@@ -7,7 +7,7 @@ import { isLive } from "./marks.ts";
 import { chunk, underlay } from "./Role.ts";
 import { cutLine } from "./text.ts";
 import { traceLayout } from "./traceLayout.ts";
-import { hitOf, treeLeft } from "./treeLine.ts";
+import { hitOf, leftWidth, treeLeft } from "./treeLine.ts";
 import { matchText } from "./treeSearch.ts";
 import { axisSegments, Bar, barSegments, markersOf, scaleOf, startCell } from "./waterfall.ts";
 
@@ -249,7 +249,7 @@ export const traceFrame = (model: TraceModel, view: TraceView, env: TraceEnv): T
     const scale = scaleOf(trace.startMs, trace.endMs, running, layout.barWidth);
     const floors = startCells(facts, scale);
     const lineEnv = { facts, search, nameColumn: layout.nameColumn };
-    const leftCells = 1 + 2 + layout.nameColumn + 8 + 1;
+    const leftCells = leftWidth(layout.nameColumn);
     const details = detailRows(model, layout.detailsWidth, env);
     const cursor = cursorEntry(logs, facts, view.logCursor);
     const matches = matchText(search, facts, model.entry);

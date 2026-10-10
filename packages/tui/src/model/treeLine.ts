@@ -12,9 +12,12 @@ import type { Fold, Rails, TreeEntry } from "./tree.ts";
 import type { SpanKind, TreeFacts } from "./treeFacts.ts";
 import type { SpanSearch } from "./treeSearch.ts";
 
-export const GUTTER = 1;
-export const GLYPH = 2;
-export const DURATION = 8;
+const GUTTER = 1;
+const GLYPH = 2;
+const DURATION = 8;
+
+/** The cells left of the bar column: gutter, exit glyph, the name column, the duration and a space. */
+export const leftWidth = (nameColumn: number): number => GUTTER + GLYPH + nameColumn + DURATION + 1;
 
 /** Levels of guides drawn in full; deeper rows show `⋯<depth>` and the innermost ones. */
 const SHOWN_LEVELS = 4;
@@ -174,9 +177,6 @@ export const treeLeft = (entry: TreeEntry, env: TreeLineEnv, selected: boolean):
     })();
     return selected ? underlay(line, "selectionBg") : line;
 };
-
-/** The cells left of the bar column. */
-export const leftWidth = (nameColumn: number): number => GUTTER + GLYPH + nameColumn + DURATION + 1;
 
 /**
  * What a click at `column` (from the row's left) hits: anywhere on a group row, or a row's fold mark, toggles it;
