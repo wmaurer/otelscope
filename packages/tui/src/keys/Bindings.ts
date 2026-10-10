@@ -1,4 +1,5 @@
 import { top } from "../nav/Nav.ts";
+import { parse } from "../query/Query.ts";
 import { Action, Peel } from "./Action.ts";
 
 import type { Nav } from "../nav/Nav.ts";
@@ -52,7 +53,8 @@ export const focusOf = (nav: Nav): Focus => {
 
 export const holds = (guard: Guard, nav: Nav): boolean => {
     const screen = top(nav);
-    const treeSearch = screen._tag === "Trace" && screen.view.search !== "";
+    // The same test as the status line's: a search counts once it has terms.
+    const treeSearch = screen._tag === "Trace" && parse(screen.view.search).length > 0;
     return guard === "treeSearch" ? treeSearch : !treeSearch;
 };
 

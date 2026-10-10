@@ -37,6 +37,9 @@ describe("hint line", () => {
             "⏎ fold · / search · n problem · b body · o origin · ? help",
         );
         expect(line("screen", trace("tree", { search: "boom" }))).toBe("⏎ fold · / search · n match · b body · ? help");
+        expect(line("screen", trace("tree", { search: "  " })), "a search without terms").toBe(
+            "⏎ fold · / search · n problem · b body · ? help",
+        );
     });
 
     it("shows the overlay's close key in an overlay and nothing while typing", () => {
@@ -61,6 +64,7 @@ describe("hint line", () => {
             traces,
             trace("tree"),
             trace("tree", { search: "x" }),
+            trace("tree", { search: " " }),
             trace("details"),
             trace("logs"),
             body,

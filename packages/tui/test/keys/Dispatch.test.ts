@@ -114,10 +114,14 @@ describe("dispatch", () => {
         expectKeys("screen", body, [...bodyKeys, ...movement, ...global]);
     });
 
-    it("moves between matches instead of problems while a tree search is active", () => {
+    it("moves between matches instead of problems while a tree search has terms", () => {
         expectKeys("screen", trace("tree", { search: "boom" }), [
             ["n", Action.NextMatch({ dir: "next" })],
             ["N", Action.NextMatch({ dir: "prev" })],
+        ]);
+        expectKeys("screen", trace("tree", { search: "   " }), [
+            ["n", Action.NextProblem({ dir: "next" })],
+            ["N", Action.NextProblem({ dir: "prev" })],
         ]);
     });
 
