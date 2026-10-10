@@ -3,7 +3,7 @@ import { Option } from "effect";
 import type { Dir } from "../keys/Action.ts";
 
 /** How many of the sorted `values` are strictly below `bound`. */
-const below = (values: ReadonlyArray<number>, bound: number): number => {
+export const below = (values: ReadonlyArray<number>, bound: number): number => {
     let low = 0;
     let high = values.length;
     while (low < high) {

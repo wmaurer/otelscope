@@ -10,6 +10,7 @@ export const theme = {
     focusBorder: "#61afef",
     selectionBg: "#2c323c",
     matchBg: "#4d4220",
+    currentMatchBg: "#7a5c14",
     bar: "#56b6c2",
     failure: "#ff5f5f",
     failurePropagated: "#a14848",

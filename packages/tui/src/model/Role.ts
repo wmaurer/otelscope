@@ -10,6 +10,7 @@ export type Role =
     | "focusBorder"
     | "selectionBg"
     | "matchBg"
+    | "currentMatchBg"
     | "bar"
     | "failure"
     | "failurePropagated"

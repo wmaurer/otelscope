@@ -6,8 +6,13 @@ export type Ranges = ReadonlyArray<readonly [start: number, end: number]>;
 
 export const none: Ranges = [];
 
+const NON_ASCII = /[\u0080-\uffff]/;
+
 /** Lowercases one character at a time, keeping any whose lowercase has another length, so indices stay `text`'s. */
-const foldInPlace = (text: string): string => {
+export const foldInPlace = (text: string): string => {
+    if (!NON_ASCII.test(text)) {
+        return text.toLowerCase();
+    }
     let out = "";
     for (const char of text) {
         const lower = char.toLowerCase();
