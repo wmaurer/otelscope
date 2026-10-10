@@ -38,10 +38,24 @@ Commit messages must not carry a `Co-Authored-By` line naming Claude, because th
 
 ## Effect Package (`packages/effect/`)
 
-`@wmaurer/otelscope-effect` is published to npm. `JsonlTrace.layer` installs Effect's OTLP tracer and appends every exported span to a JSONL file, one `JsonlSpanRecord` per line. `ReceiverClient` answers the tracer's export requests in process, so no collector or network is involved. The layer needs `FileSystem` and `Path` from the caller, and it must be provided outermost, so the tracer is installed before any other layer is built.
+`@wmaurer/otelscope-effect` is published to npm. `JsonlTrace.layer` installs Effect's OTLP tracer and appends every exported span to a JSONL file, one `JsonlSpanRecord` per line. `ReceiverClient` answers the tracer's export requests in process, so no collector or network is involved. The layer needs `FileSystem`, `Path` and `Crypto` from the caller, and it must be provided outermost, so the tracer is installed before any other layer is built.
 
 Tracing must never fail the program it observes. The sink's writer never fails: its first write failure prints one warning to stderr and stops further writes. `ReceiverClient` always answers 200, because on any other status the exporter drops its buffer and stops exporting for 60 seconds; a batch that cannot be decoded is reported on stderr and dropped instead. Keep both properties when changing these modules.
 
 `effect` is a peer dependency (`^4`), and a dev dependency pinned to the version tested against. Sources import each other with `.ts` extensions; `tsc -p tsconfig.build.json` rewrites them to `.js` in `dist/`. The package ships `dist/` and `src/`.
 
 To release: bump `version` in `packages/effect/package.json`, commit, and run `pnpm publish` from `packages/effect`. Its `prepublishOnly` script rebuilds `dist/` and runs the tests first. A published version can never be reused, even after an unpublish, so publish only when the user asks. The user's npm account may need a one-time code, so the user may prefer to run the publish themselves. Update `README.md` when the public API or the record format changes, since it is the npm page.
+
+## Viewer Package (`packages/tui/`)
+
+`@wmaurer/otelscope` is the terminal viewer, bin `otelscope`. It reads the JSONL file that `JsonlTrace.layer` writes, follows it while the program runs, and decodes each line with the `JsonlSpanRecord` Schema from `@wmaurer/otelscope-effect/format`. The spec is `docs/specs/span-viewer/`; read the file that covers a part before you change it.
+
+It needs Node >= 26.9. OpenTUI opens its native library through Node's experimental `node:ffi`, which is on by default from 26.9 and missing before 26. `src/bin.ts` checks for `node:ffi` before it imports anything, so it has no top-level imports and uses only syntax that old Node parses. `main.ts`, and every module it imports before `import("./app.tsx")`, is plain `.ts` and must not import `@wmaurer/otelscope-effect`. The spawned CLI tests run `src/bin.ts` under Node's type stripping, with no build and no TSX loader (`docs/specs/span-viewer/11-testing.md`).
+
+`@opentui/core` and `@opentui/react` are pinned to the same exact version, and `react` stays at `~19.2.0`, the version `react-reconciler` 0.33 is built for. To upgrade OpenTUI, bump both packages together, re-pin `.repos/deps/opentui` to the new version (`pnpm deps:check` confirms it), and run the viewer's tests on Node 26. `effect`, `@effect/platform-node`, `@effect/atom-react` and `@effect/vitest` are pinned to one exact version, the same as `packages/effect`'s dev dependency; bump all four together.
+
+The viewer reads `packages/effect`'s `src/` through the `@otelscope/source` export condition, so it typechecks and tests without building that package first. `tsconfig.build.json` drops the condition and compiles against `packages/effect/dist/`, as npm users will.
+
+Keep the layers apart. `data/` never imports React or OpenTUI. `model/`, `nav/`, `keys/` and `query/` are pure: no Effect runtime and no renderer. Only `ui/` and `app.tsx` import React or OpenTUI, and views stay thin: a decision belongs in a pure module with its own test, not in a component. Nothing logs to the console, because OpenTUI captures console output; an error becomes UI state.
+
+To release: bump `version` in `packages/tui/package.json` and commit. Run `pnpm --filter @wmaurer/otelscope perf` on the reference machine; it must pass (`docs/specs/span-viewer/12-performance.md`). Then run `pnpm publish` from `packages/tui`, once `@wmaurer/otelscope-effect` at the version the viewer depends on is published. Its `prepublishOnly` script rebuilds `dist/` and runs the tests first. Publish only when the user asks, as for the effect package. `README.md` is the npm page; `docs/screenshot.png` is a trace view of the sample fixture, left out of `files` and referenced by its `raw.githubusercontent.com` URL.
