@@ -165,7 +165,7 @@ export const treeLeft = (entry: TreeEntry, env: TreeLineEnv, selected: boolean):
                         "",
                         foldMark(entry.fold),
                         [chunk(`⋯ missing parent ${shortId(entry.parentId)}…`, "muted")],
-                        0,
+                        entry.fold === "folded" ? search.belowMissing(entry.parentId) : 0,
                         nameColumn,
                     ),
                     durationCells(""),

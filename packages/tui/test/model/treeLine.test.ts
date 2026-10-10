@@ -79,6 +79,20 @@ describe("treeLeft", () => {
         expect(lineText(linesOf(orphans)[0] ?? [])).toBe("   ▾ ⋯ missing parent ab12cd34…             ");
     });
 
+    it("tells how many matches a folded missing parent's row hides", () => {
+        const orphans = traceOf([
+            span("lost", "ab12cd34ef", 1, { name: "payment.charge" }),
+            span("retry", "lost", 2, { name: "payment.attempt" }),
+            span("other", "ab12cd34ef", 3),
+        ]);
+        expect(lineText(linesOf(orphans, "payment", { folded: HashSet.make("ab12cd34ef") })[0] ?? [])).toBe(
+            "   ▸ ⋯ missing parent … · 2 matches         ",
+        );
+        expect(lineText(linesOf(orphans, "payment")[0] ?? []), "open, it hides nothing").toBe(
+            "   ▾ ⋯ missing parent ab12cd34…             ",
+        );
+    });
+
     it("cuts a long name with an ellipsis inside its column", () => {
         const long = traceOf([span("root", null, 0, { name: "a.very.long.span.name.that.goes.on", ms: 3 })]);
         expect(lineText(linesOf(long, "", {}, 16)[0] ?? [])).toBe("     a.very.long.s…  3.00ms ");

@@ -21,6 +21,8 @@ export interface SpanSearch {
     readonly positions: ReadonlyArray<number>;
     /** Matches among the span's strict descendants. */
     readonly below: (spanId: SpanId) => number;
+    /** Matches under a missing parent's row: those in its orphans' subtrees. */
+    readonly belowMissing: (parentId: SpanId) => number;
     /** Matches a group hides: those in its members' subtrees, less the shown members' subtrees. */
     readonly hiddenIn: (group: Group, shown: ReadonlyArray<SpanId>) => number;
     /** No single span matches, but every term matches some span of the trace. */
@@ -36,6 +38,7 @@ const inactive = (text: string, query: Query): SpanSearch => ({
     matches: () => false,
     positions: [],
     below: () => 0,
+    belowMissing: () => 0,
     hiddenIn: () => 0,
     acrossSpans: false,
 });
@@ -80,6 +83,8 @@ const build = (facts: TreeFacts, text: string): SpanSearch => {
             const at = order.position(spanId);
             return countIn(positions, at + 1, order.end(at));
         },
+        belowMissing: (parentId) =>
+            Arr.reduce(facts.trace.children.get(parentId) ?? [], 0, (sum, id) => sum + subtree(id)),
         hiddenIn: (group, shown) => {
             const first = order.position(group.members[0] ?? "");
             const last = order.position(group.members[group.members.length - 1] ?? "");
