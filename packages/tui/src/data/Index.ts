@@ -216,7 +216,7 @@ export class Index {
         const classified = classify(text);
         switch (classified._tag) {
             case "Span":
-                return this.add(interned(this.strings, classified.record), line, offset, text, arrivalAt);
+                return this.add(classified.record, line, offset, text, arrivalAt);
             case "Legacy":
                 this.badLines = { ...this.badLines, legacy: this.badLines.legacy + 1 };
                 return;
@@ -281,16 +281,17 @@ export class Index {
     }
 
     private add(
-        record: JsonlSpanRecord,
+        parsed: JsonlSpanRecord,
         line: number,
         offset: number,
         text: string,
         arrivalAt: Option.Option<number>,
     ): void {
-        const known = this.traces.get(record.trace);
-        if (known?.spans.has(record.span) === true) {
-            return this.malformed(line, offset, `duplicate span ${record.span.slice(0, 8)}…`, text);
+        const known = this.traces.get(parsed.trace);
+        if (known?.spans.has(parsed.span) === true) {
+            return this.malformed(line, offset, `duplicate span ${parsed.span.slice(0, 8)}…`, text);
         }
+        const record = interned(this.strings, parsed);
         const trace = known ?? new TraceBuilder(record.trace);
         if (known === undefined) {
             this.traces.set(trace.id, trace);
