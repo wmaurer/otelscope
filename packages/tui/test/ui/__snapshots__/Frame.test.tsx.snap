@@ -46,9 +46,9 @@ exports[`Frame > draws a placeholder for a seeded id that is not in the file 1`]
 
 exports[`Frame > draws the bad-lines overlay with its samples 1`] = `
 "Runs                                                                                                                    
-                                                                                                                        
-                                                                                                                        
-                                                                                                                        
+    service                     started ▾         duration  traces  failed    spans    logs run                         
+    support-agent               14:05:00            1.00ms       1                1         run-2                       
+    shop-api                    14:03:20             1.00s       1                2         run-1                       
                                                                                                                         
                                                                                                                         
                                                                                                                         
@@ -108,7 +108,7 @@ exports[`Frame > draws the breadcrumb and status bar around an empty screen 1`] 
                                                                                                                         
                                                                                                                         
                                                                                                                         
-                                                                                                                        
+                                              No spans in spans.jsonl yet.                                              
                                                                                                                         
                                                                                                                         
                                                                                                                         
@@ -134,9 +134,9 @@ exports[`Frame > draws the breadcrumb and status bar around an empty screen 1`] 
 
 exports[`Frame > draws the help overlay over the current screen 1`] = `
 "Runs                                                                                                                    
-                                                                                                                        
-                                                                                                                        
-                                                                                                                        
+    service                     started ▾         duration  traces  failed    spans    logs run                         
+    support-agent               14:05:00            1.00ms       1                1         run-2                       
+    shop-api                    14:03:20             1.00s       1                2         run-1                       
                                                                                                                         
                                                                                                                         
                                                                                                                         

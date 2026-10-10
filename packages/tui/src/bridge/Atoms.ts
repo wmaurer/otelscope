@@ -6,9 +6,11 @@ import { SpanStore } from "../data/SpanStore.ts";
 import { defaultPanes } from "../model/panes.ts";
 import { resolvePrefixes } from "../nav/Resolve.ts";
 import { initialReadDone, openSingleRun } from "../nav/Seed.ts";
+import { listAtom } from "./Lists.ts";
 
 import type { Snapshot } from "../data/Snapshot.ts";
 import type { Panes } from "../model/panes.ts";
+import type { ScreenList } from "../model/screenList.ts";
 import type { Nav } from "../nav/Nav.ts";
 
 export const NOW_MILLIS = 1000;
@@ -32,6 +34,7 @@ export class Atoms extends Context.Service<
          */
         readonly nav: Atom.Writable<Nav>;
         readonly panes: Atom.Writable<Panes>;
+        readonly list: Atom.Atom<ScreenList>;
         /** Setting `Some(text)` shows it for 5 s, even when the text is the same as the one showing. */
         readonly message: Atom.Writable<Option.Option<string>>;
         /**
@@ -102,6 +105,7 @@ export class Atoms extends Context.Service<
                     now,
                     nav,
                     panes: Atom.keepAlive(Atom.make(defaultPanes)),
+                    list: Atom.keepAlive(listAtom(snapshot, nav, now)),
                     message,
                     keyPressed: () => MutableRef.set(singleRunArmed, false),
                     body: Atom.family((key: BodyKey) => Atom.make(bodies.read(key.sha256, key.bytes))),

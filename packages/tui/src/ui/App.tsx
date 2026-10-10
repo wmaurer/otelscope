@@ -26,6 +26,7 @@ export const App = (props: AppProps): ReactNode => {
     const snapshot = useAtomValue(atoms.snapshot);
     const now = useAtomValue(atoms.now);
     const message = useAtomValue(atoms.message);
+    const list = useAtomValue(atoms.list);
     const { width, height } = useTerminalDimensions();
     const [shell, setShell] = useState<Shell>(initialShell);
     // Two keys can arrive before React renders again, and the second must see what the first opened.
@@ -70,6 +71,8 @@ export const App = (props: AppProps): ReactNode => {
             file={props.file}
             width={width}
             height={height}
+            list={list}
+            onPick={() => undefined}
         />
     );
 };

@@ -1,0 +1,333 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`list frames > draws Runs at narrow 1`] = `
+"Runs                                                                            
+    service          started ▾         duration  traces  failed    spans    logs
+  ⊘ support-agent    14:05:27             3.10s       1                1        
+  ✗ shop-api         14:03:27             31.0s      27       4       28        
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+⏎ open · / filter · ? help             spans.jsonl  read once  2 runs · 29 spans
+"
+`;
+
+exports[`list frames > draws Runs at wide 1`] = `
+"Runs                                                                                                                    
+    service                     started ▾         duration  traces  failed    spans    logs run                         
+  ⊘ support-agent               14:05:27             3.10s       1                1         2026-10-06T14-05-29-113-0002
+  ✗ shop-api                    14:03:27             31.0s      27       4       28         2026-10-06T14-03-27-070-0001
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+⏎ open · / filter · n problem · S sort · ? help                                spans.jsonl  read once  2 runs · 29 spans
+"
+`;
+
+exports[`list frames > draws Traces with a closed group at narrow 1`] = `
+"Runs › shop-api · 14:03:27                                                      
+    root span                     started ▾  duration  failed error             
+    ▸ POST /orders ×24                 +0µs    10.0ms       3                   
+ ✗    POST /orders                   +2.00s    10.0ms       1                   
+ ✗    POST /orders                   +9.00s    10.0ms       1                   
+ ✗    POST /orders                   +13.0s    10.0ms       1                   
+      ⋯ 21 more ok                                                              
+ ✗  POST /payments                   +2.50s    10.0ms       1 PaymentDeclined: …
+    GET /health                      +30.0s    10.0ms                           
+ ✗  GET /cart                        +31.0s    40.0ms       1                   
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+⏎ open · / filter · ? help             spans.jsonl  read once  2 runs · 29 spans
+"
+`;
+
+exports[`list frames > draws Traces with a closed group at wide 1`] = `
+"Runs › shop-api · 14:03:27                                                                                              
+    root span                                    started ▾  duration   spans  failed   logs error                       
+    ▸ POST /orders ×24                                +0µs    10.0ms      24       3                                    
+ ✗    POST /orders                                  +2.00s    10.0ms       1       1                                    
+ ✗    POST /orders                                  +9.00s    10.0ms       1       1                                    
+ ✗    POST /orders                                  +13.0s    10.0ms       1       1                                    
+      ⋯ 21 more ok                                                                                                      
+ ✗  POST /payments                                  +2.50s    10.0ms       1       1        PaymentDeclined: card decli…
+    GET /health                                     +30.0s    10.0ms       1                                            
+ ✗  GET /cart                                       +31.0s    40.0ms       2       1                                    
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+⏎ open · / filter · n problem · S sort · ? help                                spans.jsonl  read once  2 runs · 29 spans
+"
+`;
+
+exports[`list frames > draws Traces with an open group at narrow 1`] = `
+"Runs › shop-api · 14:03:27                                                      
+    root span                     started ▾  duration  failed error             
+      POST /orders                   +6.00s    10.0ms                           
+      POST /orders                   +7.00s    10.0ms                           
+      POST /orders                   +8.00s    10.0ms                           
+ ✗    POST /orders                   +9.00s    10.0ms       1                   
+      POST /orders                   +10.0s    10.0ms                           
+      POST /orders                   +11.0s    10.0ms                           
+      POST /orders                   +12.0s    10.0ms                           
+ ✗    POST /orders                   +13.0s    10.0ms       1                   
+      POST /orders                   +14.0s    10.0ms                           
+      POST /orders                   +15.0s    10.0ms                           
+      POST /orders                   +16.0s    10.0ms                           
+      POST /orders                   +17.0s    10.0ms                           
+      POST /orders                   +18.0s    10.0ms                           
+      POST /orders                   +19.0s    10.0ms                           
+      POST /orders                   +20.0s    10.0ms                           
+      POST /orders                   +21.0s    10.0ms                           
+      POST /orders                   +22.0s    10.0ms                           
+      POST /orders                   +23.0s    10.0ms                           
+ ✗  POST /payments                   +2.50s    10.0ms       1 PaymentDeclined: …
+    GET /health                      +30.0s    10.0ms                           
+ ✗  GET /cart                        +31.0s    40.0ms       1                   
+⏎ open · / filter · ? help             spans.jsonl  read once  2 runs · 29 spans
+"
+`;
+
+exports[`list frames > draws Traces with an open group at wide 1`] = `
+"Runs › shop-api · 14:03:27                                                                                              
+    root span                                    started ▾  duration   spans  failed   logs error                       
+    ▾ POST /orders ×24                                +0µs    10.0ms      24       3                                    
+      POST /orders                                    +0µs    10.0ms       1                                            
+      POST /orders                                  +1.00s    10.0ms       1                                            
+ ✗    POST /orders                                  +2.00s    10.0ms       1       1                                    
+      POST /orders                                  +3.00s    10.0ms       1                                            
+      POST /orders                                  +4.00s    10.0ms       1                                            
+      POST /orders                                  +5.00s    10.0ms       1                                            
+      POST /orders                                  +6.00s    10.0ms       1                                            
+      POST /orders                                  +7.00s    10.0ms       1                                            
+      POST /orders                                  +8.00s    10.0ms       1                                            
+ ✗    POST /orders                                  +9.00s    10.0ms       1       1                                    
+      POST /orders                                  +10.0s    10.0ms       1                                            
+      POST /orders                                  +11.0s    10.0ms       1                                            
+      POST /orders                                  +12.0s    10.0ms       1                                            
+ ✗    POST /orders                                  +13.0s    10.0ms       1       1                                    
+      POST /orders                                  +14.0s    10.0ms       1                                            
+      POST /orders                                  +15.0s    10.0ms       1                                            
+      POST /orders                                  +16.0s    10.0ms       1                                            
+      POST /orders                                  +17.0s    10.0ms       1                                            
+      POST /orders                                  +18.0s    10.0ms       1                                            
+      POST /orders                                  +19.0s    10.0ms       1                                            
+      POST /orders                                  +20.0s    10.0ms       1                                            
+      POST /orders                                  +21.0s    10.0ms       1                                            
+      POST /orders                                  +22.0s    10.0ms       1                                            
+      POST /orders                                  +23.0s    10.0ms       1                                            
+ ✗  POST /payments                                  +2.50s    10.0ms       1       1        PaymentDeclined: card decli…
+    GET /health                                     +30.0s    10.0ms       1                                            
+ ✗  GET /cart                                       +31.0s    40.0ms       2       1                                    
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+⏎ open · / filter · n problem · S sort · ? help                                spans.jsonl  read once  2 runs · 29 spans
+"
+`;
+
+exports[`list frames > says when a filter matches nothing at narrow 1`] = `
+"Runs › shop-api · 14:03:27                                                      
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                       No traces match "nothing-matches".                       
+                             Esc clears the filter                              
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+/ nothing-matches · 0 of 27            spans.jsonl  read once  2 runs · 29 spans
+"
+`;
+
+exports[`list frames > says when a filter matches nothing at wide 1`] = `
+"Runs › shop-api · 14:03:27                                                                                              
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                           No traces match "nothing-matches".                                           
+                                                 Esc clears the filter                                                  
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+/ nothing-matches · 0 of 27                                                    spans.jsonl  read once  2 runs · 29 spans
+"
+`;
+
+exports[`list frames > shows the legacy notice in place of an empty run list 1`] = `
+"Runs                                                                                                                    
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+         This file was written by @wmaurer/otelscope-effect < 0.3 (120 lines). Rerun your program with >= 0.3.          
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+⏎ open · / filter · n problem · ? help  120 lines from otelscope < 0.3 skipped  spans.jsonl  read once  0 runs · 0 spans
+"
+`;

@@ -13,6 +13,7 @@ export const LineText = (props: { readonly line: Line }): ReactNode => (
             <span
                 key={i}
                 fg={theme[chunk.role]}
+                bg={chunk.bg === undefined ? "transparent" : theme[chunk.bg]}
                 attributes={chunk.bold === true ? TextAttributes.BOLD : TextAttributes.NONE}
             >
                 {chunk.text}

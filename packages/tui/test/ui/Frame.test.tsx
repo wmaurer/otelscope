@@ -10,6 +10,7 @@ import { initialNav } from "../../src/nav/Seed.ts";
 import { Frame } from "../../src/ui/Frame.tsx";
 import { theme } from "../../src/ui/theme.ts";
 import { trace } from "../support/keys.ts";
+import { listFor } from "../support/lists.ts";
 import { record } from "../support/records.ts";
 import { indexed } from "../support/store.ts";
 
@@ -53,17 +54,23 @@ const withBadLines: Snapshot = {
     },
 };
 
-const props = (over: Partial<FrameProps>): FrameProps => ({
-    nav: Nav.initial,
-    snapshot: empty,
-    now,
-    message: Option.none(),
-    shell: initialShell,
-    file,
-    width: 120,
-    height: 40,
-    ...over,
-});
+const props = (over: Partial<FrameProps>): FrameProps => {
+    const nav = over.nav ?? Nav.initial;
+    const snapshot = over.snapshot ?? empty;
+    return {
+        nav,
+        snapshot,
+        now,
+        message: Option.none(),
+        shell: initialShell,
+        file,
+        width: 120,
+        height: 40,
+        list: listFor(nav, snapshot, now),
+        onPick: () => undefined,
+        ...over,
+    };
+};
 
 const render = async (frame: FrameProps) => {
     const setup = await testRender(<Frame {...frame} />, { width: frame.width, height: frame.height });

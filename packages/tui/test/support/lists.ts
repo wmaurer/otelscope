@@ -1,6 +1,6 @@
-import { assemble, layoutOf, listKey, stageOf } from "../../src/model/screenList.ts";
-import { top } from "../../src/nav/Nav.ts";
-import { activeQuery } from "../../src/nav/Query.ts";
+import { Atom, AtomRegistry } from "effect/reactivity";
+
+import { listAtom } from "../../src/bridge/Lists.ts";
 import { record } from "./records.ts";
 
 import type { Exit, Snapshot } from "../../src/data/Snapshot.ts";
@@ -32,9 +32,12 @@ export const namedTraces = (
         ),
     );
 
-/** The list the app builds for the top screen. */
+/** The list the app builds for the top screen, with its filter already settled. */
 export const listFor = (nav: Nav, snapshot: Snapshot, now = 0): ScreenList => {
-    const screen = top(nav);
-    const stage = stageOf(listKey(screen, activeQuery(nav), snapshot, now), snapshot);
-    return assemble(stage, layoutOf(stage, screen));
+    const registry = AtomRegistry.make();
+    try {
+        return registry.get(listAtom(Atom.make(snapshot), Atom.make(nav), Atom.make(now)));
+    } finally {
+        registry.dispose();
+    }
 };
