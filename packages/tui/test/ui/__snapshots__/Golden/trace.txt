@@ -1,0 +1,40 @@
+Runs › shop-api · 14:03:27 › POST /orders 1a654e13                                                                      
+POST /orders  1a654e13  Success  584ms  11 spans · 2 failed · 5 logs                                                    
+┌─ 1 Tree ─────────────────────────────────────────────────┐┌─ 2 Details ──────────────────────────────────────────────┐
+│                                            │0         │  ││payment.attempt  ✗ Failure                                │
+│   ▾ POST /orders                     584ms ◆█████████████││87.1ms · +10.2ms · 14:03:27.150                           │
+│   ├   order.validate                1.81ms ◆             ││span 58c7292b6874d564 · parent 0dcf6838e5dbe8ed · #2      │
+│   ├   db.query                      8.34ms ▎             ││at fixture/scenarios.ts:113:16                            │
+│   ├ ▾ payment.charge                 364ms █████████     ││                                                          │
+│ ✗ │ ├   payment.attempt             87.1ms ██✗           ││Cause                                                     │
+│ ✗ │ ├   payment.attempt             75.6ms    ██✗        ││PaymentGatewayError                                       │
+│   │ └   payment.attempt             81.0ms        █◆     ││(no message)                                              │
+│   ├   shipping.quote                 136ms         ████▎ ││thrown at fixture/scenarios.ts:108:27                     │
+│   ├   inventory.reserve             20.8ms             ▊ ││in span payment.attempt  fixture/scenarios.ts:113:16      │
+│   ├   email.send                    74.4ms             ██││in span payment.charge  fixture/scenarios.ts:158:16       │
+│   └   db.query                      14.5ms             ▋ ││  defined at fixture/scenarios.ts:117:30                  │
+│                                                          ││in span POST /orders  fixture/scenarios.ts:179:22         │
+│                                                          ││  defined at fixture/scenarios.ts:147:28                  │
+│                                                          ││                                                          │
+│                                                          ││Attributes                                                │
+│                                                          ││payment.attempt  1                                        │
+│                                                          ││                                                          │
+│                                                          ││Events (2)                                                │
+│                                                          ││+87.1ms  WARN  payment gateway unavailable  order.id=ord_…│
+│                                                          ││+87.1ms  exception  PaymentGatewayError                   │
+│                                                          ││                                                          │
+│                                                          ││                                                          │
+│                                                          ││                                                          │
+└──────────────────────────────────────────────────────────┘└──────────────────────────────────────────────────────────┘
+┌─ 3 Logs · 1 · subtree ───────────────────────────────────────────────────────────────────────────────────────────────┐
+│ +97.3ms  WARN   #2    payment.attempt       payment gateway unavailable  order.id=ord_1002 payment.attempt=1         │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+⏎ fold · / search · n problem · b body · ? help                               spans.jsonl  read once  4 runs · 511 spans

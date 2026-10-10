@@ -1,0 +1,40 @@
+Runs › shop-api · 14:03:27                                                                                              
+    root span                                    started ▾  duration   spans  failed   logs error                       
+    POST /orders                                      +0µs     262ms       9              3                             
+ ✗  POST /orders                                   +70.0ms     584ms      11       2      5 PaymentGatewayError         
+    POST /orders                                    +140ms     280ms       9              3                             
+ ✗  POST /orders                                    +210ms     114ms       5       3      3 PaymentDeclined             
+    POST /orders                                    +280ms     1.15s       9              4                             
+    POST /orders                                    +350ms     219ms       9              3                             
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+⏎ open · / filter · n problem · S sort · ? help                               spans.jsonl  read once  4 runs · 511 spans

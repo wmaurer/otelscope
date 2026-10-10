@@ -1,0 +1,40 @@
+Runs                                                                                                                    
+    service                     started ▾         duration  traces  failed    spans    logs run                         
+  ✗ worker                      14:09:34             1.44s       1       1        4       8 2026-10-06T14-09-36-225-0004
+  ✗ batch-jobs                  14:07:34             529ms       2     (6)      442       6 2026-10-06T14-07-34-271-0003
+  ⊘ support-agent               14:05:28             5.77s       1               13       8 2026-10-06T14-05-28-495-0002
+  ✗ shop-api                    14:03:27             1.43s       6       1       52      21 2026-10-06T14-03-27-070-0001
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+⏎ open · / filter · n problem · S sort · ? help                               spans.jsonl  read once  4 runs · 511 spans
