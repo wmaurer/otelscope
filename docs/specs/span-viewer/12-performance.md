@@ -127,6 +127,10 @@ alternated, at load 1.2 to 3.3:
   than spreading both into a new `Map`, and is what `Index` would use if this needs trimming. Only a persistent map
   would remove the copy, and the numbers do not call for one: `freeze` leaves about 10 ms of the 16 ms p95 for the
   re-render.
+    - Measured with the re-render, they did: on the Traces screen the rebuilt list took the other 10 ms and more, and
+      the whole publish's p95 sat at 16 ms. `Index` now keeps the frozen traces in a `LayeredMap`
+      (`src/data/LayeredMap.ts`): a large base and a small layer of newer traces, copied on each publish and folded
+      into a new base once it holds a quarter as many entries. `freeze` fell from 3.1 to 1.0 ms at p50.
 - **Open: rare long publishes.** About one publish in 280 per run took 40 to 150 ms, in the copy as well as in
   `freeze`. Garbage collection with about 400k records on the heap is the guess; it is not profiled. It threatens the
   50 ms max, so profile it when the live-publish scenario lands in `perf/run.ts`.

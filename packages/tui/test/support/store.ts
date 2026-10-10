@@ -24,6 +24,9 @@ export const ingestAll = (index: Index, texts: ReadonlyArray<string>, arrivalAt 
     return index;
 };
 
+/** The snapshot with its traces copied into a plain `Map`, so `toEqual` compares the entries, not how they are stored. */
+export const plainTraces = (snapshot: Snapshot): Snapshot => ({ ...snapshot, traces: new Map(snapshot.traces) });
+
 export const indexed = (records: ReadonlyArray<JsonlSpanRecord>): Snapshot =>
     ingestAll(new Index(), Arr.map(records, line)).freeze(status);
 

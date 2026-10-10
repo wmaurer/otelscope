@@ -5,7 +5,7 @@ import { TestClock } from "effect/testing";
 import { TailEvent } from "../../src/data/SpanSource.ts";
 import { SLICE_LINES, THROTTLE_MILLIS } from "../../src/data/SpanStore.ts";
 import { line, record } from "../support/records.ts";
-import { linesEvent, scriptedStore } from "../support/store.ts";
+import { linesEvent, plainTraces, scriptedStore } from "../support/store.ts";
 
 const spanLine = (span: string, trace = "trace-1") => line(record({ span, trace }));
 
@@ -111,7 +111,7 @@ describe("SpanStore", () => {
             yield* store.send(linesEvent([spanLine("a"), "not json"]));
             const before = yield* store.snapshot;
             yield* store.send(TailEvent.Reset({ reason: "truncated" }));
-            const after = yield* store.snapshot;
+            const after = plainTraces(yield* store.snapshot);
             expect(after).toMatchObject({
                 version: before.version + 1,
                 epoch: before.epoch + 1,

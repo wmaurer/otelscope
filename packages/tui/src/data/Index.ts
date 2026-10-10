@@ -2,6 +2,7 @@ import { Array as Arr, Option, Order, Predicate, Record } from "effect";
 
 import { LOG_LEVEL } from "../model/levels.ts";
 import { classify } from "./Decode.ts";
+import { LayeredMap } from "./LayeredMap.ts";
 import { insertSorted, SortedIds } from "./SortedIds.ts";
 
 import type {
@@ -201,7 +202,7 @@ export class Index {
     private dirtyRuns = new Set<RunBuilder>();
     private spanCount = 0;
     private badLines = emptyBadLines;
-    private frozenTraces: ReadonlyMap<TraceId, Trace> = new Map();
+    private frozenTraces = LayeredMap.empty<TraceId, Trace>();
     private frozenRuns: ReadonlyMap<RunId, Run> = new Map();
     private strings = new Strings();
 
@@ -231,14 +232,16 @@ export class Index {
         this.dirtyRuns = new Set();
         this.spanCount = 0;
         this.badLines = emptyBadLines;
-        this.frozenTraces = new Map();
+        this.frozenTraces = LayeredMap.empty();
         this.frozenRuns = new Map();
         this.strings = new Strings();
     }
 
     freeze(status: Status): Snapshot {
         this.version += 1;
-        this.frozenTraces = withFrozen(this.frozenTraces, this.dirtyTraces, (trace) => trace.id, freezeTrace);
+        this.frozenTraces = this.frozenTraces.with(
+            Arr.map(Array.from(this.dirtyTraces), (trace) => [trace.id, freezeTrace(trace)] as const),
+        );
         this.frozenRuns = withFrozen(this.frozenRuns, this.dirtyRuns, (run) => run.id, freezeRun);
         this.dirtyTraces.clear();
         this.dirtyRuns.clear();

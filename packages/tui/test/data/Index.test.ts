@@ -3,7 +3,7 @@ import { Array as Arr, Option, Order, Schema } from "effect";
 
 import { Index } from "../../src/data/Index.ts";
 import { exception, line, log, record } from "../support/records.ts";
-import { indexed, ingestAll, status } from "../support/store.ts";
+import { indexed, ingestAll, plainTraces, status } from "../support/store.ts";
 
 import type { JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
 
@@ -195,7 +195,7 @@ describe("Index", () => {
         const before = index.freeze(status);
         index.reset();
         const after = index.freeze(status);
-        expect(after).toEqual({
+        expect(plainTraces(after)).toEqual({
             version: before.version + 1,
             epoch: before.epoch + 1,
             status,
@@ -309,7 +309,9 @@ describe("Index", () => {
                     index.freeze(status);
                 }
             });
-            expect({ ...index.freeze(status), version: 0 }).toEqual({ ...expected, version: 0 });
+            expect(plainTraces({ ...index.freeze(status), version: 0 })).toEqual(
+                plainTraces({ ...expected, version: 0 }),
+            );
         },
     );
 });
