@@ -2,12 +2,11 @@ import { Array as Arr } from "effect";
 
 import { ranges } from "../query/Highlight.ts";
 import { count, duration, shortId } from "./format.ts";
-import { chunk, underlay } from "./Role.ts";
+import { chunk, highlighted, underlay } from "./Role.ts";
 import { cells } from "./text.ts";
 import { hiddenText } from "./treeSearch.ts";
 
-import type { Ranges } from "../query/Highlight.ts";
-import type { Chunk, Line, Role } from "./Role.ts";
+import type { Chunk, Line } from "./Role.ts";
 import type { Fold, Rails, TreeEntry } from "./tree.ts";
 import type { SpanKind, TreeFacts } from "./treeFacts.ts";
 import type { SpanSearch } from "./treeSearch.ts";
@@ -61,23 +60,6 @@ const glyphs = {
 } satisfies Readonly<Record<SpanKind, Chunk>>;
 
 const blank = (width: number): Chunk => chunk(" ".repeat(Math.max(0, width)), "text");
-
-/** `text` in `role`, with its `highlights` on the match background. */
-const highlighted = (text: string, role: Role, highlights: Ranges): Line => {
-    const parts: Array<Chunk> = [];
-    let at = 0;
-    for (const [start, end] of highlights) {
-        if (start > at) {
-            parts[parts.length] = chunk(text.slice(at, start), role);
-        }
-        parts[parts.length] = { text: text.slice(start, end), role, bg: "matchBg" };
-        at = end;
-    }
-    if (at < text.length) {
-        parts[parts.length] = chunk(text.slice(at), role);
-    }
-    return parts;
-};
 
 /** The label cut to `room` cells, ending in `…` when it did not fit. */
 const fitLabel = (label: Line, room: number): Line => {

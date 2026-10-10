@@ -8,7 +8,8 @@ export const LEVELS = ["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"] as co
 
 export type LogLevel = (typeof LEVELS)[number];
 
-const LOG_LEVEL = "effect.logLevel";
+/** The attribute a log event carries its level in. */
+export const LOG_LEVEL = "effect.logLevel";
 
 const isLevel = (value: string): value is LogLevel => Arr.contains(LEVELS, value);
 

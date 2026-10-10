@@ -1,4 +1,4 @@
-import { Option } from "effect";
+import { Number as Num, Option } from "effect";
 
 const CONTEXT_ROWS = 2;
 
@@ -17,21 +17,18 @@ interface Framing {
     readonly selectedKey: string;
 }
 
-const clamp = (n: number, low: number, high: number): number => Math.min(high, Math.max(low, n));
-
 export const deriveScroll = (previous: Scroll, next: Framing): Scroll => {
     if (next.selectedIndex < 0) {
         return initialScroll;
     }
     const shift = previous.key === next.selectedKey && previous.index >= 0 ? next.selectedIndex - previous.index : 0;
     const context = Math.min(CONTEXT_ROWS, Math.floor((next.viewport - 1) / 2));
-    const offset = clamp(
-        previous.offset + shift,
-        next.selectedIndex - (next.viewport - 1 - context),
-        next.selectedIndex - context,
-    );
+    const offset = Num.clamp(previous.offset + shift, {
+        minimum: next.selectedIndex - (next.viewport - 1 - context),
+        maximum: next.selectedIndex - context,
+    });
     return {
-        offset: clamp(offset, 0, Math.max(0, next.count - next.viewport)),
+        offset: Num.clamp(offset, { minimum: 0, maximum: Math.max(0, next.count - next.viewport) }),
         key: next.selectedKey,
         index: next.selectedIndex,
     };
@@ -43,7 +40,7 @@ export interface Wheel {
 }
 
 export const wheeled = (from: number, scroll: Scroll, by: number, count: number, viewport: number): Wheel => ({
-    offset: clamp(from + by, 0, Math.max(0, count - viewport)),
+    offset: Num.clamp(from + by, { minimum: 0, maximum: Math.max(0, count - viewport) }),
     forKey: scroll.key,
 });
 

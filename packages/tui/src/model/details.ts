@@ -1,10 +1,10 @@
-import { Array as Arr, Option, Order, pipe, Predicate } from "effect";
+import { Array as Arr, Option, Order, pipe } from "effect";
 
 import { bodiesOf, bodyState } from "./bodies.ts";
 import { causeLines, causeOf, thrownOf } from "./cause.ts";
-import { clockTime, count, duration, lastSegments, offset, plural, runLabel, size } from "./format.ts";
-import { levelOf, levelRole } from "./levels.ts";
-import { chunk } from "./Role.ts";
+import { clockTime, count, duration, offset, plural, runLabel, size, valueText, where } from "./format.ts";
+import { LOG_LEVEL, levelOf, levelRole } from "./levels.ts";
+import { chunk, heading } from "./Role.ts";
 import { cut, cutLine } from "./text.ts";
 import { TreeEntry } from "./tree.ts";
 
@@ -12,7 +12,7 @@ import type { SpanId, Snapshot } from "../data/Snapshot.ts";
 import type { BodyRef } from "./bodies.ts";
 import type { Chunk, Line } from "./Role.ts";
 import type { Group, TreeFacts } from "./treeFacts.ts";
-import type { AttributeValue, JsonlSpanEvent, JsonlSpanRecord, Location } from "@wmaurer/otelscope-effect/format";
+import type { JsonlSpanEvent, JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
 import type { AsyncResult } from "effect/reactivity";
 
 export interface DetailRow {
@@ -36,8 +36,6 @@ const HIDDEN: ReadonlySet<string> = new Set(["span.label", "status.interrupted"]
 const BODY_SUFFIXES = [".sha256", ".bytes", ".preview"];
 const PROBLEMS_SHOWN = 20;
 
-const valueText = (value: AttributeValue): string => (Predicate.isString(value) ? value : JSON.stringify(value));
-
 const byKey = Order.mapInput(Order.String, (entry: readonly [string, string]) => entry[0]);
 
 /** The Attributes section's pairs, sorted by key, without what the header, exit and Bodies already show. */
@@ -54,10 +52,6 @@ export const shownAttributes = (span: JsonlSpanRecord): ReadonlyArray<readonly [
 };
 
 const plain = (line: Line): DetailRow => ({ line, body: Option.none() });
-
-const heading = (text: string): Line => [chunk(text, "text", true)];
-
-const where = (location: Location): string => `${lastSegments(location.file)}:${location.line}:${location.col}`;
 
 const exitChunk = (span: JsonlSpanRecord): Chunk =>
     span.exit === "Failure"
@@ -142,7 +136,7 @@ const attributeLines = (key: string, value: string, width: number): ReadonlyArra
         : [[chunk(cut(key, width), "muted")], ...Arr.map(parts, continued)];
 };
 
-const LOG_HIDDEN: ReadonlySet<string> = new Set(["effect.logLevel", "effect.fiberId"]);
+const LOG_HIDDEN: ReadonlySet<string> = new Set([LOG_LEVEL, "effect.fiberId"]);
 const NOTHING_HIDDEN: ReadonlySet<string> = new Set();
 
 const pairs = (attrs: JsonlSpanEvent["attrs"], hidden: ReadonlySet<string>): string =>

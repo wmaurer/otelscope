@@ -1,6 +1,7 @@
-import { Array as Arr, DateTime, Option } from "effect";
+import { Array as Arr, DateTime, Option, Predicate } from "effect";
 
 import type { Run } from "../data/Snapshot.ts";
+import type { AttributeValue } from "@wmaurer/otelscope-effect/format";
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -123,3 +124,10 @@ const segments = (path: string): ReadonlyArray<string> => Arr.filter(path.split(
 export const lastSegments = (path: string): string => Arr.join(Arr.takeRight(segments(path), 2), "/");
 
 export const basename = (path: string): string => Option.getOrElse(Arr.last(segments(path)), () => path);
+
+/** An attribute value as shown: a string as is, anything else as JSON. */
+export const valueText = (value: AttributeValue): string => (Predicate.isString(value) ? value : JSON.stringify(value));
+
+/** `file.ts:12:5`, the file cut to its last segments. */
+export const where = (at: { readonly file: string; readonly line: number; readonly col: number }): string =>
+    `${lastSegments(at.file)}:${at.line}:${at.col}`;

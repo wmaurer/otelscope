@@ -1,3 +1,5 @@
+import { Number as Num } from "effect";
+
 import { leftWidth } from "./treeLine.ts";
 
 import type { Panes } from "./panes.ts";
@@ -48,9 +50,7 @@ interface Size {
     readonly height: number;
 }
 
-const clamp = (n: number, low: number, high: number): number => Math.min(high, Math.max(low, n));
-
-const clampSplit = (split: number): number => clamp(split, SPLIT_MIN, SPLIT_MAX);
+const clampSplit = (split: number): number => Num.clamp(split, { minimum: SPLIT_MIN, maximum: SPLIT_MAX });
 
 const inner = (n: number): number => Math.max(0, n - 2);
 
@@ -96,7 +96,7 @@ const panesOf = (
 export const traceLayout = (size: Size, panes: Panes): TraceLayout => {
     const body: Rect = { x: 0, y: 0, width: size.width, height: Math.max(0, size.height - HEADER_ROWS - FOOTER_ROWS) };
     const { mode, tree, details, logs, grip } = panesOf(size, clampSplit(panes.split), body);
-    const nameColumn = clamp(panes.nameColumn, NAME_MIN, nameMax(tree));
+    const nameColumn = Num.clamp(panes.nameColumn, { minimum: NAME_MIN, maximum: nameMax(tree) });
     return {
         mode,
         body,
@@ -122,7 +122,7 @@ export const resizeSplit = (panes: Panes, delta: number): Panes => ({
 /** From the effective (clamped) column, so `>` at the maximum changes nothing and the stored value never runs away. */
 export const resizeName = (panes: Panes, layout: TraceLayout, delta: number): Panes => ({
     ...panes,
-    nameColumn: clamp(layout.nameColumn + delta, NAME_MIN, nameMax(layout.tree)),
+    nameColumn: Num.clamp(layout.nameColumn + delta, { minimum: NAME_MIN, maximum: nameMax(layout.tree) }),
 });
 
 /** A divider drag at absolute screen cell (x, y): the whole percent that puts the tree's border under the pointer, clamped to 25..80. */

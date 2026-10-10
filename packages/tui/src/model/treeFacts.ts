@@ -74,7 +74,7 @@ interface SiblingList {
     readonly groups: ReadonlyMap<string, Group>;
 }
 
-const NO_CHILDREN: ReadonlyArray<SpanId> = [];
+export const NO_CHILDREN: ReadonlyArray<SpanId> = [];
 
 /**
  * By the identity of a `children` array. The index replaces a parent's array only when that parent gains a child, and

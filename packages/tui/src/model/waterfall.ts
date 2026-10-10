@@ -1,4 +1,4 @@
-import { Array as Arr, Data, Option, Order, pipe } from "effect";
+import { Array as Arr, Data, Number as Num, Option, Order, pipe } from "effect";
 
 import { duration } from "./format.ts";
 import { levelOf, levelRole, severity } from "./levels.ts";
@@ -26,8 +26,6 @@ const MIN_RANGE_MS = 0.001;
 
 /** Absorbs float error in tick arithmetic, so a whole number of ticks is not rounded up one and a tick on a cell edge is not drawn a cell early. */
 const EPSILON = 1e-9;
-
-const clamp = (n: number, low: number, high: number): number => Math.min(high, Math.max(low, n));
 
 /** 1, 2 and 5 × 10ⁿ ms from 1 µs up; n < 0 divides, so 0.002 is the double nearest to it. */
 const INTERVALS: ReadonlyArray<number> = Arr.flatMap(Arr.range(-3, 15), (n) =>
@@ -81,7 +79,7 @@ export const xOf = (scale: Scale, atMs: number): number =>
 const lastCell = (scale: Scale): number => Math.max(0, scale.width - 1);
 
 export const startCell = (scale: Scale, atMs: number): number =>
-    clamp(Math.floor(xOf(scale, atMs)), 0, lastCell(scale));
+    Num.clamp(Math.floor(xOf(scale, atMs)), { minimum: 0, maximum: lastCell(scale) });
 
 export type Tone = "success" | "origin" | "propagated" | "interrupted";
 
@@ -119,7 +117,10 @@ export const Bar = Data.taggedEnum<Bar>();
 
 /** The bar's start cell after clamping and the floor: max(startCell(start), floorCell). Children use it as their floor. */
 export const barStart = (scale: Scale, bar: Bar, floorCell: number): number =>
-    clamp(bar._tag === "None" ? floorCell : Math.max(startCell(scale, bar.startMs), floorCell), 0, lastCell(scale));
+    Num.clamp(bar._tag === "None" ? floorCell : Math.max(startCell(scale, bar.startMs), floorCell), {
+        minimum: 0,
+        maximum: lastCell(scale),
+    });
 
 interface Cell {
     readonly char: string;

@@ -3,16 +3,16 @@ import { Array as Arr, Data, Option, Order, pipe, Predicate, Schema } from "effe
 import { ranges } from "../query/Highlight.ts";
 import { logMatches } from "../query/Match.ts";
 import { parse } from "../query/Query.ts";
-import { count, offset, plural } from "./format.ts";
-import { levelOf, levelRole } from "./levels.ts";
-import { chunk } from "./Role.ts";
+import { count, offset, plural, valueText } from "./format.ts";
+import { LOG_LEVEL, levelOf, levelRole } from "./levels.ts";
+import { chunk, highlighted } from "./Role.ts";
 import { cut, cutLine } from "./text.ts";
 
 import type { SpanId } from "../data/Snapshot.ts";
 import type { LogCursor, LogScope } from "../nav/Screen.ts";
 import type { LogLine } from "../query/Match.ts";
 import type { Query } from "../query/Query.ts";
-import type { Chunk, Line, Role } from "./Role.ts";
+import type { Line, Role } from "./Role.ts";
 import type { TreeEntry } from "./tree.ts";
 import type { TreeFacts } from "./treeFacts.ts";
 import type { AttributeValue, JsonlSpanEvent, JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
@@ -37,11 +37,8 @@ export interface TraceLogs {
     readonly range: (from: number, to: number) => ReadonlyArray<LogEntry>;
 }
 
-const LOG_LEVEL = "effect.logLevel";
 const FIBER_ID = "effect.fiberId";
 const CAUSE = "effect.cause";
-
-const asText = (value: AttributeValue): string => (Predicate.isString(value) ? value : JSON.stringify(value));
 
 const jsonValues = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Array(Schema.Json)));
 
@@ -83,7 +80,7 @@ const entryOf = (
         annotations: pipe(
             Object.entries(event.attrs),
             Arr.filter(([key]) => key !== LOG_LEVEL && key !== FIBER_ID && key !== CAUSE),
-            Arr.map(([key, value]) => [key, asText(value)] as const),
+            Arr.map(([key, value]) => [key, valueText(value)] as const),
         ),
         exit: span.exit,
         cause: causeOf(event.attrs[CAUSE]),
@@ -302,22 +299,8 @@ const GAP = "  ";
 /** Where the message starts: offset, level, fiber and span name, each followed by a gap. */
 const MESSAGE_AT = OFFSET_CELLS + LEVEL_CELLS + FIBER_CELLS + SPAN_CELLS + 4 * GAP.length;
 
-/** `text` in `role`, with the parts the query's text terms match on the match background. */
-const marked = (text: string, role: Role, query: Query, bold = false): Line => {
-    const parts: Array<Chunk> = [];
-    let at = 0;
-    for (const [start, end] of ranges(query, text)) {
-        if (start > at) {
-            parts[parts.length] = chunk(text.slice(at, start), role, bold);
-        }
-        parts[parts.length] = { ...chunk(text.slice(start, end), role, bold), bg: "matchBg" };
-        at = end;
-    }
-    if (at < text.length) {
-        parts[parts.length] = chunk(text.slice(at), role, bold);
-    }
-    return parts;
-};
+const marked = (text: string, role: Role, query: Query, bold = false): Line =>
+    highlighted(text, role, ranges(query, text), bold);
 
 export const logLine = (entry: LogEntry, query: Query, traceStartMs: number, width: number): Line =>
     cutLine(

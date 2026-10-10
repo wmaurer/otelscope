@@ -1,4 +1,4 @@
-import { Array as Arr, Option } from "effect";
+import { Array as Arr, Number as Num, Option } from "effect";
 
 import { locationTarget } from "../editor.ts";
 import { moveRows } from "../keys/Action.ts";
@@ -35,8 +35,6 @@ import type { Nav } from "./Nav.ts";
 import type { Pane, ScreenOf, TraceView } from "./Screen.ts";
 import type { ScreenStep, TraceContext } from "./ScreenStep.ts";
 
-const clamp = (n: number, low: number, high: number): number => Math.min(high, Math.max(low, n));
-
 const signed = (dir: Dir, n: number): number => (dir === "next" ? n : -n);
 
 export const stepTrace = (
@@ -56,12 +54,15 @@ export const stepTrace = (
     const anchor = () => anchorOf(facts, Option.map(model.entry, rowOf));
     const detailsMax = Math.max(0, context.detailsLines - layout.detailsRows);
     const moveTree = (target: number): ScreenStep => {
-        const entry = tree.rows[clamp(target, 0, tree.rows.length - 1)];
+        const entry = tree.rows[Num.clamp(target, { minimum: 0, maximum: tree.rows.length - 1 })];
         return entry === undefined ? stepTo(nav) : set(selectRow(view, rowOf(entry)));
     };
     const moveLogs = (target: (current: number, last: number) => number): ScreenStep => {
         const last = logs.entries.length - 1;
-        const entry = logs.entries[clamp(target(cursorEntry(logs, facts, view.logCursor), last), 0, last)];
+        const entry =
+            logs.entries[
+                Num.clamp(target(cursorEntry(logs, facts, view.logCursor), last), { minimum: 0, maximum: last })
+            ];
         return entry === undefined ? stepTo(nav) : set({ ...view, logCursor: Option.some(entry.key) });
     };
     const goToLog = (from: TraceView, index: number): ScreenStep => {

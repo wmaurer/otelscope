@@ -1,5 +1,6 @@
 import { Array as Arr, Option, Order, Predicate } from "effect";
 
+import { LOG_LEVEL } from "../model/levels.ts";
 import { classify } from "./Decode.ts";
 import { insertSorted, SortedIds } from "./SortedIds.ts";
 
@@ -19,8 +20,6 @@ import type { JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
 
 const MAX_SAMPLES = 100;
 const SAMPLE_CHARS = 200;
-
-const LOG_LEVEL = "effect.logLevel";
 
 class TraceBuilder {
     readonly id: TraceId;

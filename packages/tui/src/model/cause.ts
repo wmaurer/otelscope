@@ -1,8 +1,9 @@
 import { Array as Arr, Data, Option, Predicate } from "effect";
 
-import { lastSegments } from "./format.ts";
-import { chunk } from "./Role.ts";
+import { where } from "./format.ts";
+import { chunk, heading } from "./Role.ts";
 import { cutLine } from "./text.ts";
+import { NO_CHILDREN } from "./treeFacts.ts";
 
 import type { SpanId } from "../data/Snapshot.ts";
 import type { Line } from "./Role.ts";
@@ -133,8 +134,6 @@ export type Cause = Data.TaggedEnum<{
 }>;
 export const Cause = Data.taggedEnum<Cause>();
 
-const NO_CHILDREN: ReadonlyArray<SpanId> = [];
-
 const failedCause = (facts: TreeFacts, span: JsonlSpanRecord): Cause => {
     const thrown = thrownOf(span);
     return Option.match(Arr.head(thrown), {
@@ -167,8 +166,6 @@ export const causeOf = (facts: TreeFacts, spanId: SpanId): Cause => {
     return span.exit === "Interrupted" ? Cause.Interrupted() : failedCause(facts, span);
 };
 
-const where = (frame: Frame): string => `${lastSegments(frame.file)}:${frame.line}:${frame.col}`;
-
 const frameLine = (frame: Frame, index: number, names: ReadonlySet<string>): Line => {
     if (index === 0) {
         return [chunk("thrown at ", "muted"), chunk(where(frame), "text")];
@@ -195,8 +192,6 @@ const thrownLines = (thrown: Thrown, names: ReadonlySet<string>): ReadonlyArray<
 ];
 
 const nameOf = (facts: TreeFacts, spanId: SpanId): string => facts.trace.spans.get(spanId)?.name ?? spanId;
-
-const heading = (text: string): Line => [chunk(text, "text", true)];
 
 /** The Cause (or Interrupted) section, heading included; empty for a span that succeeded. */
 export const causeLines = (cause: Cause, facts: TreeFacts, width: number): ReadonlyArray<Line> => {
