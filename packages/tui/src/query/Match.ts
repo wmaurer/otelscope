@@ -29,12 +29,8 @@ const valueHas = (value: AttributeValue, needle: Needle): boolean => {
 const PREVIEW = ".preview";
 
 const isBodyMeta = (attrs: Attributes, key: string): boolean => {
-    const dot = key.lastIndexOf(".");
-    if (dot < 0) {
-        return false;
-    }
-    const suffix = key.slice(dot);
-    return (suffix === ".sha256" || suffix === ".bytes") && `${key.slice(0, dot)}${PREVIEW}` in attrs;
+    const suffix = key.endsWith(".sha256") ? ".sha256" : key.endsWith(".bytes") ? ".bytes" : undefined;
+    return suffix !== undefined && `${key.slice(0, -suffix.length)}${PREVIEW}` in attrs;
 };
 
 const attrsHave = (attrs: Attributes, needle: Needle): boolean => {
@@ -112,8 +108,19 @@ const TERM_CACHE_SIZE = 32;
 
 class TermCaches {
     private readonly caches = new Map<string, WeakMap<Trace, ReadonlyArray<RunId>>>();
+    private readonly byTerm = new WeakMap<Term, WeakMap<Trace, ReadonlyArray<RunId>>>();
 
-    get(key: string): WeakMap<Trace, ReadonlyArray<RunId>> {
+    forTerm(term: Term): WeakMap<Trace, ReadonlyArray<RunId>> {
+        const known = this.byTerm.get(term);
+        if (known !== undefined) {
+            return known;
+        }
+        const cache = this.get(termKey(term));
+        this.byTerm.set(term, cache);
+        return cache;
+    }
+
+    private get(key: string): WeakMap<Trace, ReadonlyArray<RunId>> {
         const found = this.caches.get(key);
         if (found !== undefined) {
             this.caches.delete(key);
@@ -161,7 +168,7 @@ const traceHits = (term: Term, trace: Trace): ReadonlyArray<RunId> => {
     if (term._tag === "Level" || term._tag === "Never") {
         return NONE;
     }
-    const cache = termCaches.get(termKey(term));
+    const cache = termCaches.forTerm(term);
     const hit = cache.get(trace);
     if (hit !== undefined) {
         return hit;
