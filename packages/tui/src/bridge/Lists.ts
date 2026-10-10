@@ -78,7 +78,15 @@ export const listAtom = (
         const shown = get.self<Staged>();
         return Option.isSome(shown) && Equal.equals(shown.value.key, next) && sameLists(shown.value.snapshot, latest)
             ? shown.value
-            : { key: next, snapshot: latest, stage: stageOf(next, latest) };
+            : {
+                  key: next,
+                  snapshot: latest,
+                  stage: stageOf(
+                      next,
+                      latest,
+                      Option.map(shown, (staged) => staged.stage),
+                  ),
+              };
     });
     const stage = Atom.map(staged, (current) => current.stage);
     const layout = Atom.make((get) => layoutOf(get(stage), top(get(nav)))).pipe(Atom.withEquality(Equal.equals));

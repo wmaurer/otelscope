@@ -1,4 +1,4 @@
-import { Array as Arr, Data, HashSet, Option, Order, Record } from "effect";
+import { Array as Arr, Data, Equal, HashSet, Option, Order, Record } from "effect";
 
 import { TraceRow } from "../nav/Screen.ts";
 import { traceMatches } from "../query/Match.ts";
@@ -19,9 +19,19 @@ const CLOSED_SHOWN = 5;
 export interface Item {
     readonly trace: Trace;
     readonly state: TraceState;
-    /** The row's key, and the trace's `headName`: read off the trace once, so laying out the rows reads only items. */
+    /** Whether the trace matches the list's filter. */
+    readonly matched: boolean;
+    // What the list reads of the trace, copied off it when the item is made. The passes over every item of the run on
+    // each publish then read only items, which lie together, and not the traces, which lie scattered on the heap.
+    readonly id: TraceId;
     readonly key: string;
     readonly headName: string;
+    readonly startMs: number;
+    readonly durationMs: number;
+    readonly spanCount: number;
+    readonly failedSpans: number;
+    readonly logs: number;
+    readonly errorType: string | undefined;
 }
 
 /** The sums a group's heading shows, over its members. */
@@ -93,12 +103,12 @@ const rowValue = (row: TraceListRow): TraceRow => {
 };
 
 const orders = {
-    duration: Order.flip(Order.mapInput(Order.Number, (item: Item) => item.trace.endMs - item.trace.startMs)),
+    duration: Order.flip(Order.mapInput(Order.Number, (item: Item) => item.durationMs)),
     failures: Order.combine(
         Order.flip(Order.mapInput(Order.Boolean, (item: Item) => item.state === "failed")),
-        Order.flip(Order.mapInput(Order.Number, (item: Item) => item.trace.failedSpans)),
+        Order.flip(Order.mapInput(Order.Number, (item: Item) => item.failedSpans)),
     ),
-    spans: Order.flip(Order.mapInput(Order.Number, (item: Item) => item.trace.spanCount)),
+    spans: Order.flip(Order.mapInput(Order.Number, (item: Item) => item.spanCount)),
 } satisfies Readonly<Record<Exclude<TraceSort, "start">, Order.Order<Item>>>;
 
 export interface Collected {
@@ -106,8 +116,11 @@ export interface Collected {
     readonly run: Run;
     readonly filter: string;
     readonly query: Query;
+    readonly liveAt: Option.Option<number>;
     readonly total: number;
-    readonly matching: ReadonlyArray<Trace>;
+    /** Every trace of the run, in the run's order. */
+    readonly all: ReadonlyArray<Item>;
+    readonly matching: ReadonlyArray<Item>;
     readonly sorted: ReadonlyArray<Item>;
     /** The matching traces' starts, in `matching` order. */
     readonly starts: ReadonlyArray<number>;
@@ -140,23 +153,117 @@ const gathering = (size: number): Gathering => ({
 });
 
 /** Adds a member's numbers, which do not depend on the order of the members. */
-const total = (group: Gathering, trace: Trace, state: TraceState): void => {
-    group.durations[group.count] = trace.endMs - trace.startMs;
+const total = (group: Gathering, item: Item): void => {
+    group.durations[group.count] = item.durationMs;
     group.count += 1;
-    group.spans += trace.spanCount;
-    group.failedTraces += state === "failed" ? 1 : 0;
-    group.logs += trace.logs;
-    if (Option.isSome(trace.firstError)) {
-        const type = trace.firstError.value.type;
-        group.errors.set(type, (group.errors.get(type) ?? 0) + 1);
+    group.spans += item.spanCount;
+    group.failedTraces += item.state === "failed" ? 1 : 0;
+    group.logs += item.logs;
+    if (item.errorType !== undefined) {
+        group.errors.set(item.errorType, (group.errors.get(item.errorType) ?? 0) + 1);
         group.errorTotal += 1;
     }
 };
 
+const itemOf = (trace: Trace, query: Query, live: boolean): Item => ({
+    trace,
+    state: traceState(trace, live),
+    matched: query.length === 0 || traceMatches(query, trace),
+    id: trace.id,
+    key: traceKey(trace.id),
+    headName: trace.headName,
+    startMs: trace.startMs,
+    durationMs: trace.endMs - trace.startMs,
+    spanCount: trace.spanCount,
+    failedSpans: trace.failedSpans,
+    logs: trace.logs,
+    errorType: Option.isSome(trace.firstError) ? trace.firstError.value.type : undefined,
+});
+
+interface Kept {
+    readonly items: ReadonlyArray<Item>;
+    /** The traces whose items cannot be kept. */
+    readonly changed: ReadonlySet<TraceId>;
+    /** Whether liveness may differ, which decides whether a trace without a root is running or partial. */
+    readonly restate: boolean;
+}
+
+const unchanged: ReadonlySet<TraceId> = new Set();
+
+const nothingKept: Kept = { items: [], changed: unchanged, restate: false };
+
+/** The items of `previous` that hold for `snapshot`: those of the traces that did not change since. */
+const keptOf = (
+    previous: Option.Option<Collected>,
+    snapshot: Snapshot,
+    filter: string,
+    liveAt: Option.Option<number>,
+): Kept =>
+    Option.getOrElse(
+        Option.flatMap(previous, (before): Option.Option<Kept> => {
+            if (before.filter !== filter) {
+                return Option.none();
+            }
+            const { since, traces } = snapshot.changed;
+            const changed =
+                before.snapshot.traces === snapshot.traces
+                    ? Option.some(unchanged)
+                    : since <= before.snapshot.version && before.snapshot.version < snapshot.version
+                      ? Option.some(traces)
+                      : Option.none();
+            return Option.map(changed, (changed) => ({
+                items: before.all,
+                changed,
+                restate: !Equal.equals(before.liveAt, liveAt) || before.snapshot.status.phase !== snapshot.status.phase,
+            }));
+        }),
+        () => nothingKept,
+    );
+
 /**
- * It runs over every trace of the run on each publish. So it reads each trace in one pass, without an `Option` or a
- * closure per trace, and orders the groups' members in a second pass that reads only the items. Neighbouring traces
- * mostly share their root's name, so it looks a name up again only when it changes.
+ * Every trace of the run as an item, in the run's order. A trace that did not change keeps its item, which spares
+ * reading it again: the traces that did not change keep their order, so one pass over the run and the kept items in step
+ * pairs them up.
+ */
+const itemsOf = (
+    snapshot: Snapshot,
+    run: Run,
+    query: Query,
+    liveAt: Option.Option<number>,
+    { items: old, changed, restate }: Kept,
+): ReadonlyArray<Item> => {
+    const phase = snapshot.status.phase;
+    const live = (trace: Trace): boolean => Option.isSome(liveAt) && isLive(trace.lastArrivalAt, phase, liveAt.value);
+    const items: Array<Item> = [];
+    let next = 0;
+    for (const id of run.traceIds) {
+        if (!changed.has(id)) {
+            while (next < old.length && old[next]?.id !== id) {
+                next += 1;
+            }
+            const item = old[next];
+            if (item !== undefined) {
+                next += 1;
+                const state =
+                    restate && (item.state === "running" || item.state === "partial")
+                        ? traceState(item.trace, live(item.trace))
+                        : item.state;
+                items[items.length] = state === item.state ? item : { ...item, state };
+                continue;
+            }
+        }
+        const trace = snapshot.traces.get(id);
+        if (trace !== undefined) {
+            items[items.length] = itemOf(trace, query, live(trace));
+        }
+    }
+    return items;
+};
+
+/**
+ * It runs over every trace of the run on each publish. So it keeps the items of the traces that did not change since
+ * `previous` was collected, reads each changed trace once, and lays out the rest from the items alone. Neighbouring
+ * traces mostly share their root's name, so it looks a name up again only when it changes.
  */
 export const collect = (
     snapshot: Snapshot,
@@ -164,67 +271,60 @@ export const collect = (
     view: Pick<TracesView, "sort" | "reverse">,
     filter: string,
     liveAt: Option.Option<number>,
+    previous: Option.Option<Collected>,
 ): Option.Option<Collected> =>
     Option.map(Option.fromUndefinedOr(snapshot.runs.get(runId)), (run) => {
         const query = parse(filter);
-        const all: Array<Trace> = [];
+        const all = itemsOf(snapshot, run, query, liveAt, keptOf(previous, snapshot, filter, liveAt));
         // oxlint-disable-next-line effect-native/imperative-collection-build -- counting in the same pass is the point.
         const counts = new Map<string, number>();
         let name: string | undefined;
         let named = 0;
-        for (const id of run.traceIds) {
-            const trace = snapshot.traces.get(id);
-            if (trace !== undefined) {
-                all[all.length] = trace;
-                if (trace.headName === name) {
-                    named += 1;
-                } else {
-                    if (name !== undefined) {
-                        counts.set(name, (counts.get(name) ?? 0) + named);
-                    }
-                    name = trace.headName;
-                    named = 1;
+        for (const item of all) {
+            if (item.headName === name) {
+                named += 1;
+            } else {
+                if (name !== undefined) {
+                    counts.set(name, (counts.get(name) ?? 0) + named);
                 }
+                name = item.headName;
+                named = 1;
             }
         }
         if (name !== undefined) {
             counts.set(name, (counts.get(name) ?? 0) + named);
         }
-        const matching = query.length === 0 ? all : Arr.filter(all, (trace) => traceMatches(query, trace));
+        const matching = query.length === 0 ? all : Arr.filter(all, (item) => item.matched);
 
-        const phase = snapshot.status.phase;
-        const items: Array<Item> = [];
         const starts: Array<number> = [];
         // oxlint-disable-next-line effect-native/imperative-collection-build -- grouping in the same pass is the point.
         const groups = new Map<string, Gathering>();
         let last: { readonly name: string; readonly group: Gathering | undefined } | undefined;
-        for (const trace of matching) {
-            const state = traceState(trace, Option.isSome(liveAt) && isLive(trace.lastArrivalAt, phase, liveAt.value));
-            items[items.length] = { trace, state, key: traceKey(trace.id), headName: trace.headName };
-            starts[starts.length] = trace.startMs;
-            if (last?.name !== trace.headName) {
-                const size = counts.get(trace.headName) ?? 0;
-                let group = groups.get(trace.headName);
+        for (const item of matching) {
+            starts[starts.length] = item.startMs;
+            if (last?.name !== item.headName) {
+                const size = counts.get(item.headName) ?? 0;
+                let group = groups.get(item.headName);
                 if (group === undefined && size >= GROUP_MIN) {
                     group = gathering(size);
-                    groups.set(trace.headName, group);
+                    groups.set(item.headName, group);
                 }
-                last = { name: trace.headName, group };
+                last = { name: item.headName, group };
             }
             if (last.group !== undefined) {
-                total(last.group, trace, state);
+                total(last.group, item);
             }
         }
 
-        const ordered = view.sort === "start" ? items : Arr.sort(items, orders[view.sort]);
+        const ordered = view.sort === "start" ? matching : Arr.sort(matching, orders[view.sort]);
         const sorted = view.reverse ? Arr.reverse(ordered) : ordered;
-        let previous: { readonly name: string; readonly group: Gathering | undefined } | undefined;
+        let current: { readonly name: string; readonly group: Gathering | undefined } | undefined;
         for (const item of sorted) {
-            if (previous?.name !== item.headName) {
-                previous = { name: item.headName, group: groups.get(item.headName) };
+            if (current?.name !== item.headName) {
+                current = { name: item.headName, group: groups.get(item.headName) };
             }
-            if (previous.group !== undefined) {
-                previous.group.items[previous.group.items.length] = item;
+            if (current.group !== undefined) {
+                current.group.items[current.group.items.length] = item;
             }
         }
         return {
@@ -232,7 +332,9 @@ export const collect = (
             run,
             filter,
             query,
+            liveAt,
             total: all.length,
+            all,
             matching,
             sorted,
             starts,
@@ -296,7 +398,7 @@ export const traceList = (
         if (isProblem(item.state)) {
             stops[stops.length] = rows.length;
         }
-        if (item.trace === newest) {
+        if (item === newest) {
             followIndex = rows.length;
         }
         rows[rows.length] = { _tag: "Trace", key: item.key, item, member };

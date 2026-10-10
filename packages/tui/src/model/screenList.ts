@@ -56,14 +56,27 @@ export type Stage =
     | { readonly _tag: "Built"; readonly list: ScreenList }
     | { readonly _tag: "Collected"; readonly collected: Collected };
 
-export const stageOf = (key: ListKey, snapshot: Snapshot): Stage =>
+/** `previous` is the stage before this one, whose items `collect` keeps for the traces that did not change. */
+export const stageOf = (key: ListKey, snapshot: Snapshot, previous: Option.Option<Stage>): Stage =>
     ListKey.$match(key, {
         Runs: (runs): Stage => ({ _tag: "Built", list: { _tag: "Runs", list: runList(snapshot, runs, runs.filter) } }),
         Traces: (traces): Stage =>
-            Option.match(collect(snapshot, traces.runId, traces, traces.filter, traces.liveAt), {
-                onNone: (): Stage => ({ _tag: "Built", list: noList }),
-                onSome: (collected): Stage => ({ _tag: "Collected", collected }),
-            }),
+            Option.match(
+                collect(
+                    snapshot,
+                    traces.runId,
+                    traces,
+                    traces.filter,
+                    traces.liveAt,
+                    Option.flatMap(previous, (stage) =>
+                        stage._tag === "Collected" ? Option.some(stage.collected) : Option.none(),
+                    ),
+                ),
+                {
+                    onNone: (): Stage => ({ _tag: "Built", list: noList }),
+                    onSome: (collected): Stage => ({ _tag: "Collected", collected }),
+                },
+            ),
         None: (): Stage => ({ _tag: "Built", list: noList }),
     });
 

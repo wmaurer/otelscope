@@ -8,6 +8,7 @@ import { insertSorted, SortedIds } from "./SortedIds.ts";
 import type {
     BadLine,
     BadLines,
+    Changed,
     FirstError,
     Run,
     RunId,
@@ -194,6 +195,8 @@ const interned = (strings: Strings, record: JsonlSpanRecord): JsonlSpanRecord =>
 export class Index {
     private version = 0;
     private epoch = 0;
+    /** The last version to freeze a trace, or the first after a reset. */
+    private tracesFrozenAt = 0;
     private traces = new Map<TraceId, TraceBuilder>();
     private runs = new Map<RunId, RunBuilder>();
     private traceOrder = new SortedIds();
@@ -224,6 +227,7 @@ export class Index {
 
     reset(): void {
         this.epoch += 1;
+        this.tracesFrozenAt = this.version + 1;
         this.traces = new Map();
         this.runs = new Map();
         this.traceOrder = new SortedIds();
@@ -239,6 +243,13 @@ export class Index {
 
     freeze(status: Status): Snapshot {
         this.version += 1;
+        const changed: Changed = {
+            since: this.tracesFrozenAt,
+            traces: new Set(Arr.map(Array.from(this.dirtyTraces), (trace) => trace.id)),
+        };
+        if (this.dirtyTraces.size > 0) {
+            this.tracesFrozenAt = this.version;
+        }
         this.frozenTraces = this.frozenTraces.with(
             Arr.map(Array.from(this.dirtyTraces), (trace) => [trace.id, freezeTrace(trace)] as const),
         );
@@ -252,6 +263,7 @@ export class Index {
             runs: this.frozenRuns,
             runOrder: this.runOrder.freeze(),
             traces: this.frozenTraces,
+            changed,
             traceOrder: this.traceOrder.freeze(),
             spanCount: this.spanCount,
             badLines: this.badLines,

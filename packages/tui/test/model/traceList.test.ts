@@ -12,7 +12,7 @@ import { exception, line, record } from "../support/records.ts";
 import { indexed, ingestAll, status } from "../support/store.ts";
 
 import type { Snapshot } from "../../src/data/Snapshot.ts";
-import type { TraceList, TraceListRow } from "../../src/model/traceList.ts";
+import type { Collected, TraceList, TraceListRow } from "../../src/model/traceList.ts";
 import type { TracesView } from "../../src/nav/Screen.ts";
 
 const failing = new Set([3, 7, 11, 15, 19, 22]);
@@ -31,7 +31,7 @@ const build = (
     pinned: Option.Option<string> = Option.none(),
 ): TraceList => {
     const view = { sort: "start" as const, reverse: false, openGroups: HashSet.empty<string>(), ...over };
-    const collected = Option.getOrThrow(collect(source, "run-1", view, filter, Option.none()));
+    const collected = Option.getOrThrow(collect(source, "run-1", view, filter, Option.none(), Option.none()));
     return traceList(collected, view.openGroups, pinned);
 };
 
@@ -107,9 +107,8 @@ describe("groups", () => {
         expect(Option.map(more, (row) => (row._tag === "More" ? moreText(row.group.hidden) : ""))).toEqual(
             Option.some("⋯ 1 more failed · 19 ok"),
         );
-        const trace = snapshot.traces.get("h1")!;
         const states = ["ok", "partial", "recovered", "running", "interrupted", "failed"] as const;
-        expect(moreText(Arr.map(states, (state) => ({ trace, state, key: "t:h1", headName: trace.headName })))).toBe(
+        expect(moreText(Arr.map(states, (state) => ({ state })))).toBe(
             "⋯ 1 more failed · 1 interrupted · 1 running · 1 recovered · 1 partial · 1 ok",
         );
     });
@@ -128,7 +127,7 @@ describe("groups", () => {
             Option.some(at),
         ).freeze({ ...status, phase: "following", lastRecordAt: Option.some(at) });
         const collected = Option.getOrThrow(
-            collect(live, "run-1", { sort: "start", reverse: false }, "", Option.some(at + 1000)),
+            collect(live, "run-1", { sort: "start", reverse: false }, "", Option.some(at + 1000), Option.none()),
         );
         expect(labels(traceList(collected, HashSet.empty(), Option.none()))).toEqual(["▸ job", "  x", "⋯ job"]);
     });
@@ -164,7 +163,7 @@ describe("stops and following", () => {
 describe("the pinned selection", () => {
     it("pins only a member a closed group hides, and shows it under the heading", () => {
         const collected = Option.getOrThrow(
-            collect(snapshot, "run-1", { sort: "start", reverse: false }, "", Option.none()),
+            collect(snapshot, "run-1", { sort: "start", reverse: false }, "", Option.none(), Option.none()),
         );
         const select = (traceId: string) => Option.some(TraceRow.Trace({ traceId }));
         expect(pinnedBy(collected, HashSet.empty(), select("o010"))).toEqual(Option.some("o010"));
@@ -280,4 +279,91 @@ const context = (list: TraceList, filtered: boolean) => ({
     query: filtered ? parse(list.filter) : [],
     filtered,
     width: 120,
+});
+
+describe("collecting with the previous list", () => {
+    const between = (minimum: number, maximum: number) => Schema.Int.check(Schema.isBetween({ minimum, maximum }));
+    const Step = Schema.Struct({
+        trace: between(0, 29),
+        child: Schema.Boolean,
+        startMs: between(0, 40),
+        exit: Schema.Literals(["Success", "Failure", "Interrupted"]),
+        error: Schema.Literals(["", "Timeout", "Declined"]),
+        waitMs: between(0, 3000),
+        phase: Schema.Literals(["following", "done"]),
+        live: Schema.Boolean,
+        freezes: between(0, 2),
+        collects: Schema.Boolean,
+        reset: between(0, 19),
+        refilter: between(0, 9),
+        otherRun: between(0, 9),
+        sort: Schema.Literals(["start", "duration", "failures", "spans"]),
+        reverse: Schema.Boolean,
+    });
+    const filters = ["", "job", "is:failed", "timeout"];
+
+    /** What a list shows, less its functions and the snapshot it was collected from. */
+    const shown = (collected: Collected, openGroups: HashSet.HashSet<string>) => {
+        const { rows, stops, followIndex, starts, matched, total, groups } = traceList(
+            collected,
+            openGroups,
+            Option.none(),
+        );
+        return { all: collected.all, sizes: collected.sizes, rows, stops, followIndex, starts, matched, total, groups };
+    };
+
+    it.prop(
+        "lays out the same list as collecting afresh, over any publishes, clock ticks, filters, sorts and resets",
+        [Schema.Array(Step).check(Schema.isMinLength(40), Schema.isMaxLength(120)), between(0, 3)],
+        ([steps, firstFilter]) => {
+            const index = new Index();
+            let snapshot = index.freeze(status);
+            let previous = Option.none<Collected>();
+            let filter = firstFilter;
+            let now = 1_760_000_000_000;
+            Arr.forEach(steps, (step, i) => {
+                now += step.waitMs;
+                if (step.reset === 0) {
+                    index.reset();
+                }
+                const trace = `t${String(step.trace).padStart(2, "0")}`;
+                index.ingest(
+                    line(
+                        record({
+                            run: step.trace % 5 === 0 ? "run-2" : "run-1",
+                            span: `s${i}`,
+                            trace,
+                            parent: step.child ? `${trace}-root` : null,
+                            name: step.trace % 7 === 0 ? "other" : "job",
+                            startMs: 1000 + step.startMs * 100,
+                            exit: step.exit,
+                            events: step.error === "" ? [] : [exception(step.error, `in ${i}`)],
+                        }),
+                    ),
+                    i + 1,
+                    i * 100,
+                    Option.some(now),
+                );
+                Arr.forEach(Arr.range(1, step.freezes), () => {
+                    snapshot = index.freeze({ ...status, phase: step.phase, lastRecordAt: Option.some(now) });
+                });
+                filter = step.refilter === 0 ? (filter + 1) % filters.length : filter;
+                if (!step.collects) {
+                    return;
+                }
+                const run = step.otherRun === 0 ? "run-2" : "run-1";
+                const view = { sort: step.sort, reverse: step.reverse };
+                const liveAt = step.live ? Option.some(now) : Option.none();
+                const collected = (before: Option.Option<Collected>) =>
+                    collect(snapshot, run, view, filters[filter]!, liveAt, before);
+                const kept = collected(previous);
+                Arr.forEach([HashSet.empty<string>(), HashSet.make("job")], (open) =>
+                    expect(Option.map(kept, (list) => shown(list, open))).toEqual(
+                        Option.map(collected(Option.none()), (list) => shown(list, open)),
+                    ),
+                );
+                previous = kept;
+            });
+        },
+    );
 });

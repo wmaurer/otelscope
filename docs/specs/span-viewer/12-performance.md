@@ -137,11 +137,28 @@ alternated, at load 1.2 to 3.3:
   `perf/run.ts`'s live section none reached 40 ms: the slowest of each full run took 25 to 36 ms. With `--trace-gc`,
   each publish over 18 ms coincided with a young-generation scavenge (2 to 3 ms) during a Traces-list rebuild, or
   with the `LayeredMap` folding its layer into a new base (`freeze` 7.5 ms).
-- **Where the live publish stands**, after the remedies in the git log of step 7: p95 14.6 to 15.4 ms against 16, at
-  load 1.5 to 3. Its p95 is set on the Traces screen, by the publishes that add traces. Each one rebuilds the list
-  over every trace of the run (32k by the end of the 30 s), at about 250 ns per trace, mostly the first read of each
-  `Trace` object and of the `Option`s it holds; skipping a pass or a lookup did not move it. A list updated from the
-  traces a publish changed, rather than rebuilt, is the remedy if the budget needs more room.
+- **The Traces list keeps its items across publishes.** Pooled with the Trace screen's, the live publish measured
+  p95 13.8 to 16.0 ms; on the Traces screen alone, 15.0 to 18.1 ms, and the harness now judges each screen apart. A CPU profile of the Traces screen's publishes, cut to the time from `freeze` to the frame, put 8.2 ms of
+  each 10.8 in rebuilding the list over every trace of the run (32k by the end of the 30 s), at about 250 ns per
+  trace: `collect` read each `Trace`, the `Option`s it holds and its entry in the traces map, and the traces lie
+  scattered on the heap. Skipping a pass or a lookup had not moved it.
+    - The snapshot names the traces each publish froze anew (`changed`,
+      [03-data-layer.md](03-data-layer.md#the-snapshot)), and `collect` keeps the previous list's items for the
+      others. The traces that did not change keep their order, so one pass over the run's ids and the kept items in
+      step pairs them up. An item copies what the list reads of its trace, so grouping, the heading totals and the
+      rows read only items, which lie together. A trace without a root is judged running or partial again when
+      liveness may have changed. A property test checks the kept list against one collected afresh over random
+      publishes, clock ticks, filters, sorts and resets.
+    - Comparing each trace with the previous list's by identity instead would need no `changed`, but costs a lookup
+      per trace in the traces map: on a following-size snapshot (36k traces) that walk took 1.8 ms at p50, and a
+      lookup per trace in a small set 0.4 ms.
+    - `perf --only following`, 5 runs per side, alternated, load 1.3 to 1.7 (median of the runs [range]): on the
+      Traces screen p50 12.5 [12.1-12.6] to 6.8 [6.5-6.9] ms, p95 15.4 [15.0-16.3] to 10.1 [10.0-10.9] ms, max 26.6
+      [21.9-29.2] to 17.9 [15.6-24.4] ms; freeze to the snapshot's listeners, p95 11.0 to 5.3 ms. The Trace screen
+      and `freeze` alone did not change.
+    - What is left on the Traces screen, by the same profile: the passes over the items and the rows, about 3.6 ms;
+      the frame, 1.6 ms; `freeze`, 1.0 ms. The slowest publishes add a young-generation scavenge (2 to 3.6 ms) or the
+      `LayeredMap` folding its layer into a new base (3 to 4 ms).
 
 ## The compile cache
 
@@ -165,6 +182,8 @@ Each is applied only after profiling shows its target is the cause.
       case-insensitive regular expression (49 ms for the same tests), and the plain term's p95 fell to 72 ms. An index
       would cost memory, where RSS after the full index is within 4 % of its budget.
 - **Live publish**: profile first. The 100 ms throttle stays.
+    - Applied: the Traces list keeps the items of the traces a publish did not change
+      ([Data-layer measurements](#data-layer-measurements)).
 
 ## Changing a budget
 

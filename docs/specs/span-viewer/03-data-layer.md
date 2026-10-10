@@ -162,9 +162,17 @@ interface Snapshot {
     readonly runs: ReadonlyMap<RunId, Run>;
     readonly runOrder: ReadonlyArray<RunId>;           // by firstStartMs
     readonly traces: ReadonlyMap<TraceId, Trace>;
+    readonly changed: Changed;
     readonly traceOrder: ReadonlyArray<TraceId>;       // by startMs
     readonly spanCount: number;
     readonly badLines: BadLines;
+}
+
+// The traces frozen anew since the snapshot of version `since`, of the same epoch: every other trace is the same
+// object in each snapshot from that version to this one.
+interface Changed {
+    readonly since: number;                            // the last version to freeze a trace, or the first after a Reset
+    readonly traces: ReadonlySet<TraceId>;
 }
 
 interface Status {
@@ -236,6 +244,8 @@ A Reset returns to `loading` (or `waiting` after a removal).
 - **Copy-on-write per trace.** On each publish the store freezes a new `Trace` (and `Run`) object only for those
   touched since the last publish, and reuses the rest by reference. `React.memo`, `Atom.family` and selectors work
   by identity. The `spans` and `children` maps of a touched trace are copied; an untouched trace is the same object.
+  `changed` names the touched traces, so a view over many traces, such as the Traces list, reads only those again
+  ([12-performance.md](12-performance.md#data-layer-measurements)).
 - **Throttle**: the first publish is immediate, then at most one every **100 ms**, trailing edge, on the live clock.
   A Reset, `Missing`, `CaughtUp` and `Failed` publish at once.
 - The snapshot goes into the `SubscriptionRef`.

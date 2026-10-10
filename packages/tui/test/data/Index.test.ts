@@ -5,6 +5,7 @@ import { Index } from "../../src/data/Index.ts";
 import { exception, line, log, record } from "../support/records.ts";
 import { indexed, ingestAll, plainTraces, status } from "../support/store.ts";
 
+import type { Snapshot } from "../../src/data/Snapshot.ts";
 import type { JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
 
 const trace = (snapshot: ReturnType<typeof indexed>, id = "trace-1") => {
@@ -186,6 +187,20 @@ describe("Index", () => {
         );
     });
 
+    it("names the traces a freeze froze anew, since the last version that froze one", () => {
+        const index = ingestAll(new Index(), [
+            line(record({ span: "a", trace: "t1" })),
+            line(record({ span: "b", trace: "t2" })),
+        ]);
+        const first = index.freeze(status);
+        const quiet = index.freeze(status);
+        ingestAll(index, [line(record({ span: "c", trace: "t2" }))]);
+        const next = index.freeze(status);
+        expect(quiet.changed).toEqual({ since: first.version, traces: new Set() });
+        expect(next.changed).toEqual({ since: first.version, traces: new Set(["t2"]) });
+        expect(next.traces.get("t1"), "unchanged").toBe(first.traces.get("t1"));
+    });
+
     it("clears everything on reset and bumps the epoch", () => {
         const index = ingestAll(new Index(), [
             line(record({ span: "a" })),
@@ -202,6 +217,7 @@ describe("Index", () => {
             runs: new Map(),
             runOrder: [],
             traces: new Map(),
+            changed: { since: before.version + 1, traces: new Set() },
             traceOrder: [],
             spanCount: 0,
             badLines: { legacy: 0, malformed: 0, samples: [] },
@@ -289,7 +305,7 @@ describe("Index", () => {
         });
 
     it.prop(
-        "gives the same final snapshot for the same records in any order and any chunking, apart from version",
+        "gives the same final snapshot for the same records in any order and any chunking, apart from versions",
         [Schema.Array(GeneratedSpan).check(Schema.isMaxLength(40))],
         ([seeds]) => {
             const records = recordsOf(seeds);
@@ -309,9 +325,9 @@ describe("Index", () => {
                     index.freeze(status);
                 }
             });
-            expect(plainTraces({ ...index.freeze(status), version: 0 })).toEqual(
-                plainTraces({ ...expected, version: 0 }),
-            );
+            const unversioned = (snapshot: Snapshot): Snapshot =>
+                plainTraces({ ...snapshot, version: 0, changed: { since: 0, traces: new Set() } });
+            expect(unversioned(index.freeze(status))).toEqual(unversioned(expected));
         },
     );
 });

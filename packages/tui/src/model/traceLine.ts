@@ -15,7 +15,7 @@ import type { Group, Item, TraceListRow } from "./traceList.ts";
 
 const MORE_ORDER: ReadonlyArray<TraceState> = ["failed", "interrupted", "running", "recovered", "partial", "ok"];
 
-export const moreText = (hidden: ReadonlyArray<Item>): string => {
+export const moreText = (hidden: ReadonlyArray<Pick<Item, "state">>): string => {
     const counts = Arr.getSomes(
         Arr.map(MORE_ORDER, (state) => {
             const n = Arr.reduce(hidden, 0, (sum, item) => (item.state === state ? sum + 1 : sum));

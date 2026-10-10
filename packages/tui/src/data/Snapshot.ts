@@ -71,6 +71,15 @@ export interface Trace {
     readonly missingParents: ReadonlyArray<SpanId>;
 }
 
+/**
+ * The traces frozen anew since the snapshot of version `since`, of the same epoch. Every other trace is the same object
+ * in each snapshot from that version to this one, so a view built from any of them needs only these.
+ */
+export interface Changed {
+    readonly since: number;
+    readonly traces: ReadonlySet<TraceId>;
+}
+
 export interface Snapshot {
     readonly version: number;
     readonly epoch: number;
@@ -78,6 +87,7 @@ export interface Snapshot {
     readonly runs: ReadonlyMap<RunId, Run>;
     readonly runOrder: ReadonlyArray<RunId>;
     readonly traces: ReadonlyMap<TraceId, Trace>;
+    readonly changed: Changed;
     readonly traceOrder: ReadonlyArray<TraceId>;
     readonly spanCount: number;
     readonly badLines: BadLines;
