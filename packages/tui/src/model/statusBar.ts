@@ -1,6 +1,7 @@
 import { Array as Arr, Option } from "effect";
 
 import { basename, clockTime, count, plural, sizePair } from "./format.ts";
+import { isLive } from "./marks.ts";
 import { chunk } from "./Role.ts";
 import { cut, cutLine, lineCells } from "./text.ts";
 
@@ -8,7 +9,6 @@ import type { BadLines, ResetReason, Snapshot, Status } from "../data/Snapshot.t
 import type { HintItem } from "../keys/Hints.ts";
 import type { Line } from "./Role.ts";
 
-export const LIVE_MILLIS = 5000;
 export const FLASH_MILLIS = 5000;
 
 export interface StatusInput {
@@ -51,7 +51,7 @@ export const phasePart = (status: Status, file: string, now: number): Line => {
             if (Option.isSome(reloaded)) {
                 return [chunk(`following · reloaded ${clockTime(reloaded.value.at)}`, "muted")];
             }
-            const live = Option.exists(status.lastRecordAt, (at) => now - at < LIVE_MILLIS);
+            const live = isLive(status.lastRecordAt, status.phase, now);
             return live ? [chunk("● following", "live")] : [chunk("following", "muted")];
         }
         case "done":
