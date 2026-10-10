@@ -64,9 +64,13 @@ All measured on `huge`.
   with `--expose-gc` and the `@otelscope/source` condition on Node 26. It is a plain script, not `vitest bench`,
   outside `pre-push` and `pnpm test`. `perf/run.ts` asks for React's production build, as the bin does, and loads
   `perf/measure.ts`. `--only startup,index,idle,loading,following,search` runs some of the sections.
-    - In process, it builds the app's own `servicesLayer` from source (the real `SpanSource`, `SpanStore`, `Bodies`
-      and `Atoms`) and mounts the real `App` on OpenTUI's test renderer at 120×40. It mounts with `createTestRenderer`
-      and `createRoot`, which is what `testRender` from `@opentui/react/test-utils` does, without its `act`.
+    - In process, it builds the app's own `servicesLayer` (the real `SpanSource`, `SpanStore`, `Bodies` and `Atoms`)
+      and mounts the real `App` on OpenTUI's test renderer at 120×40. It mounts with `createTestRenderer` and
+      `createRoot`, which is what `testRender` from `@opentui/react/test-utils` does, without its `act`.
+    - The in-process sections, too, import the app from `dist/`, not from source. `tsx` compiles with esbuild's
+      `keepNames`, which wraps every named closure in a `__name` call when it is created, such as the `onNone` and
+      `onSome` of each `Option.match`. On `huge` the Traces list's `collect` took 17.9 ms at p50 from source and 5.9 ms
+      from `dist/`, so from source the harness would have measured the loader.
     - It spawns child processes for startup and the full index, so each starts JIT-cold. The children run **built
       code from `dist/`**, so startup is measured on what users run, with the compile cache, and without a TypeScript
       loader in the way.

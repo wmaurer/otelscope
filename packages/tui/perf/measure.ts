@@ -1,6 +1,6 @@
 // The performance budgets of docs/specs/span-viewer/12-performance.md, measured on `huge`, loaded by perf/run.ts.
-// Startup and the full index run in child processes on dist/ (perf/startup.ts); everything else runs here, from source,
-// on the real data layer and the real App on a 120×40 test renderer. `--json` prints the results as JSON,
+// Startup and the full index run in child processes (perf/startup.ts); everything else runs here, on the real data
+// layer and the real App on a 120×40 test renderer. Both run the built app in dist/. `--json` prints the results as JSON,
 // `--only idle,search` runs some sections, and any miss exits 1.
 
 import { RegistryContext } from "@effect/atom-react";
@@ -28,20 +28,45 @@ import {
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import { createElement } from "react";
 
-import { servicesLayer } from "../src/app.tsx";
-import { Atoms } from "../src/bridge/Atoms.ts";
-import { SEARCH_DEBOUNCE_MILLIS } from "../src/bridge/Lists.ts";
-import { Index } from "../src/data/Index.ts";
-import { top } from "../src/nav/Nav.ts";
-import { resolvePrefixes } from "../src/nav/Resolve.ts";
-import { initialNav, openArrivedTrace } from "../src/nav/Seed.ts";
-import { traceMatches } from "../src/query/Match.ts";
-import { parse } from "../src/query/Query.ts";
-import { App } from "../src/ui/App.tsx";
 import { MarksJson } from "./marks.ts";
 
+import type * as AppModule from "../src/app.tsx";
+import type * as AtomsModule from "../src/bridge/Atoms.ts";
+import type * as ListsModule from "../src/bridge/Lists.ts";
+import type * as IndexModule from "../src/data/Index.ts";
 import type { Snapshot, Status, Trace } from "../src/data/Snapshot.ts";
+import type * as NavModule from "../src/nav/Nav.ts";
 import type { Nav } from "../src/nav/Nav.ts";
+import type * as ResolveModule from "../src/nav/Resolve.ts";
+import type * as SeedModule from "../src/nav/Seed.ts";
+import type * as MatchModule from "../src/query/Match.ts";
+import type * as QueryModule from "../src/query/Query.ts";
+import type * as AppViewModule from "../src/ui/App.tsx";
+
+// The app comes from dist/, as users run it. tsx compiles with esbuild's `keepNames`, which wraps every named closure
+// in a `__name` call when it is created, such as the `onNone` and `onSome` of each `Option.match`: from source, the
+// Traces list's `collect` took 17.9 ms at p50 on `huge`, against 5.9 ms from dist/.
+const dist = (path: string): string => new URL(`../dist/${path}`, import.meta.url).href;
+// SAFETY: dist/ is src/ compiled by tsc, so each module has its source's types.
+const { servicesLayer } = (await import(dist("app.js"))) as typeof AppModule;
+// SAFETY: as above.
+const { Atoms } = (await import(dist("bridge/Atoms.js"))) as typeof AtomsModule;
+// SAFETY: as above.
+const { SEARCH_DEBOUNCE_MILLIS } = (await import(dist("bridge/Lists.js"))) as typeof ListsModule;
+// SAFETY: as above.
+const { Index } = (await import(dist("data/Index.js"))) as typeof IndexModule;
+// SAFETY: as above.
+const { top } = (await import(dist("nav/Nav.js"))) as typeof NavModule;
+// SAFETY: as above.
+const { resolvePrefixes } = (await import(dist("nav/Resolve.js"))) as typeof ResolveModule;
+// SAFETY: as above.
+const { initialNav, openArrivedTrace } = (await import(dist("nav/Seed.js"))) as typeof SeedModule;
+// SAFETY: as above.
+const { traceMatches } = (await import(dist("query/Match.js"))) as typeof MatchModule;
+// SAFETY: as above.
+const { parse } = (await import(dist("query/Query.js"))) as typeof QueryModule;
+// SAFETY: as above.
+const { App } = (await import(dist("ui/App.js"))) as typeof AppViewModule;
 
 const WIDTH = 120;
 const HEIGHT = 40;
@@ -652,13 +677,13 @@ const whileFollowing = Effect.fnUntraced(function* (huge: string, targets: Targe
     let publishes: ReadonlyArray<Published> = [];
     // SAFETY: `freeze` is a method declared on `Index`, so its prototype holds it as a data property.
     const freeze = Object.getOwnPropertyDescriptor(Index.prototype, "freeze") as TypedPropertyDescriptor<
-        Index["freeze"]
+        IndexModule.Index["freeze"]
     >;
     yield* Effect.acquireRelease(
         Effect.sync(() =>
             Object.defineProperty(Index.prototype, "freeze", {
                 configurable: true,
-                value(this: Index, status: Status) {
+                value(this: IndexModule.Index, status: Status) {
                     const start = performance.now();
                     const snapshot = freeze.value?.call(this, status);
                     inFlight = Option.some({ start, freezeMs: performance.now() - start });
