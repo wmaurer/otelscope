@@ -178,8 +178,12 @@ so the guard can speak before anything fails. In order:
    undefined, set `process.env.OPENTUI_LIBC = "musl"`.
 3. **Warning.** Replace Node's default `warning` listener with one that drops only the `ExperimentalWarning` about FFI
    and prints every other warning as Node would. No `--disable-warning`.
-4. **Compile cache.** `module.enableCompileCache()` (through `process.getBuiltinModule("node:module")`).
-5. **Start.** `await import("./main.ts")`, so nothing loads before the guard has passed.
+4. **React's production build.** If `NODE_ENV` is unset, set it to `production`. React picks its build from it when
+   it is first loaded, and the development build records a `performance.measure`, with a diff of the props, for every
+   component render. Node keeps every measure: on the Traces screen, following `huge` while 5,000 spans/s arrived grew
+   the heap by 15 to 20 MB per publish and reached Node's 4 GB heap limit after about a minute.
+5. **Compile cache.** `module.enableCompileCache()` (through `process.getBuiltinModule("node:module")`).
+6. **Start.** `await import("./main.ts")`, so nothing loads before the guard has passed.
 
 ## `src/main.ts`
 
