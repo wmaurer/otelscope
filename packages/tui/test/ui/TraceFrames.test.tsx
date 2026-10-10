@@ -58,6 +58,7 @@ const props = (nav: Nav.Nav, size: "wide" | "narrow" = "wide", shell: Shell = in
         trace: traceModelFor(nav, sample),
         panes: defaultPanes,
         bodyStats: new Map(),
+        body: Option.none(),
         onAction: () => undefined,
     };
 };

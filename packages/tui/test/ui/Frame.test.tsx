@@ -71,6 +71,7 @@ const props = (over: Partial<FrameProps>): FrameProps => {
         trace: Option.none(),
         panes: defaultPanes,
         bodyStats: new Map(),
+        body: Option.none(),
         onAction: () => undefined,
         ...over,
     };

@@ -10,6 +10,12 @@ const shown = (id: string) => `${shortId(id)}…`;
 
 const capitalized = (noun: string) => `${noun.charAt(0).toUpperCase()}${noun.slice(1)}`;
 
+/** A Body screen whose prefix is not among its span's bodies. */
+export const noBodyLines = (prefix: string): ReadonlyArray<Line> => [
+    [chunk(`No body ${prefix} on this span`, "text")],
+    [chunk("Esc to go back", "muted")],
+];
+
 export const placeholderLines = (presence: Presence): Option.Option<ReadonlyArray<Line>> => {
     const goBack: Line = [chunk("Esc to go back", "muted")];
     switch (presence._tag) {

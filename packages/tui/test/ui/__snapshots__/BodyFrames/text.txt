@@ -1,0 +1,40 @@
+Runs › POST /orders 5643b831 › email                                                                                    
+email · email.send · 3.0 KB · text · L 1–26 / 26                                                                        
+<!doctype html><html><body><h1>Your order is confirmed</h1><p>Hello,</p><p>Thank you for your order. We will let you    
+know as soon as it ships.</p><p>confirmed today updated customer order tracking yesterday again was missing the after   
+status delayed please check refund. has shipment requested not parcel been is before account number a address invoice   
+warehouse carrier confirmed today. updated customer order tracking yesterday again was missing the after status delayed 
+please check refund has shipment. requested not parcel been is before account number a address invoice warehouse carrier
+confirmed today updated customer. order tracking yesterday again was missing the after status delayed please check      
+refund has shipment requested not. parcel been is before account number a address invoice warehouse carrier confirmed   
+today updated customer order tracking. yesterday again was missing the after status delayed please check refund has     
+shipment requested not parcel been. is before account number a address invoice warehouse carrier confirmed today updated
+customer order tracking yesterday again. was missing the after status delayed please check refund has shipment requested
+not parcel been is before. account number a address invoice warehouse carrier confirmed today updated customer order    
+tracking yesterday again was missing. the after status delayed please check refund has shipment requested not parcel    
+been is before account number. a address invoice warehouse carrier confirmed today updated customer order tracking      
+yesterday again was missing the after. status delayed please check refund has shipment requested not parcel been is     
+before account number a address. invoice warehouse carrier confirmed today updated customer order tracking yesterday    
+again was missing the after status delayed. please check refund has shipment requested not parcel been is before account
+number a address invoice warehouse. carrier confirmed today updated customer order tracking yesterday again was missing 
+the after status delayed please check. refund has shipment requested not parcel been is before account number a address 
+invoice warehouse carrier confirmed. today updated customer order tracking yesterday again was missing the after status 
+delayed please check refund has. shipment requested not parcel been is before account number a address invoice warehouse
+carrier confirmed today updated. customer order tracking yesterday again was missing the after status delayed please    
+check refund has shipment requested. not parcel been is before account number a address invoice warehouse carrier       
+confirmed today updated customer order. tracking yesterday again was missing the after status delayed please check      
+refund has shipment requested not parcel. been is before account number a address invoice warehouse carrier confirmed   
+today updated customer order tracking yesterday. again was missing the after status delayed please check</p><p>The shop 
+team</p></body></html>                                                                                                  
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+/ search · r raw · w wrap · y copy · ? help                                   spans.jsonl  read once  4 runs · 511 spans

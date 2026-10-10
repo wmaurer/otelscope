@@ -5,8 +5,10 @@ import { useRef, useState } from "react";
 
 import { dispatch } from "../keys/Dispatch.ts";
 import { initialKeyState, modeOf, stepShell } from "../keys/Shell.ts";
+import { bodyContext } from "../model/bodyFrame.ts";
 import { overlayContent, overlayExtent } from "../model/overlays.ts";
 import { traceContext } from "../model/traceFrame.ts";
+import { top } from "../nav/Nav.ts";
 import { ShellEffect } from "../nav/ScreenStep.ts";
 import { Frame, listRows } from "./Frame.tsx";
 
@@ -39,6 +41,7 @@ export const App = (props: AppProps): ReactNode => {
     const trace = useAtomValue(atoms.trace);
     const panes = useAtomValue(atoms.panes);
     const bodyStats = useAtomValue(atoms.bodyStats);
+    const body = useAtomValue(atoms.bodyModel);
     const { width, height } = useTerminalDimensions();
     const [keys, setKeys] = useState<KeyState>(initialKeyState);
     // Two keys can arrive before React renders again, and the second must see what the first opened.
@@ -65,7 +68,12 @@ export const App = (props: AppProps): ReactNode => {
                         bodyStats: registry.get(atoms.bodyStats),
                     }),
                 ),
-                body: Option.none(),
+                body: Option.flatMap(registry.get(atoms.bodyModel), (model) => {
+                    const screen = top(before);
+                    return screen._tag === "Body"
+                        ? Option.some(bodyContext(model, screen.view, { width, height }))
+                        : Option.none();
+                }),
                 overlay:
                     state.shell._tag === "Overlay"
                         ? overlayExtent(overlayContent(state.shell.kind, before, latest), { width, height })
@@ -112,6 +120,7 @@ export const App = (props: AppProps): ReactNode => {
             trace={trace}
             panes={panes}
             bodyStats={bodyStats}
+            body={body}
             onAction={(action) => {
                 atoms.keyPressed();
                 apply(action);

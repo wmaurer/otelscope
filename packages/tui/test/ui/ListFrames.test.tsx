@@ -69,6 +69,7 @@ const props = (nav: Nav.Nav, snapshot: Snapshot, size: "wide" | "narrow" = "wide
     trace: Option.none(),
     panes: defaultPanes,
     bodyStats: new Map(),
+    body: Option.none(),
     onAction: () => undefined,
 });
 

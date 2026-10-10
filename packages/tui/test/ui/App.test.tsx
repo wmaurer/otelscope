@@ -1,3 +1,4 @@
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { RegistryContext } from "@effect/atom-react";
@@ -34,9 +35,18 @@ const serviceRecords = [
 ];
 const services = indexed(serviceRecords);
 
-const start = async (nav: Nav.Nav = Nav.initial, first: Snapshot = twoRuns) => {
+/** `bodies` are written to `bodies/<sha256>.txt` next to the file. */
+const start = async (
+    nav: Nav.Nav = Nav.initial,
+    first: Snapshot = twoRuns,
+    bodies: Readonly<Record<string, string>> = {},
+) => {
     const dir = tempDir();
     const file = join(dir, "spans.jsonl");
+    mkdirSync(join(dir, "bodies"));
+    for (const [sha256, text] of Object.entries(bodies)) {
+        writeFileSync(join(dir, "bodies", `${sha256}.txt`), text);
+    }
     const scope = Scope.makeUnsafe();
     const ref = Effect.runSync(SubscriptionRef.make(first));
     const context = await Effect.runPromise(
@@ -323,6 +333,12 @@ describe("App", () => {
         }
     });
 
+    const BODY_SHA = "f".repeat(64);
+    const requestBody = JSON.stringify({
+        card: "visa",
+        notes: ["no refund yet", "customer asked twice", "refund the charge"],
+        amount: 42,
+    });
     const orders = [
         record({ span: "root", trace: "t1", name: "POST /orders", startMs: 1000, ms: 40, exit: "Failure" }),
         record({ span: "auth", trace: "t1", parent: "root", name: "auth.check", startMs: 1001, ms: 2 }),
@@ -343,17 +359,33 @@ describe("App", () => {
             startMs: 1004,
             ms: 20,
             exit: "Failure",
+            attrs: {
+                "http.request.sha256": BODY_SHA,
+                "http.request.bytes": requestBody.length,
+                "http.request.preview": requestBody.slice(0, 20),
+            },
         }),
         record({ span: "mail", trace: "t1", parent: "root", name: "email.send", startMs: 1035, ms: 4 }),
     ];
 
-    it("opens a trace on its failure origin, moves and folds in the tree, and goes back on Esc", async () => {
-        const app = await start(initialNav({ run: Option.some("run-1"), trace: Option.none() }), indexed(orders));
+    it("opens a trace on its failure origin, drills into a body, moves and folds in the tree, and goes back on Esc", async () => {
+        const app = await start(initialNav({ run: Option.some("run-1"), trace: Option.none() }), indexed(orders), {
+            [BODY_SHA]: requestBody,
+        });
         try {
             const trace = await app.enter();
             expect(line(trace, 0)).toMatch(/ › POST \/orders t1$/);
             expect(trace).toContain("1 Tree");
             expect(trace, "the origin's details").toMatch(/payment\.attempt +✗ Failure/);
+            expect(line(await app.press("b"), 1), "the body is still being read").toBe(
+                "http.request · payment.attempt · 96 B",
+            );
+            const body = await app.settle();
+            expect(line(body, 0)).toMatch(/ › POST \/orders t1 › http\.request$/);
+            expect(line(body, 1)).toMatch(/^http\.request · payment\.attempt · 96 B · json · L 1–9 \/ 9$/);
+            expect(line(body, 3)).toBe('  "card": "visa",');
+            const back = await app.escape();
+            expect(back, "back on the trace, the origin still selected").toMatch(/payment\.attempt +✗ Failure/);
             const up = await app.press("k");
             expect(up).toMatch(/payment\.charge +✗ Failure/);
             const folded = await app.enter();
@@ -391,6 +423,45 @@ describe("App", () => {
             expect(after).toContain("early.2");
             expect(lineIndex(after, "payment.attempt "), "the selected row held its line").toBe(row);
             expect(after, "the selection did not move").toMatch(/payment\.attempt +✗ Failure/);
+        } finally {
+            await app.stop();
+        }
+    });
+
+    it("searches a body, steps through its matches, copies it and opens it in the editor", async () => {
+        const app = await start(initialNav({ run: Option.some("run-1"), trace: Option.none() }), indexed(orders), {
+            [BODY_SHA]: requestBody,
+        });
+        try {
+            await app.enter();
+            await app.press("b");
+            await app.settle();
+            await app.press("/");
+            const typed = await app.type("refund");
+            expect(line(typed, height - 1)).toMatch(/^\/ refund▏ +2 matches$/);
+            expect(line(typed, 1), "typing highlights without a current match").toMatch(/ · 2 matches$/);
+            const submitted = await app.enter();
+            expect(line(submitted, 1)).toMatch(/ · match 1\/2$/);
+            expect(line(submitted, height - 1)).toMatch(/^\/ refund · match 1\/2 /);
+            expect(line(await app.press("n"), 1)).toMatch(/ · match 2\/2$/);
+            expect(line(await app.press("n"), 1), "wrapping around").toMatch(/ · match 1\/2$/);
+
+            const copied = await app.press("y");
+            const pretty = JSON.stringify(JSON.parse(requestBody), null, 2);
+            expect(app.copies()).toEqual([pretty]);
+            expect(line(copied, height - 1)).toMatch(new RegExp(`^copied ${pretty.length} B `));
+            await app.press("e");
+            expect(app.edits()).toEqual([
+                {
+                    file: expect.stringMatching(new RegExp(`/bodies/${BODY_SHA}\\.txt$`)),
+                    line: Option.none(),
+                    col: Option.none(),
+                },
+            ]);
+
+            const cleared = await app.escape();
+            expect(line(cleared, 1), "the first Esc clears the search").toMatch(/ · L 1–9 \/ 9$/);
+            expect(line(await app.escape(), 0), "the second goes back").toMatch(/ › POST \/orders t1$/);
         } finally {
             await app.stop();
         }

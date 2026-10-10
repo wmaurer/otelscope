@@ -1,0 +1,40 @@
+Runs › agent.session b2df7dd2 › llm.request                                                                             
+llm.request · llm.chat · 2.6 KB · json · L 1–36 / 48                                                                    
+ llm.request │ llm.response                                                                                             
+{                                                                                                                       
+  "model": "claude-sonnet-5-5",                                                                                         
+  "messages": [                                                                                                         
+    {                                                                                                                   
+      "role": "system",                                                                                                 
+      "content": "warehouse carrier confirmed today updated customer order tracking yesterday again was missing the     
+after status delayed please.                                                                                            
+        check refund has shipment requested not parcel been is before account number a address invoice warehouse        
+carrier.                                                                                                                
+        confirmed today updated customer order tracking yesterday again was missing the after status delayed please     
+check refund.                                                                                                           
+        has shipment requested not parcel been is before account number a address invoice warehouse carrier confirmed   
+today.                                                                                                                  
+        updated customer order tracking yesterday again was missing the after status delayed please check refund has    
+shipment.                                                                                                               
+        requested not parcel been is before account number a address invoice warehouse carrier confirmed today updated  
+customer.                                                                                                               
+        order tracking yesterday again was missing the after status delayed please check refund has shipment requested  
+not.                                                                                                                    
+        parcel been is before account number a address invoice warehouse carrier confirmed today updated customer order 
+tracking.                                                                                                               
+        yesterday again was missing the after status delayed please check refund has shipment requested not parcel been.
+        is before account number a address invoice warehouse carrier confirmed today updated customer order tracking    
+yesterday again.                                                                                                        
+        was missing the after status delayed please check refund has shipment requested not parcel been is before.      
+        account number a address invoice warehouse carrier confirmed today updated customer order tracking yesterday    
+again was missing.                                                                                                      
+        the after status delayed please check refund has shipment requested not parcel been is before account number.   
+        a address invoice warehouse carrier confirmed today updated customer order tracking yesterday again was missing 
+the after.                                                                                                              
+        status delayed please check refund has shipment requested not parcel been is before account number a address.   
+        invoice warehouse carrier confirmed today updated customer order tracking yesterday again was missing the after 
+status delayed.                                                                                                         
+        please check refund has shipment requested not parcel been is before account number a address invoice warehouse.
+        carrier confirmed today updated customer order tracking yesterday again was missing"                            
+    },                                                                                                                  
+/ search · r raw · w wrap · y copy · ? help                                   spans.jsonl  read once  4 runs · 511 spans
