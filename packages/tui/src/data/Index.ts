@@ -1,4 +1,4 @@
-import { Array as Arr, Option, Order, Predicate } from "effect";
+import { Array as Arr, Option, Order, Predicate, Record } from "effect";
 
 import { LOG_LEVEL } from "../model/levels.ts";
 import { classify } from "./Decode.ts";
@@ -16,7 +16,7 @@ import type {
     Trace,
     TraceId,
 } from "./Snapshot.ts";
-import type { JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
+import type { Attributes, JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
 
 const MAX_SAMPLES = 100;
 const SAMPLE_CHARS = 200;
@@ -148,6 +148,48 @@ const withFrozen = <K, B, A>(
 
 const emptyBadLines: BadLines = { legacy: 0, malformed: 0, samples: [] };
 
+/**
+ * One copy of each repeated string. `JSON.parse` shares object keys and values of up to about 10 characters, but makes a
+ * new string for every longer value, so without this each record carries its own run, trace id, names, file paths and
+ * attribute values.
+ */
+class Strings {
+    // oxlint-disable-next-line effect-native/imperative-collection-build -- an intern table: filling it is the design.
+    private readonly known = new Map<string, string>();
+
+    readonly of = (text: string): string => {
+        const found = this.known.get(text);
+        if (found !== undefined) {
+            return found;
+        }
+        this.known.set(text, text);
+        return text;
+    };
+}
+
+const internedAttrs = (strings: Strings, attrs: Attributes): Attributes =>
+    Record.map(attrs, (value) => (Predicate.isString(value) ? strings.of(value) : value));
+
+const interned = (strings: Strings, record: JsonlSpanRecord): JsonlSpanRecord => ({
+    ...record,
+    run: strings.of(record.run),
+    service: strings.of(record.service),
+    trace: strings.of(record.trace),
+    parent: record.parent === null ? null : strings.of(record.parent),
+    name: strings.of(record.name),
+    site: record.site === null ? null : { ...record.site, file: strings.of(record.site.file) },
+    def: record.def === null ? null : { ...record.def, file: strings.of(record.def.file) },
+    events:
+        record.events.length === 0
+            ? record.events
+            : Arr.map(record.events, (event) => ({
+                  ...event,
+                  name: strings.of(event.name),
+                  attrs: internedAttrs(strings, event.attrs),
+              })),
+    attrs: internedAttrs(strings, record.attrs),
+});
+
 export class Index {
     private version = 0;
     private epoch = 0;
@@ -161,6 +203,7 @@ export class Index {
     private badLines = emptyBadLines;
     private frozenTraces: ReadonlyMap<TraceId, Trace> = new Map();
     private frozenRuns: ReadonlyMap<RunId, Run> = new Map();
+    private strings = new Strings();
 
     ingest(text: string, line: number, offset: number, arrivalAt: Option.Option<number>): void {
         if (text.length === 0) {
@@ -169,7 +212,7 @@ export class Index {
         const classified = classify(text);
         switch (classified._tag) {
             case "Span":
-                return this.add(classified.record, line, offset, text, arrivalAt);
+                return this.add(interned(this.strings, classified.record), line, offset, text, arrivalAt);
             case "Legacy":
                 this.badLines = { ...this.badLines, legacy: this.badLines.legacy + 1 };
                 return;
@@ -190,6 +233,7 @@ export class Index {
         this.badLines = emptyBadLines;
         this.frozenTraces = new Map();
         this.frozenRuns = new Map();
+        this.strings = new Strings();
     }
 
     freeze(status: Status): Snapshot {
