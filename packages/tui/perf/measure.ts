@@ -756,10 +756,10 @@ const whileFollowing = Effect.fnUntraced(function* (huge: string, targets: Targe
     return {
         publish: [
             {
-                metric: "live publish: freeze + re-render",
+                metric: "live publish: freeze + re-render, all screens",
                 unit: "ms",
                 samples: Arr.map(publishes, (publish) => publish.ms),
-                judge: IDLE,
+                judge: Judge.Info(),
                 note: `${shown} of ${publishes.length} frames showed the published span count`,
             },
             {
@@ -780,6 +780,8 @@ const whileFollowing = Effect.fnUntraced(function* (huge: string, targets: Targe
                 samples: Arr.map(publishes, (publish) => publish.drawMs),
                 judge: Judge.Info(),
             },
+            // Each screen meets the budget on its own: the Trace screen's cheap publishes must not hide the Traces
+            // screen's, where the list over every trace of the run is the user's worst case while following.
             ...Arr.map(["Traces", "Trace"], (tag) => ({
                 metric: `live publish: on the ${tag} screen`,
                 unit: "ms" as const,
@@ -787,7 +789,7 @@ const whileFollowing = Effect.fnUntraced(function* (huge: string, targets: Targe
                     Arr.filter(publishes, (publish) => publish.screen === tag),
                     (publish) => publish.ms,
                 ),
-                judge: Judge.Info(),
+                judge: IDLE,
             })),
         ] satisfies ReadonlyArray<Result>,
         following,

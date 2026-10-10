@@ -37,7 +37,7 @@ All measured on `huge`.
 | Full index                 | spawn → the complete snapshot under `--no-follow` (phase `done`)                                           | 3 fresh processes                       | median ≤ 3 s                            |
 | Key press, idle            | `flushSync(key)` + `renderOnce()` at 120×40                                                                | 200 presses per scenario                | p95 ≤ 16 ms, max ≤ 50 ms                |
 | Key press, while loading   | the same, while `huge` is still being indexed                                                              | 200 presses per scenario                | p95 ≤ 50 ms, max ≤ 100 ms               |
-| Live publish               | store freeze + re-render of the visible screen, following `huge` while 5,000 spans/s are appended for 30 s | every publish in the 30 s               | p95 ≤ 16 ms, max ≤ 50 ms                |
+| Live publish               | store freeze + re-render of the visible screen, following `huge` while 5,000 spans/s are appended for 30 s | every publish in the 30 s, per screen   | p95 ≤ 16 ms, max ≤ 50 ms                |
 | Key press, while following | the idle scenarios, during the same 30 s                                                                   | 200 presses per scenario                | the idle budget                         |
 | Search                     | debounce firing → the filtered frame, over all spans                                                       | 50 per query                            | p95 ≤ 100 ms (plus the 150 ms debounce) |
 | Memory                     | after the full index and `global.gc()`                                                                     | worst of the 3 index runs               | heap used ≤ 400 MB, RSS ≤ 600 MB        |
@@ -96,9 +96,11 @@ All measured on `huge`.
   of about 9 spans and half into existing traces, built from the file's first 5,000 records with new ids and current
   start times. A wrapper on `Index.prototype.freeze` marks the start of each publish; when the snapshot atom changes,
   the harness draws with `renderOnce` and times the publish from the start of `freeze` to the end of the frame. Key
-  presses wait while a publish is in flight, so neither is timed inside the other. The table also shows `freeze`
-  alone, the two halves (to the snapshot atom's listeners, which run after the atoms that depend on it recompute,
-  and from there to the frame), and the publishes on each screen. Each frame is checked for the published span count.
+  presses wait while a publish is in flight, so neither is timed inside the other. The budget is judged on each
+  screen's publishes apart: the presses spend about two fifths of the 30 s on the Traces screen and the rest on the
+  Trace screen, whose publishes are cheap, and pooled they hid a Traces screen over budget. The table also shows all
+  publishes pooled, `freeze` alone and the two halves (to the snapshot atom's listeners, which run after the atoms
+  that depend on it recompute, and from there to the frame). Each frame is checked for the published span count.
 - **Search** runs on the big run's Traces list, which holds 96 % of the spans. The Runs screen covers them all but
   stops at the first matching span of each run, so it does less work. Before each repetition the harness clears the
   filter and matches throwaway terms on the smallest trace, which pushes the query out of the term caches in
