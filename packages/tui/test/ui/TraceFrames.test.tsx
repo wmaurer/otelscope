@@ -11,7 +11,6 @@ import { Index } from "../../src/data/Index.ts";
 import { initialShell } from "../../src/keys/Shell.ts";
 import { openingFor } from "../../src/model/opening.ts";
 import { defaultPanes } from "../../src/model/panes.ts";
-import { traceModelOf } from "../../src/model/traceModel.ts";
 import { factsOf } from "../../src/model/treeFacts.ts";
 import { searchOf } from "../../src/model/treeSearch.ts";
 import * as Nav from "../../src/nav/Nav.ts";
@@ -20,6 +19,7 @@ import { parse } from "../../src/query/Query.ts";
 import { Frame } from "../../src/ui/Frame.tsx";
 import { theme } from "../../src/ui/theme.ts";
 import { ingestAll, status } from "../support/store.ts";
+import { traceModelFor } from "../support/traces.ts";
 
 import type { Snapshot, TraceId } from "../../src/data/Snapshot.ts";
 import type { Shell } from "../../src/keys/Shell.ts";
@@ -46,8 +46,6 @@ const navFor = (traceId: TraceId, view: Partial<TraceView>): Nav.Nav =>
     );
 
 const props = (nav: Nav.Nav, size: "wide" | "narrow" = "wide", shell: Shell = initialShell): FrameProps => {
-    const screen = Nav.top(nav);
-    const trace = screen._tag === "Trace" ? sample.traces.get(screen.traceId) : undefined;
     return {
         nav,
         snapshot: sample,
@@ -58,10 +56,7 @@ const props = (nav: Nav.Nav, size: "wide" | "narrow" = "wide", shell: Shell = in
         width: size === "wide" ? 120 : 80,
         height: size === "wide" ? 40 : 24,
         list: { _tag: "None" },
-        trace:
-            screen._tag === "Trace" && trace !== undefined
-                ? Option.some(traceModelOf(trace, screen.view, screen.view.logFilter))
-                : Option.none(),
+        trace: traceModelFor(nav, sample),
         panes: defaultPanes,
         bodyStats: new Map(),
         onAction: () => undefined,

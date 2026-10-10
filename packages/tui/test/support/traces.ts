@@ -1,10 +1,16 @@
 import { Array as Arr } from "effect";
+import { Atom, AtomRegistry } from "effect/reactivity";
 
+import { settledFilter } from "../../src/bridge/Lists.ts";
+import { traceModelAtom } from "../../src/bridge/Trace.ts";
 import { record } from "./records.ts";
 import { indexed } from "./store.ts";
 
-import type { Trace } from "../../src/data/Snapshot.ts";
+import type { Snapshot, Trace } from "../../src/data/Snapshot.ts";
+import type { TraceModel } from "../../src/model/traceModel.ts";
+import type { Nav } from "../../src/nav/Nav.ts";
 import type { JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
+import type { Option } from "effect";
 
 /** A span named after its id unless `over` names it. */
 export const span = (
@@ -32,3 +38,14 @@ export const siblings = (
     over: (i: number) => Partial<JsonlSpanRecord> = () => ({}),
 ): ReadonlyArray<JsonlSpanRecord> =>
     Arr.makeBy(count, (i) => span(`${prefix}-${String(i).padStart(3, "0")}`, parent, from + i, { name, ...over(i) }));
+
+/** The model the app builds for the top Trace screen, with its log filter already settled; None elsewhere. */
+export const traceModelFor = (nav: Nav, snapshot: Snapshot): Option.Option<TraceModel> => {
+    const registry = AtomRegistry.make();
+    try {
+        const navAtom = Atom.make(nav);
+        return registry.get(traceModelAtom(Atom.make(snapshot), navAtom, settledFilter(navAtom)));
+    } finally {
+        registry.dispose();
+    }
+};

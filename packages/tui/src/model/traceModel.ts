@@ -1,11 +1,8 @@
 import { Option } from "effect";
 
 import { logList } from "./logs.ts";
-import { flatten, rowKey, rowOf, shownIndex, visibilityOf } from "./tree.ts";
-import { factsOf } from "./treeFacts.ts";
-import { searchOf } from "./treeSearch.ts";
+import { rowKey, rowOf, shownIndex } from "./tree.ts";
 
-import type { Trace } from "../data/Snapshot.ts";
 import type { LogScope, TraceView, TreeRow } from "../nav/Screen.ts";
 import type { LogList } from "./logs.ts";
 import type { Tree, TreeEntry } from "./tree.ts";
@@ -55,17 +52,3 @@ export const logsOfKey = (facts: TreeFacts, tree: Tree, key: LogsKey): LogList =
         key.scope,
         key.filter,
     );
-
-/** The same stages the bridge memoizes, composed without caching: for tests and one-off uses. */
-export const traceModelOf = (trace: Trace, view: TraceView, logFilter: string): TraceModel => {
-    const facts = factsOf(trace);
-    const tree = flatten(facts, visibilityOf(facts, view));
-    const chosen = chosenOf(facts, tree, view);
-    return {
-        facts,
-        tree,
-        search: searchOf(facts, view.search),
-        ...chosen,
-        logs: logsOfKey(facts, tree, logsKeyOf(view, chosen.entry, logFilter)),
-    };
-};

@@ -4,14 +4,13 @@ import { Array as Arr, HashSet, Option } from "effect";
 import { Action, ClickTarget } from "../../src/keys/Action.ts";
 import { defaultPanes } from "../../src/model/panes.ts";
 import { traceContext } from "../../src/model/traceFrame.ts";
-import { traceModelOf } from "../../src/model/traceModel.ts";
 import * as Nav from "../../src/nav/Nav.ts";
 import { bodyFor, defaultTraceView, Screen, TreeRow } from "../../src/nav/Screen.ts";
 import { ShellEffect } from "../../src/nav/ScreenStep.ts";
 import { seekMatch, stepTrace } from "../../src/nav/TraceStep.ts";
 import { log } from "../support/records.ts";
 import { indexed } from "../support/store.ts";
-import { siblings, span } from "../support/traces.ts";
+import { siblings, span, traceModelFor } from "../support/traces.ts";
 
 import type { TraceAction } from "../../src/keys/Action.ts";
 import type { Panes } from "../../src/model/panes.ts";
@@ -54,7 +53,6 @@ const snapshot = indexed([
     })),
     span("notify", "root", 60, { name: "notify", exit: "Interrupted" }),
 ]);
-const trace = snapshot.traces.get("trace-1")!;
 
 const navOf = (view: Partial<TraceView> = {}): Nav.Nav =>
     Nav.push(
@@ -85,7 +83,7 @@ const step = (
     if (screen._tag !== "Trace") {
         throw new Error("not on a Trace screen");
     }
-    const model = traceModelOf(trace, screen.view, screen.view.logFilter);
+    const model = Option.getOrThrow(traceModelFor(nav, snapshot));
     const context = traceContext(model, {
         size,
         panes,
@@ -193,8 +191,8 @@ describe("n and N", () => {
 
     it("says so when there are no problems", () => {
         const clean = indexed([span("root", null, 0)]);
-        const model = traceModelOf(clean.traces.get("trace-1")!, defaultTraceView, "");
         const nav = navOf();
+        const model = Option.getOrThrow(traceModelFor(nav, clean));
         const screen = Nav.top(nav);
         if (screen._tag !== "Trace") {
             throw new Error("not on a Trace screen");
