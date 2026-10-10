@@ -10,8 +10,9 @@ import {
     defaultTraceView,
     Screen,
     TraceRow,
+    TreeRow,
 } from "../../src/nav/Screen.ts";
-import { initialNav, initialReadDone, openSingleRun } from "../../src/nav/Seed.ts";
+import { initialNav, initialReadDone, openArrivedTrace, openSingleRun } from "../../src/nav/Seed.ts";
 import { record } from "../support/records.ts";
 import { indexed } from "../support/store.ts";
 
@@ -204,5 +205,56 @@ describe("presence", () => {
             Presence.NotInFile({ noun: "span", id: "zz", resetAt: Option.none() }),
         );
         expect(presence(bodyFor("gone", "a", "llm.request"), snapshot)._tag).toBe("NotInFile");
+    });
+});
+
+describe("openArrivedTrace", () => {
+    const seeded = (search = "") =>
+        Nav.push(
+            Nav.initial,
+            Screen.Trace({
+                traceId: "trace-1",
+                idIsPrefix: false,
+                viaRun: none,
+                view: { ...defaultTraceView, search },
+            }),
+        );
+    const arrived = indexed([
+        record({ span: "root", name: "POST /orders" }),
+        record({ span: "pay", parent: "root", name: "payment", startMs: 1001, exit: "Failure" }),
+        record({ span: "ok", parent: "root", name: "notify", startMs: 1002 }),
+    ]);
+    const selected = (nav: Nav.Nav) => {
+        const screen = Nav.top(nav);
+        return screen._tag === "Trace" ? screen.view.selected : Option.none();
+    };
+
+    it("does nothing while the trace is absent", () => {
+        const nav = seeded();
+        expect(openArrivedTrace(nav, snapshot)).toBe(nav);
+    });
+
+    it("stores the opening selection the first time the trace is present, and only then", () => {
+        const opened = openArrivedTrace(seeded(), arrived);
+        expect(selected(opened)).toEqual(Option.some(TreeRow.Span({ spanId: "pay" })));
+        const moved = Nav.update(opened, "Trace", (view) => ({
+            ...view,
+            selected: Option.some(TreeRow.Span({ spanId: "ok" })),
+        }));
+        expect(openArrivedTrace(moved, arrived)).toBe(moved);
+    });
+
+    it("honours a seeded search", () => {
+        expect(selected(openArrivedTrace(seeded("notify"), arrived))).toEqual(
+            Option.some(TreeRow.Span({ spanId: "ok" })),
+        );
+    });
+
+    it("waits for a prefix to resolve", () => {
+        const prefixed = Nav.push(
+            Nav.initial,
+            Screen.Trace({ traceId: "trace", idIsPrefix: true, viaRun: none, view: defaultTraceView }),
+        );
+        expect(openArrivedTrace(prefixed, arrived)).toBe(prefixed);
     });
 });

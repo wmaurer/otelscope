@@ -1,6 +1,8 @@
-import { Option } from "effect";
+import { HashSet, Option } from "effect";
 
-import { push } from "./Nav.ts";
+import { openingFor } from "../model/opening.ts";
+import { parse } from "../query/Query.ts";
+import { push, top, update } from "./Nav.ts";
 import { defaultRunsView, defaultTracesView, defaultTraceView, Screen, TraceRow, tracesFor } from "./Screen.ts";
 
 import type { CliArgs } from "../cli/Args.ts";
@@ -38,4 +40,25 @@ export const openSingleRun = (nav: Nav, snapshot: Snapshot): Nav => {
         return nav;
     }
     return push(nav, tracesFor(only, runs.view));
+};
+
+/**
+ * 04 "Pushes": a Trace screen pushed before its trace was loaded gets its opening selection the first time the trace is
+ * present, seeded search included. It runs once: afterwards the selection is set.
+ */
+export const openArrivedTrace = (nav: Nav, snapshot: Snapshot): Nav => {
+    const screen = top(nav);
+    if (screen._tag !== "Trace" || screen.idIsPrefix || Option.isSome(screen.view.selected)) {
+        return nav;
+    }
+    const trace = snapshot.traces.get(screen.traceId);
+    if (trace === undefined) {
+        return nav;
+    }
+    const opening = openingFor(trace, parse(screen.view.search));
+    return update(nav, "Trace", (view) => ({
+        ...view,
+        selected: Option.some(opening.selected),
+        openGroups: HashSet.union(view.openGroups, opening.openGroups),
+    }));
 };
