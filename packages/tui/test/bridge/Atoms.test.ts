@@ -75,7 +75,9 @@ describe("Atoms", () => {
             expect(atoms.body({ sha256: sha, bytes: 8 }), "an equal key gives the same atom").toBe(body);
 
             const loaded = yield* valueOf(atoms.registry, body, AsyncResult.isSuccess);
-            expect(AsyncResult.value(loaded)).toEqual(Option.some({ text: "the body", truncated: false, bytes: 8 }));
+            expect(AsyncResult.value(loaded)).toEqual(
+                Option.some(expect.objectContaining({ text: "the body", truncated: false, bytes: 8, storedBytes: 8 })),
+            );
 
             const missing = yield* valueOf(
                 atoms.registry,

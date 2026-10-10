@@ -2,6 +2,8 @@ import { Data } from "effect";
 
 import type { Snapshot } from "../data/Snapshot.ts";
 import type { EditTarget } from "../editor.ts";
+import type { BodyModel } from "../model/bodyModel.ts";
+import type { BodyRows } from "../model/bodyRows.ts";
 import type { Panes } from "../model/panes.ts";
 import type { ScreenList } from "../model/screenList.ts";
 import type { TraceLayout } from "../model/traceLayout.ts";
@@ -16,6 +18,8 @@ export type ShellEffect = Data.TaggedEnum<{
     Say: { readonly text: string };
     SetPanes: { readonly panes: Panes };
     Edit: { readonly target: EditTarget };
+    /** `done` is what the status line says when the terminal accepts the copy. */
+    Copy: { readonly text: string; readonly done: string };
 }>;
 export const ShellEffect = Data.taggedEnum<ShellEffect>();
 
@@ -28,12 +32,22 @@ export interface TraceContext {
     readonly detailsLines: number;
 }
 
+/** What the Body screen's keys read: the same rows and viewport its frame draws. */
+export interface BodyContext {
+    readonly model: BodyModel;
+    readonly rows: BodyRows;
+    readonly viewport: number;
+    readonly width: number;
+}
+
 export interface StepContext {
     readonly snapshot: Snapshot;
     readonly list: ScreenList;
     readonly listRows: number;
     /** Some on a Trace screen whose trace is present. */
     readonly trace: Option.Option<TraceContext>;
+    /** Some on a Body screen whose body is on its span. */
+    readonly body: Option.Option<BodyContext>;
 }
 
 export interface ScreenStep {

@@ -31,22 +31,30 @@ const withBodies = (file: string, maxCacheBytes?: number) =>
     );
 
 describe("Bodies", () => {
-    it.effect("reads a body whole, with its declared length", () =>
+    it.effect("reads a body whole, with its declared length, its file's size and its absolute path", () =>
         Effect.gen(function* () {
-            const { file } = bodiesDir({ [sha("a")]: "héllo" });
+            const { file, bodies: dir } = bodiesDir({ [sha("a")]: "héllo" });
             const bodies = yield* withBodies(file);
-            expect(yield* bodies.read(sha("a"), 6)).toEqual({ text: "héllo", truncated: false, bytes: 6 });
+            expect(yield* bodies.read(sha("a"), 6)).toEqual({
+                text: "héllo",
+                truncated: false,
+                bytes: 6,
+                storedBytes: 6,
+                path: join(dir, `${sha("a")}.txt`),
+            });
         }),
     );
 
     it.effect("marks a body truncated when the declared bytes exceed the stored file", () =>
         Effect.gen(function* () {
-            const { file } = bodiesDir({ [sha("a")]: "capped\ntruncated 10 chars" });
+            const { file, bodies: dir } = bodiesDir({ [sha("a")]: "capped\ntruncated 10 chars" });
             const bodies = yield* withBodies(file);
             expect(yield* bodies.read(sha("a"), 5_000)).toEqual({
                 text: "capped\ntruncated 10 chars",
                 truncated: true,
                 bytes: 5_000,
+                storedBytes: 25,
+                path: join(dir, `${sha("a")}.txt`),
             });
         }),
     );

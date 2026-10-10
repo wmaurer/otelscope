@@ -1,7 +1,7 @@
 import { Data, Option } from "effect";
 
 import { back } from "../nav/Nav.ts";
-import { activeQuery, clearQuery, setQuery, typeQuery } from "../nav/Query.ts";
+import { activeQuery, clearQuery, setQuery, submitQuery, typeQuery } from "../nav/Query.ts";
 import { ShellEffect } from "../nav/ScreenStep.ts";
 import { stepScreen } from "../nav/Step.ts";
 import { isShellAction, moveRows } from "./Action.ts";
@@ -134,7 +134,7 @@ export const stepShell = (state: KeyState, context: KeyContext, action: Action):
             const kept = text.trim() === "" ? "" : text;
             return step({
                 state: { shell: Shell.Screen(), history: remember(state.history, kept) },
-                nav: setQuery(nav, kept),
+                nav: submitQuery(setQuery(nav, kept), context),
             });
         }
         case "CancelInput":

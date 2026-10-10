@@ -78,7 +78,14 @@ export const run = (args: CliArgs, nav: Nav) =>
             yield* Effect.sync(() =>
                 createRoot(renderer).render(
                     <RegistryContext.Provider value={atoms.registry}>
-                        <App atoms={atoms} file={args.file} onQuit={requestQuit} onSuspend={suspend} onEdit={edit} />
+                        <App
+                            atoms={atoms}
+                            file={args.file}
+                            onQuit={requestQuit}
+                            onSuspend={suspend}
+                            onEdit={edit}
+                            onCopy={(text) => renderer.copyToClipboardOSC52(text)}
+                        />
                     </RegistryContext.Provider>,
                 ),
             );

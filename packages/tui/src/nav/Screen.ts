@@ -65,6 +65,8 @@ export interface BodyView {
     readonly wrap: boolean;
     readonly raw: boolean;
     readonly search: string;
+    /** Where the current match starts in the shown text. It is current only while a match starts there. */
+    readonly current: Option.Option<number>;
 }
 
 export const defaultRunsView: RunsView = {
@@ -96,7 +98,14 @@ export const defaultTraceView: TraceView = {
     detailsTop: 0,
 };
 
-export const defaultBodyView: BodyView = { topLine: 0, leftCol: 0, wrap: true, raw: false, search: "" };
+export const defaultBodyView: BodyView = {
+    topLine: 0,
+    leftCol: 0,
+    wrap: true,
+    raw: false,
+    search: "",
+    current: Option.none(),
+};
 
 export type Screen = Data.TaggedEnum<{
     Runs: { readonly view: RunsView };

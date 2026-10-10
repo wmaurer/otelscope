@@ -28,6 +28,7 @@ const ctx = (nav: Nav.Nav, snapshot: Snapshot, overlay: Extent): KeyContext => (
     list: listFor(nav, snapshot),
     listRows: 10,
     trace: Option.none(),
+    body: Option.none(),
 });
 
 describe("stepShell", () => {

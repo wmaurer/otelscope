@@ -5,7 +5,12 @@ import { InputFile } from "./InputFile.ts";
 export interface BodyText {
     readonly text: string;
     readonly truncated: boolean;
+    /** The span's `<prefix>.bytes`. */
     readonly bytes: number;
+    /** The file's size, below `bytes` when the writer truncated the body. */
+    readonly storedBytes: number;
+    /** Absolute. */
+    readonly path: string;
 }
 
 export class BodyMissing extends Schema.TaggedError<BodyMissing>()("BodyMissing", {
@@ -95,7 +100,13 @@ export class Bodies extends Context.Service<
                 return Bodies.of({
                     read: Effect.fnUntraced(function* (sha256: string, declaredBytes: number) {
                         const stored = cache.get(sha256) ?? (yield* load(sha256));
-                        return { text: stored.text, truncated: declaredBytes > stored.fileBytes, bytes: declaredBytes };
+                        return {
+                            text: stored.text,
+                            truncated: declaredBytes > stored.fileBytes,
+                            bytes: declaredBytes,
+                            storedBytes: stored.fileBytes,
+                            path: pathOf(sha256),
+                        };
                     }),
                     stat: (sha256) =>
                         fs.stat(pathOf(sha256)).pipe(

@@ -1,9 +1,13 @@
+import { Option } from "effect";
+
+import { seekFirstMatch } from "./BodyStep.ts";
 import { top, update } from "./Nav.ts";
 import { Screen } from "./Screen.ts";
 import { seekMatch } from "./TraceStep.ts";
 
 import type { Snapshot } from "../data/Snapshot.ts";
 import type { Nav } from "./Nav.ts";
+import type { StepContext } from "./ScreenStep.ts";
 
 /**
  * The query the focused pane owns: a list's filter, the tree search (from the tree or details pane), the log filter,
@@ -39,3 +43,7 @@ export const typeQuery = (nav: Nav, text: string, snapshot: Snapshot): Nav => {
     const next = setQuery(nav, text);
     return next === nav ? nav : seekMatch(next, snapshot);
 };
+
+/** `⏎` in the `/` input, after the query is kept. On Body it jumps to the first match at or after the top row. */
+export const submitQuery = (nav: Nav, context: StepContext): Nav =>
+    Option.match(context.body, { onNone: () => nav, onSome: (body) => seekFirstMatch(nav, body) });

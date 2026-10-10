@@ -67,6 +67,7 @@ export type Action = Data.TaggedEnum<{
     /** A divider drag: the tree's share in percent, not yet clamped. */
     SetSplit: { readonly percent: number };
 
+    ScrollBody: { readonly rows: number };
     Sideways: { readonly dir: Dir };
     CycleBody: { readonly dir: Dir };
     ToggleRaw: {};
@@ -146,6 +147,25 @@ export type TraceAction = Extract<ScreenAction, { readonly _tag: (typeof traceTa
 const traceTagSet: ReadonlySet<string> = new Set(traceTags);
 
 export const isTraceAction = (action: ScreenAction): action is TraceAction => traceTagSet.has(action._tag);
+
+const bodyTags = [
+    "Move",
+    "Jump",
+    "ScrollBody",
+    "Sideways",
+    "CycleBody",
+    "ToggleRaw",
+    "ToggleWrap",
+    "NextMatch",
+    "Copy",
+    "OpenEditor",
+] as const;
+
+export type BodyAction = Extract<ScreenAction, { readonly _tag: (typeof bodyTags)[number] }>;
+
+const bodyTagSet: ReadonlySet<string> = new Set(bodyTags);
+
+export const isBodyAction = (action: ScreenAction): action is BodyAction => bodyTagSet.has(action._tag);
 
 /**
  * `Esc` on a screen: clear the focused query, else go back, else nothing. Only the binding table holds it, and

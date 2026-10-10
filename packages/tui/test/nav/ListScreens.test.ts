@@ -24,7 +24,11 @@ const snapshot: Snapshot = indexed([
 ]);
 
 const step = (nav: Nav.Nav, action: ScreenAction) =>
-    stepScreen(nav, { snapshot, list: listFor(nav, snapshot), listRows: 10, trace: Option.none() }, action);
+    stepScreen(
+        nav,
+        { snapshot, list: listFor(nav, snapshot), listRows: 10, trace: Option.none(), body: Option.none() },
+        action,
+    );
 
 const runs = Nav.initial;
 const traces = (view: Partial<TracesView> = {}) =>
@@ -67,7 +71,13 @@ describe("the Runs reducer", () => {
         const stepBefore = (nav: Nav.Nav, action: ScreenAction) =>
             stepScreen(
                 nav,
-                { snapshot: before, list: listFor(nav, before), listRows: 10, trace: Option.none() },
+                {
+                    snapshot: before,
+                    list: listFor(nav, before),
+                    listRows: 10,
+                    trace: Option.none(),
+                    body: Option.none(),
+                },
                 action,
             ).nav;
         const byService = Nav.update(runs, "Runs", (view) => ({ ...view, sort: "service" }));

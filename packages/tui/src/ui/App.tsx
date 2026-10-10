@@ -23,7 +23,11 @@ export interface AppProps {
     readonly onQuit: () => void;
     readonly onSuspend: () => void;
     readonly onEdit: (target: EditTarget) => void;
+    /** Whether the terminal took the text. */
+    readonly onCopy: (text: string) => boolean;
 }
+
+export const NO_COPY = "the terminal did not accept the copy (OSC 52)";
 
 export const App = (props: AppProps): ReactNode => {
     const { atoms } = props;
@@ -61,6 +65,7 @@ export const App = (props: AppProps): ReactNode => {
                         bodyStats: registry.get(atoms.bodyStats),
                     }),
                 ),
+                body: Option.none(),
                 overlay:
                     state.shell._tag === "Overlay"
                         ? overlayExtent(overlayContent(state.shell.kind, before, latest), { width, height })
@@ -80,6 +85,7 @@ export const App = (props: AppProps): ReactNode => {
                 Say: ({ text }) => registry.set(atoms.message, Option.some(text)),
                 SetPanes: ({ panes }) => registry.set(atoms.panes, panes),
                 Edit: ({ target }) => props.onEdit(target),
+                Copy: ({ text, done }) => registry.set(atoms.message, Option.some(props.onCopy(text) ? done : NO_COPY)),
             }),
         );
     };

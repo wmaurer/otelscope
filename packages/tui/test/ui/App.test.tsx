@@ -54,6 +54,7 @@ const start = async (nav: Nav.Nav = Nav.initial, first: Snapshot = twoRuns) => {
     let quits = 0;
     let suspends = 0;
     const edits: Array<EditTarget> = [];
+    const copies: Array<string> = [];
     const setup = await testRender(
         <RegistryContext.Provider value={atoms.registry}>
             <App
@@ -63,6 +64,10 @@ const start = async (nav: Nav.Nav = Nav.initial, first: Snapshot = twoRuns) => {
                 onSuspend={() => (suspends += 1)}
                 onEdit={(target) => {
                     edits[edits.length] = target;
+                }}
+                onCopy={(text) => {
+                    copies[copies.length] = text;
+                    return true;
                 }}
             />
         </RegistryContext.Provider>,
@@ -128,6 +133,7 @@ const start = async (nav: Nav.Nav = Nav.initial, first: Snapshot = twoRuns) => {
         quits: () => quits,
         suspends: () => suspends,
         edits: () => edits,
+        copies: () => copies,
         frame,
         press,
         escape,

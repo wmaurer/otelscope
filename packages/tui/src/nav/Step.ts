@@ -1,6 +1,7 @@
 import { Option } from "effect";
 
-import { isListAction, isTraceAction } from "../keys/Action.ts";
+import { isBodyAction, isListAction, isTraceAction } from "../keys/Action.ts";
+import { stepBody } from "./BodyStep.ts";
 import { top } from "./Nav.ts";
 import { stepRuns } from "./RunsStep.ts";
 import { stepTo } from "./ScreenStep.ts";
@@ -17,6 +18,11 @@ export const stepScreen = (nav: Nav, context: StepContext, action: ScreenAction)
     if (screen._tag === "Trace") {
         return isTraceAction(action) && Option.isSome(context.trace)
             ? stepTrace(nav, screen, context.trace.value, action)
+            : stepTo(nav);
+    }
+    if (screen._tag === "Body") {
+        return isBodyAction(action) && Option.isSome(context.body)
+            ? stepBody(nav, screen, context.body.value, action)
             : stepTo(nav);
     }
     if (!isListAction(action)) {
