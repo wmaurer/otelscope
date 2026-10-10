@@ -128,18 +128,23 @@ const freezeRun = (run: RunBuilder): Run => ({
     lastArrivalAt: run.lastArrivalAt,
 });
 
+/** Copies the previous map whole, which is cheaper than spreading it into entries, then replaces the touched values. */
 const withFrozen = <K, B, A>(
     previous: ReadonlyMap<K, A>,
     dirty: ReadonlySet<B>,
     keyOf: (builder: B) => K,
     freeze: (builder: B) => A,
-): ReadonlyMap<K, A> =>
-    dirty.size === 0
-        ? previous
-        : new Map([
-              ...previous,
-              ...Arr.map(Array.from(dirty), (builder) => [keyOf(builder), freeze(builder)] as const),
-          ]);
+): ReadonlyMap<K, A> => {
+    if (dirty.size === 0) {
+        return previous;
+    }
+    // oxlint-disable-next-line effect-native/imperative-collection-build -- a copy-on-write publish: filling it is the design.
+    const next = new Map(previous);
+    for (const builder of dirty) {
+        next.set(keyOf(builder), freeze(builder));
+    }
+    return next;
+};
 
 const emptyBadLines: BadLines = { legacy: 0, malformed: 0, samples: [] };
 
