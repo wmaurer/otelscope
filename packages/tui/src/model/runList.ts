@@ -58,7 +58,7 @@ export const runList = (snapshot: Snapshot, view: Pick<RunsView, "sort" | "rever
 
 type RunColumn = "marks" | "service" | "started" | "duration" | "traces" | "failed" | "spans" | "logs" | "run";
 
-export const RUN_COLUMNS: ReadonlyArray<Column<RunColumn>> = [
+const RUN_COLUMNS: ReadonlyArray<Column<RunColumn>> = [
     { id: "marks", title: "", align: "left", width: { fixed: 2 } },
     { id: "service", title: "service", align: "left", width: { flex: 1, min: 14 } },
     { id: "started", title: "started", align: "left", width: { fixed: 16 } },
@@ -70,7 +70,7 @@ export const RUN_COLUMNS: ReadonlyArray<Column<RunColumn>> = [
     { id: "run", title: "run", align: "left", width: { fixed: 28 } },
 ];
 
-export const RUN_DROP_ORDER: ReadonlyArray<RunColumn> = ["run", "logs", "spans"];
+const RUN_DROP_ORDER: ReadonlyArray<RunColumn> = ["run", "logs", "spans"];
 
 export const runSortColumn = {
     newest: "started",

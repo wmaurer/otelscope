@@ -45,9 +45,6 @@ export const indexer = (rows: ReadonlyArray<Keyed>): ((key: string) => number) =
     };
 };
 
-export const isFollowing = <Row extends Keyed, K>(list: List<Row, K>, selection: ListSelection<K>): boolean =>
-    list.timeSort && Option.isNone(selection.selected);
-
 export const selectedIndex = <Row extends Keyed, K>(list: List<Row, K>, selection: ListSelection<K>): number => {
     if (list.rows.length === 0) {
         return -1;

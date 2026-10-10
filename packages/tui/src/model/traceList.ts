@@ -14,7 +14,7 @@ import type { TraceState } from "./marks.ts";
 
 /** Same-name groups, of root spans in the Traces list and of siblings in the trace tree, fold from this many on. */
 export const GROUP_MIN = 20;
-export const CLOSED_SHOWN = 5;
+const CLOSED_SHOWN = 5;
 
 export interface Item {
     readonly trace: Trace;
@@ -39,8 +39,6 @@ export type TraceListRow = Data.TaggedEnum<{
 export interface TraceList extends List<TraceListRow, TraceRow> {
     readonly run: Run;
     readonly groups: Readonly<Record<string, Group>>;
-    /** The build's first stage, for the reveal check. */
-    readonly collected: Collected;
 }
 
 /** A record's own value: span names are user data, and `constructor` must not find `Object.prototype`'s. */
@@ -51,7 +49,7 @@ const traceKey = (traceId: TraceId): string => `t:${traceId}`;
 const headingKey = (name: string): string => `h:${name}`;
 const moreKey = (name: string): string => `m:${name}`;
 
-export const rowKey = (row: TraceRow): string => {
+const rowKey = (row: TraceRow): string => {
     switch (row._tag) {
         case "Trace":
             return traceKey(row.traceId);
@@ -62,7 +60,7 @@ export const rowKey = (row: TraceRow): string => {
     }
 };
 
-export const rowValue = (row: TraceListRow): TraceRow => {
+const rowValue = (row: TraceListRow): TraceRow => {
     switch (row._tag) {
         case "Trace":
             return TraceRow.Trace({ traceId: row.item.trace.id });
@@ -224,7 +222,6 @@ export const traceList = (
         total: collected.total,
         run: collected.run,
         groups,
-        collected,
     };
 };
 

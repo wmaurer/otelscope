@@ -9,7 +9,7 @@ import type { Scroll, Wheel } from "../model/scroll.ts";
 import type { MouseEvent } from "@opentui/core";
 import type { ReactNode } from "react";
 
-export const WHEEL_ROWS = 3;
+const WHEEL_ROWS = 3;
 
 interface WindowedListProps {
     readonly size: number;
