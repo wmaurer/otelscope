@@ -2,11 +2,12 @@ import { describe, expect, it } from "@effect/vitest";
 import { Option } from "effect";
 
 import { Index } from "../../src/data/Index.ts";
-import { runMatches, spanMatches, traceMatches, traceScans } from "../../src/query/Match.ts";
+import { logMatches, runMatches, spanMatches, traceMatches, traceScans } from "../../src/query/Match.ts";
 import { parse } from "../../src/query/Query.ts";
 import { exception, line, log, record } from "../support/records.ts";
 import { indexed, status } from "../support/store.ts";
 
+import type { LogLine } from "../../src/query/Match.ts";
 import type { JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
 
 const span = record({
@@ -136,5 +137,59 @@ describe("traceMatches and runMatches", () => {
         expect(traceMatches(query, second.traces.get("t2")!)).toBe(false);
         expect(traceMatches(query, second.traces.get("t1")!), "the new span matches").toBe(true);
         expect(traceScans() - before, "only t1 was walked again").toBe(1);
+    });
+});
+
+const logLine: LogLine = {
+    message: "payment failed",
+    level: "ERROR",
+    fiber: "#7",
+    spanName: "payment.charge",
+    annotations: [["order.id", "ord_1004"]],
+    exit: "Failure",
+};
+
+const logMatchesQuery = (query: string, line: LogLine = logLine) => logMatches(parse(query), line);
+
+describe("logMatches", () => {
+    it("matches a plain term on the message, level, fiber, span name and annotations only", () => {
+        for (const query of ["payment", "failed", "error", "#7", "charge", "order.id", "ord_1004"]) {
+            expect(logMatchesQuery(query), query).toBe(true);
+        }
+        expect(logMatchesQuery("Failure"), "the exit is not text").toBe(false);
+        expect(logMatchesQuery("#8")).toBe(false);
+        expect(logMatchesQuery("#", { ...logLine, fiber: "" }), "a line without a fiber has no #").toBe(false);
+    });
+
+    it("applies smart case to the line's text", () => {
+        expect(logMatchesQuery("payment")).toBe(true);
+        expect(logMatchesQuery("PAYMENT"), "a capital makes it case-sensitive").toBe(false);
+        expect(logMatchesQuery("ERROR")).toBe(true);
+        expect(logMatchesQuery("Error")).toBe(false);
+        expect(logMatchesQuery("order.id=ORD"), "values follow smart case too").toBe(false);
+        expect(logMatchesQuery("order.id=ord")).toBe(true);
+    });
+
+    it("needs an annotation with the exact key for key=value, and matches a key's presence with key=", () => {
+        expect(logMatchesQuery("order.id=1004")).toBe(true);
+        expect(logMatchesQuery("order=1004"), "the key must be exact").toBe(false);
+        expect(logMatchesQuery("order.id=1005")).toBe(false);
+        expect(logMatchesQuery("order.id=")).toBe(true);
+        expect(logMatchesQuery("user.id=")).toBe(false);
+    });
+
+    it("matches is:<level> against the level and is:<exit> against the span's exit", () => {
+        expect(logMatchesQuery("is:error")).toBe(true);
+        expect(logMatchesQuery("is:warn")).toBe(false);
+        expect(logMatchesQuery("is:fatal", { ...logLine, level: "FATAL" })).toBe(true);
+        expect(logMatchesQuery("is:failed")).toBe(true);
+        expect(logMatchesQuery("is:ok")).toBe(false);
+        expect(logMatchesQuery("is:bogus"), "an unknown is: value matches nothing").toBe(false);
+    });
+
+    it("needs every term to match", () => {
+        expect(logMatchesQuery("is:error payment order.id=ord")).toBe(true);
+        expect(logMatchesQuery("is:error refund")).toBe(false);
+        expect(logMatchesQuery("")).toBe(true);
     });
 });

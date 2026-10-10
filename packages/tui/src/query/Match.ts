@@ -266,3 +266,41 @@ export interface LogLine {
     /** The exit of the log's span, for `is:failed` and the like. */
     readonly exit: Exit;
 }
+
+const logHas = (line: LogLine, term: Term): boolean => {
+    switch (term._tag) {
+        case "Text": {
+            const { needle } = term;
+            return (
+                has(line.message, needle) ||
+                has(line.level, needle) ||
+                has(line.fiber, needle) ||
+                has(line.spanName, needle) ||
+                Arr.some(line.annotations, ([key, value]) => has(key, needle) || has(value, needle))
+            );
+        }
+        case "Attr": {
+            const value = term.value._tag === "Some" ? term.value.value : undefined;
+            return Arr.some(
+                line.annotations,
+                ([key, found]) => key === term.key && (value === undefined || has(found, value)),
+            );
+        }
+        case "Level":
+            return line.level.toLowerCase() === term.level;
+        case "Exit":
+            return line.exit === term.exit;
+        case "Never":
+            return false;
+    }
+};
+
+/** Every term must match the log line: 08's log-line level. */
+export const logMatches = (query: Query, line: LogLine): boolean => {
+    for (const term of query) {
+        if (!logHas(line, term)) {
+            return false;
+        }
+    }
+    return true;
+};
