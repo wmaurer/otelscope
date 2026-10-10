@@ -2,7 +2,7 @@ import { Array as Arr, Equal, Option } from "effect";
 import { Atom } from "effect/reactivity";
 
 import { bodiesOf } from "../model/bodies.ts";
-import { chosenOf, logsKeyOf, logsOfKey } from "../model/traceModel.ts";
+import { chosenOf, logsKeyOf, logsOfKey, shownSpan } from "../model/traceModel.ts";
 import { flatten, visibilityOf } from "../model/tree.ts";
 import { factsOf } from "../model/treeFacts.ts";
 import { searchOf } from "../model/treeSearch.ts";
@@ -98,13 +98,7 @@ export const bodyStatsAtom = (
     bodyStat: (sha256: string) => Atom.Atom<AsyncResult.AsyncResult<Option.Option<number>>>,
 ): Atom.Atom<BodyStats> =>
     Atom.make((get): BodyStats => {
-        const span = Option.flatMap(get(model), (shown) =>
-            Option.flatMap(shown.entry, (entry) =>
-                entry._tag === "Span"
-                    ? Option.fromUndefinedOr(shown.facts.trace.spans.get(entry.spanId))
-                    : Option.none(),
-            ),
-        );
+        const span = Option.flatMap(get(model), shownSpan);
         const bodies = Option.match(span, { onNone: () => [], onSome: bodiesOf });
         return new Map(Arr.map(bodies, (body) => [body.sha256, get(bodyStat(body.sha256))] as const));
     }).pipe(Atom.withEquality(sameStats));

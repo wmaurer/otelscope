@@ -8,6 +8,7 @@ import type { LogList } from "./logs.ts";
 import type { Tree, TreeEntry } from "./tree.ts";
 import type { TreeFacts } from "./treeFacts.ts";
 import type { SpanSearch } from "./treeSearch.ts";
+import type { JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
 
 /** Everything the Trace screen's keys and frame read, derived from the trace and the view. */
 export interface TraceModel {
@@ -19,6 +20,12 @@ export interface TraceModel {
     readonly entry: Option.Option<TreeEntry>;
     readonly logs: LogList;
 }
+
+/** The record of the span the selection shows as; None on a group or missing-parent row. */
+export const shownSpan = (model: TraceModel): Option.Option<JsonlSpanRecord> =>
+    Option.flatMap(model.entry, (entry) =>
+        entry._tag === "Span" ? Option.fromUndefinedOr(model.facts.trace.spans.get(entry.spanId)) : Option.none(),
+    );
 
 export interface Chosen {
     readonly index: number;

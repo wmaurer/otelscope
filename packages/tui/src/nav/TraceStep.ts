@@ -7,6 +7,7 @@ import { originOf } from "../model/cause.ts";
 import { cursorEntry } from "../model/logs.ts";
 import { firstAtOrAfter, nextStop } from "../model/stops.ts";
 import { resizeName, resizeSplit } from "../model/traceLayout.ts";
+import { shownSpan } from "../model/traceModel.ts";
 import { anchorOf, rowOf } from "../model/tree.ts";
 import { factsOf } from "../model/treeFacts.ts";
 import { searchOf } from "../model/treeSearch.ts";
@@ -51,9 +52,7 @@ export const stepTrace = (
     const setPanes = (next: Panes): ScreenStep => ({ nav, effects: [ShellEffect.SetPanes({ panes: next })] });
     const withEntry = (f: (entry: TreeEntry) => TraceView): ScreenStep =>
         Option.match(model.entry, { onNone: () => stepTo(nav), onSome: (entry) => set(f(entry)) });
-    const selectedSpan = Option.flatMap(model.entry, (entry) =>
-        entry._tag === "Span" ? Option.fromUndefinedOr(facts.trace.spans.get(entry.spanId)) : Option.none(),
-    );
+    const selectedSpan = shownSpan(model);
     const anchor = () => anchorOf(facts, Option.map(model.entry, rowOf));
     const detailsMax = Math.max(0, context.detailsLines - layout.detailsRows);
     const moveTree = (target: number): ScreenStep => {

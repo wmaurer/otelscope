@@ -1,19 +1,24 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, Option } from "effect";
+import { Array as Arr, Equal, HashSet, Option } from "effect";
 
+import { Action } from "../../src/keys/Action.ts";
 import { dispatch } from "../../src/keys/Dispatch.ts";
 import { helpSections } from "../../src/keys/Help.ts";
 import { formatHint, hintBindings, hintFacts, hintLine } from "../../src/keys/Hints.ts";
+import { defaultPanes } from "../../src/model/panes.ts";
+import { traceContext } from "../../src/model/traceFrame.ts";
 import * as Nav from "../../src/nav/Nav.ts";
 import { TreeRow } from "../../src/nav/Screen.ts";
+import { stepTrace } from "../../src/nav/TraceStep.ts";
 import { body, bodySearching, press, runs, trace, traces } from "../support/keys.ts";
 import { record } from "../support/records.ts";
 import { indexed } from "../support/store.ts";
+import { traceModelFor } from "../support/traces.ts";
 
 import type { Mode } from "../../src/keys/Bindings.ts";
 import type { HelpSection } from "../../src/keys/Help.ts";
 
-const quiet = { propagated: false };
+const quiet = { toOrigin: false };
 const line = (mode: Mode, nav: Nav.Nav, facts = quiet) =>
     Arr.join(Arr.map(hintLine(mode, nav, facts), formatHint), " · ");
 
@@ -27,8 +32,8 @@ describe("hint line", () => {
         expect(line("screen", body)).toBe("/ search · r raw · w wrap · y copy · ? help");
     });
 
-    it("offers o origin only on a propagated span, and n match while a tree search is active", () => {
-        expect(line("screen", trace("tree"), { propagated: true })).toBe(
+    it("offers o origin only where o would move, and n match while a tree search is active", () => {
+        expect(line("screen", trace("tree"), { toOrigin: true })).toBe(
             "⏎ fold · / search · n problem · b body · o origin · ? help",
         );
         expect(line("screen", trace("tree", { search: "boom" }))).toBe("⏎ fold · / search · n match · b body · ? help");
@@ -61,8 +66,8 @@ describe("hint line", () => {
             body,
         ];
         Arr.forEach(navs, (nav) =>
-            Arr.forEach([true, false], (propagated) =>
-                Arr.forEach(hintBindings("screen", nav, { propagated }), (binding) =>
+            Arr.forEach([true, false], (toOrigin) =>
+                Arr.forEach(hintBindings("screen", nav, { toOrigin }), (binding) =>
                     expect(dispatch("screen", nav, press(binding.keys[0])), binding.label).toEqual(
                         Option.some(binding.action),
                     ),
@@ -74,18 +79,49 @@ describe("hint line", () => {
 
 describe("hintFacts", () => {
     const snapshot = indexed([
-        record({ span: "root", exit: "Failure" }),
-        record({ span: "child", parent: "root", exit: "Failure" }),
-        record({ span: "ok", parent: "root" }),
+        record({ span: "root" }),
+        record({ span: "ok", parent: "root", startMs: 1001 }),
+        record({ span: "passed", parent: "ok", startMs: 1002, exit: "Failure" }),
+        record({ span: "origin", parent: "passed", startMs: 1003, exit: "Failure" }),
+        record({ span: "other", parent: "root", startMs: 1004 }),
     ]);
-    const selecting = (spanId: string) => trace("tree", { selected: Option.some(TreeRow.Span({ spanId })) });
+    const on = (spanId: string, folded: ReadonlyArray<string> = []) =>
+        trace("tree", { selected: Option.some(TreeRow.Span({ spanId })), folded: HashSet.fromIterable(folded) });
+    const toOrigin = (nav: Nav.Nav) => hintFacts(traceModelFor(nav, snapshot)).toOrigin;
+    const shownKey = (nav: Nav.Nav) => Option.map(Option.getOrThrow(traceModelFor(nav, snapshot)).entry, (e) => e.key);
+    /** Whether `o` changes the row the selection shows as. */
+    const moves = (nav: Nav.Nav) => {
+        const screen = Nav.top(nav);
+        if (screen._tag !== "Trace") {
+            throw new Error("not on a Trace screen");
+        }
+        const context = traceContext(Option.getOrThrow(traceModelFor(nav, snapshot)), {
+            size: { width: 120, height: 40 },
+            panes: defaultPanes,
+            now: 0,
+            snapshot,
+            bodyStats: new Map(),
+        });
+        const after = stepTrace(nav, screen, context, Action.GoToOrigin()).nav;
+        return !Equal.equals(shownKey(after), shownKey(nav));
+    };
 
-    it("finds a propagated failure at the selected span", () => {
-        expect(hintFacts(selecting("root"), snapshot)).toEqual({ propagated: true });
-        expect(hintFacts(selecting("child"), snapshot), "a failure origin").toEqual({ propagated: false });
-        expect(hintFacts(selecting("ok"), snapshot)).toEqual({ propagated: false });
-        expect(hintFacts(trace("tree"), snapshot), "nothing selected").toEqual({ propagated: false });
-        expect(hintFacts(runs, snapshot)).toEqual({ propagated: false });
+    it("reads the row the selection shows as, not the stored span", () => {
+        expect(toOrigin(on("passed")), "a span the failure passed through").toBe(true);
+        expect(toOrigin(on("passed", ["ok"])), "it shows as its folded ancestor, which succeeded").toBe(false);
+        expect(toOrigin(on("origin")), "an origin is its own origin").toBe(false);
+        expect(toOrigin(on("origin", ["passed"])), "it shows as its folded parent, which passed it on").toBe(true);
+        expect(toOrigin(runs)).toBe(false);
+    });
+
+    it("shows o origin exactly when o moves the selection", () => {
+        const folds = [[], ["ok"], ["passed"], ["root"]];
+        Arr.forEach(["root", "ok", "passed", "origin", "other"], (spanId) =>
+            Arr.forEach(folds, (folded) => {
+                const nav = on(spanId, folded);
+                expect(toOrigin(nav), `${spanId} with ${Arr.join(folded, ",")} folded`).toBe(moves(nav));
+            }),
+        );
     });
 });
 

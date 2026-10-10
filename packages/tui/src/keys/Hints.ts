@@ -1,33 +1,30 @@
 import { Array as Arr, Option, Order } from "effect";
 
-import { factsOf } from "../model/treeFacts.ts";
-import { top } from "../nav/Nav.ts";
+import { originOf } from "../model/cause.ts";
+import { shownSpan } from "../model/traceModel.ts";
 import { BINDINGS, focusOf } from "./Bindings.ts";
 import { lookup, scopesFor } from "./Dispatch.ts";
 import { keyLabel } from "./Key.ts";
 
-import type { Snapshot } from "../data/Snapshot.ts";
+import type { TraceModel } from "../model/traceModel.ts";
 import type { Nav } from "../nav/Nav.ts";
 import type { Binding, HintScope, Mode } from "./Bindings.ts";
 
 export interface HintFacts {
-    readonly propagated: boolean;
+    readonly toOrigin: boolean;
 }
 
-/** `propagated`: the Trace screen's stored selection is a span the failure only passed through. */
-export const hintFacts = (nav: Nav, snapshot: Snapshot): HintFacts => {
-    const screen = top(nav);
-    if (screen._tag !== "Trace") {
-        return { propagated: false };
-    }
-    const trace = snapshot.traces.get(screen.traceId);
-    return {
-        propagated: Option.exists(
-            screen.view.selected,
-            (row) => row._tag === "Span" && trace !== undefined && factsOf(trace).kind(row.spanId) === "propagated",
+/**
+ * `toOrigin`: `o` would move the selection, because the row it shows as (the one `o` acts on) is a span whose cause
+ * origin is another span.
+ */
+export const hintFacts = (trace: Option.Option<TraceModel>): HintFacts => ({
+    toOrigin: Option.exists(trace, (model) =>
+        Option.exists(shownSpan(model), (span) =>
+            Option.exists(originOf(model.facts, span.span), (origin) => origin !== span.span),
         ),
-    };
-};
+    ),
+});
 
 export interface HintItem {
     readonly key: string;

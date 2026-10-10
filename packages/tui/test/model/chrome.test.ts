@@ -36,7 +36,7 @@ const live = withStatus({ lastRecordAt: Option.some(now - 1000) });
 const bad: Snapshot = { ...live, badLines: { legacy: 0, malformed: 3, samples: [] } };
 
 const input = (over: Partial<StatusInput> = {}): StatusInput => ({
-    hints: hintLine("screen", runs, { propagated: false }),
+    hints: hintLine("screen", runs, { toOrigin: false }),
     message: Option.none(),
     query: Option.none(),
     newRows: Option.some("↑ 3 new"),

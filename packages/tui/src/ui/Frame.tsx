@@ -81,7 +81,7 @@ export const Frame = (props: FrameProps): ReactNode => {
               )
             : statusBar(
                   {
-                      hints: hintLine(modeOf(shell), nav, hintFacts(nav, snapshot)),
+                      hints: hintLine(modeOf(shell), nav, hintFacts(props.trace)),
                       message: props.message,
                       query: Option.orElse(
                           Option.flatMap(list, (frame) => frame.query),

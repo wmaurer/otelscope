@@ -23,8 +23,8 @@ export type HintScope = Focus | "overlay";
 /** A condition read from the Nav alone. A binding whose guard fails does not exist for dispatch, hints or help. */
 export type Guard = "treeSearch" | "noTreeSearch";
 
-/** A condition that needs the snapshot. It gates only whether a hint shows, never what a key does. */
-export type HintFact = "propagated";
+/** A condition that needs the Trace model. It gates only whether a hint shows, never what a key does. */
+export type HintFact = "toOrigin";
 
 export interface Hint {
     readonly label?: string;
@@ -173,7 +173,7 @@ export const BINDINGS: ReadonlyArray<Binding> = [
     }),
     bind("Trace.tree", ["N"], Action.NextProblem({ dir: "prev" }), "problem", { when: "noTreeSearch" }),
     bind("Trace.tree", ["o"], Action.GoToOrigin(), "go to the failure origin", {
-        hint: { label: "origin", rank: { "Trace.tree": 5 }, when: "propagated" },
+        hint: { label: "origin", rank: { "Trace.tree": 5 }, when: "toOrigin" },
     }),
     bind("Trace.tree", ["h", "left"], Action.FoldOrParent(), "fold, or go to the parent"),
     bind("Trace.tree", ["l", "right"], Action.Unfold(), "unfold"),
