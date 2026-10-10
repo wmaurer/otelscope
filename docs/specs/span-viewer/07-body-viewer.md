@@ -13,7 +13,7 @@ amendments from [Keymap and help](../../../.wayfinder/span-viewer-tui/tickets/19
 - The span's body prefixes come from its `<prefix>.sha256` attributes, sorted by prefix, the same order as the details
   pane's Bodies section.
 - **`Tab`/`Shift-Tab`** switch to the next/previous body on the span with `replace`, keeping `search`, `wrap` and
-  `raw`, and resetting `topLine` and `leftCol`.
+  `raw`, and resetting `topLine`, `leftCol` and `current`.
 - `Esc` returns to the trace with its view state intact.
 
 ## Layout
@@ -73,8 +73,11 @@ No size limit beyond the writer's cap: the 32 MB body cache loads any body whole
 - `/` opens the input in place of the status bar, prefilled with the current `search`. The query is a **plain
   substring**, not the query language of [08-search.md](08-search.md): case-insensitive unless it holds a capital
   letter, matched against the text as shown (formatted or raw), so a match may cross a wrapped row.
-- `⏎` keeps the query and jumps to the first match at or after the top row. Every match is highlighted and the
-  current one marked. `n`/`N` go to the next/previous match, wrapping around.
+- `⏎` keeps the query and jumps to the first match at or after the top row, else to the first match. Typing only
+  highlights; it never scrolls. Every match is highlighted and the current one marked.
+- `n`/`N` go to the next/previous match, wrapping around. They continue from the current match while it is on screen,
+  else from the top row. The current match is `BodyView.current`, its offset in the shown text; it counts only while
+  a match starts there, and `r` and `Tab` reset it.
 - `Esc` in the input restores the previous query. An empty query submitted clears the highlights.
 - With highlights active, `Esc` clears them first; the next `Esc` goes back.
 

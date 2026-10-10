@@ -68,11 +68,12 @@ interface BodyView {
     readonly wrap: boolean;
     readonly raw: boolean;
     readonly search: string;
+    readonly current: Option<number>;      // the current match's offset in the shown text
 }
 ```
 
 Defaults: `RunsView` `{ None, "", "newest", false, None }`; `TracesView` `{ None, "", "start", false, ∅, None }`;
-`TraceView` `{ None, ∅, ∅, "tree", "subtree", "", "", None, 0 }`; `BodyView` `{ 0, 0, true, false, "" }`.
+`TraceView` `{ None, ∅, ∅, "tree", "subtree", "", "", None, 0 }`; `BodyView` `{ 0, 0, true, false, "", None }`.
 
 - **Selection is stored by id, never by row index**, so live inserts and re-sorts never move the cursor. Rows that are
   not a run, trace or span are stored by what they show (`TraceRow`, `TreeRow`).

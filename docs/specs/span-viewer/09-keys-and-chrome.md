@@ -166,6 +166,7 @@ is GitHub issue [#1](https://github.com/wmaurer/otelscope/issues/1). The backgro
 | `focusBorder`         | `#61afef`             | focused pane border                            |
 | `selectionBg`         | `#2c323c`             | selected row background                        |
 | `matchBg`             | `#4d4220`             | matched text background                        |
+| `currentMatchBg`      | `#7a5c14`             | the Body's current match background            |
 | `bar`                 | `#56b6c2`             | success bars                                   |
 | `failure`             | `#ff5f5f`             | failure origin, failed counts, `✗` bright      |
 | `failurePropagated`   | `#a14848`             | propagated failure, `✗` dim                    |
