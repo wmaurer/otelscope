@@ -39,8 +39,10 @@ packages/tui/
 │   ├── support/                   record and snapshot builders
 │   └── fixtures/sample/           committed; large/ and huge/ gitignored
 └── perf/
-    ├── run.ts
-    └── startup.ts
+    ├── run.ts                     asks for React's production build, then loads measure.ts
+    ├── measure.ts                 the sections and the table
+    ├── startup.ts                 the startup child, on dist/
+    └── marks.ts                   what startup.ts prints
 ```
 
 Files with JSX are `.tsx`; everything else is `.ts`. Nothing outside `ui/` and `app.tsx` imports React or OpenTUI.

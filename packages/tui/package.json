@@ -28,7 +28,6 @@
         "test": "vitest run",
         "test:watch": "vitest",
         "perf": "pnpm --filter \"@wmaurer/otelscope...\" build && node --expose-gc --conditions=@otelscope/source --import tsx perf/run.ts",
-        "perf:publish": "node --conditions=@otelscope/source --import tsx perf/publish.ts",
         "prepublishOnly": "pnpm build && pnpm test"
     },
     "dependencies": {

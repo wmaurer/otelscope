@@ -35,7 +35,7 @@ All measured on `huge`.
 | First frame                | spawn → the first frame drawn, whatever it shows                                                           | 10 spawns after 1 discarded, warm cache | median ≤ 400 ms                         |
 | First rows                 | spawn → the first frame listing runs                                                                       | same spawns                             | median ≤ 750 ms                         |
 | Full index                 | spawn → the complete snapshot under `--no-follow` (phase `done`)                                           | 3 fresh processes                       | median ≤ 3 s                            |
-| Key press, idle            | `act(key)` + `renderOnce()` at 120×40                                                                      | 200 presses per scenario                | p95 ≤ 16 ms, max ≤ 50 ms                |
+| Key press, idle            | `flushSync(key)` + `renderOnce()` at 120×40                                                                | 200 presses per scenario                | p95 ≤ 16 ms, max ≤ 50 ms                |
 | Key press, while loading   | the same, while `huge` is still being indexed                                                              | 200 presses per scenario                | p95 ≤ 50 ms, max ≤ 100 ms               |
 | Live publish               | store freeze + re-render of the visible screen, following `huge` while 5,000 spans/s are appended for 30 s | every publish in the 30 s               | p95 ≤ 16 ms, max ≤ 50 ms                |
 | Key press, while following | the idle scenarios, during the same 30 s                                                                   | 200 presses per scenario                | the idle budget                         |
@@ -46,6 +46,13 @@ All measured on `huge`.
   renderer; first rows means the tail hands over its first 1 MiB slice without reading the whole file first.
 - **Key-press scenarios**: `j`/`k` and `PgDn` on the trace list (about 28k traces); `j`/`k` in the trace view of the
   10,001-span trace, across the 10,000-sibling group; folding and unfolding that group's parent, and the root.
+    - In `huge` the 28,000 traces of the big run share the root name `POST /orders`, so the list opens on one closed
+      group. The harness opens it before it presses.
+    - The 10,000 siblings' parent is the trace's root, so "the group's parent" and "the root" are one span. The
+      harness folds and unfolds the root with the group open, and closes and opens the group itself.
+- **`flushSync`, not `act`**: React runs its production build, as `src/bin.ts` loads it
+  ([02-package.md](02-package.md#the-bin-shim-srcbints)), and that build has no `act`. `flushSync` from
+  `@opentui/react` commits the key's updates before `renderOnce` draws, which is what `act` did.
 - **The UI stays interactive while loading and following**: indexing yields at least every 16–30 ms
   ([03-data-layer.md](03-data-layer.md#chunked-indexing)).
 - **The live writer** appends to new and existing traces alike.
@@ -54,25 +61,57 @@ All measured on `huge`.
 ## Harness
 
 - **`pnpm --filter @wmaurer/otelscope perf`** builds both packages' `dist/`, then runs `perf/run.ts` under `tsx`
-  with `--expose-gc` and the `@otelscope/source` condition on Node 26. It is a plain script, not `vitest bench`, outside `pre-push` and `pnpm test`.
-    - In process, it drives the real `SpanSource` and `SpanStore` and renders with `@opentui/react/test-utils` at
-      120×40.
+  with `--expose-gc` and the `@otelscope/source` condition on Node 26. It is a plain script, not `vitest bench`,
+  outside `pre-push` and `pnpm test`. `perf/run.ts` asks for React's production build, as the bin does, and loads
+  `perf/measure.ts`. `--only startup,index,idle,loading,following,search` runs some of the sections.
+    - In process, it builds the app's own `servicesLayer` from source (the real `SpanSource`, `SpanStore`, `Bodies`
+      and `Atoms`) and mounts the real `App` on OpenTUI's test renderer at 120×40. It mounts with `createTestRenderer`
+      and `createRoot`, which is what `testRender` from `@opentui/react/test-utils` does, without its `act`.
     - It spawns child processes for startup and the full index, so each starts JIT-cold. The children run **built
       code from `dist/`**, so startup is measured on what users run, with the compile cache, and without a TypeScript
       loader in the way.
 - **`perf/startup.ts`** handles startup, which needs a TTY. It is plain `.ts` (no JSX), run with `node` under type
-  stripping, and imports only from `../dist/`. It goes through the same shim steps as `dist/bin.js`, mounts the app
-  on the test renderer at 120×40, and prints a `process.hrtime` mark at the first frame and another at the first frame
-  with runs. The harness times both marks from spawn. `dist/app.js` therefore exports a way to run the app on a given
-  renderer, which the bin path calls with the real one.
-- **Output**: a table on stdout with each metric, its budget, its median/p95/max and pass or fail; `--json` for
-  machine-readable output; exit 1 on any miss. Nothing is committed.
+  stripping, and imports only from `../dist/`. It goes through the same shim steps as `dist/bin.js`, parses the
+  arguments and runs the startup checks as `main` does (all but the TTY check), and mounts the app on the test
+  renderer at 120×40 with `runOn` from `dist/app.js`, which the bin path calls with the real renderer.
+    - The renderer draws on demand, as the real one does, and the child forces no frame. On every frame it reads the
+      clock and the frame's text. The first frame is the first one drawn. The first rows are the first frame whose
+      text contains the id of a run in the snapshot, so the mark is what the user sees, not what the atoms hold.
+    - Under `--no-follow` it also marks the snapshot reaching phase `done`, runs `global.gc()`, and reports `heapUsed`
+      and RSS with the app still mounted.
+    - It prints the marks as one JSON line (`perf/marks.ts`). The parent reads `process.hrtime` just before the
+      spawn, on the same monotonic clock, and times each mark from it.
+- **A key press** is `flushSync(key)` and `renderOnce()`, timed inside one promise so that no other fiber runs inside
+  the measurement. The table also counts the presses that changed the `Nav`: a press that changes nothing measured
+  nothing.
+- **While loading** uses a copy of `huge` with the 10,001-span trace's lines moved to the front, because in `huge` it
+  arrives in the last 4 % of the file. The store does not depend on record order. Between presses the harness yields
+  to the event loop, so the store indexes a slice; only presses that start while the phase is `loading` count, and
+  it reloads a fresh store until each scenario has 200.
+- **Live publish** follows a copy of `huge`. A writer appends 500 lines every 100 ms for 30 s, half into new traces
+  of about 9 spans and half into existing traces, built from the file's first 5,000 records with new ids and current
+  start times. A wrapper on `Index.prototype.freeze` marks the start of each publish; when the snapshot atom changes,
+  the harness draws with `renderOnce` and times the publish from the start of `freeze` to the end of the frame. Key
+  presses wait while a publish is in flight, so neither is timed inside the other. The table also shows `freeze`
+  alone, the two halves (to the snapshot atom's listeners, which run after the atoms that depend on it recompute,
+  and from there to the frame), and the publishes on each screen. Each frame is checked for the published span count.
+- **Search** runs on the big run's Traces list, which holds 96 % of the spans. The Runs screen covers them all but
+  stops at the first matching span of each run, so it does less work. Before each repetition the harness clears the
+  filter and matches throwaway terms on the smallest trace, which pushes the query out of the term caches in
+  `src/query/Match.ts`, so every repetition parses and scans afresh. A wrapper on `setTimeout` marks the moment the
+  150 ms debounce fires, since `Effect.sleep` is a `setTimeout`. The time runs from there to the end of the
+  `renderOnce` after the list atom shows the filter.
+- **The fixture**: if `huge` is missing, the harness generates it once with
+  `pnpm exec tsx packages/effect/scripts/sample-fixture.ts huge`.
+- **Output**: a table on stdout with each metric, its budget, its median/p95/max and pass or fail, and the load
+  average before and after; `--json` for machine-readable output; exit 1 on any miss. Nothing is committed.
 
 ## Data-layer measurements
 
-`pnpm --filter @wmaurer/otelscope perf:publish live|full` runs `perf/publish.ts` in process from source, with no
-renderer. It measures the store's `freeze` (the publish without the re-render) on `huge`. Step 7's `perf/run.ts` can
-absorb it. Measured on the reference machine on 2026-10-09, five runs of each mode, alternated, at load 1.2 to 3.3:
+These were measured with `perf/publish.ts`, in process from source, with no renderer: the store's `freeze` (the
+publish without the re-render) on `huge`. `perf/run.ts` has since absorbed it: its live-publish section reports
+`freeze` alone beside the whole publish. Measured on the reference machine on 2026-10-09, five runs of each mode,
+alternated, at load 1.2 to 3.3:
 
 | Mode   | Scenario                                                                                                                                             | Result                                                                                                             |
 | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
