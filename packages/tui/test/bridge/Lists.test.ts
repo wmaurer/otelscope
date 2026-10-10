@@ -161,4 +161,25 @@ describe("listAtom", () => {
         registry.set(now, at + 11_000);
         expect(list(), "nothing can be live, so time passing rebuilds nothing").toBe(idle);
     });
+
+    it("keeps the list across a publish that changed no trace, and rebuilds it for one that did", () => {
+        const index = ingestAll(new Index(), [line(record({ span: "a", run: "r1", trace: "t1", startMs: 1000 }))]);
+        const registry = AtomRegistry.make();
+        const source = Atom.make(index.freeze({ ...status, phase: "loading" }));
+        const navAtom = Atom.make(onTraces());
+        const list = listAtom(source, navAtom, Atom.make(0), settledFilter(navAtom));
+        registry.mount(list);
+        const built = registry.get(list);
+
+        registry.set(source, index.freeze({ ...status, phase: "loading", bytesRead: 100 }));
+        expect(registry.get(list), "only the status moved").toBe(built);
+
+        registry.set(source, index.freeze({ ...status, phase: "following", bytesRead: 100 }));
+        const caughtUp = registry.get(list);
+        expect(caughtUp, "the phase decides which traces are live").not.toBe(built);
+
+        ingestAll(index, [line(record({ span: "b", run: "r1", trace: "t2", startMs: 2000 }))]);
+        registry.set(source, index.freeze({ ...status, phase: "following", bytesRead: 200 }));
+        expect(keys(registry.get(list))).toEqual(["t:t1", "t:t2"]);
+    });
 });

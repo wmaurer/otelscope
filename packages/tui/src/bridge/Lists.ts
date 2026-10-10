@@ -5,7 +5,7 @@ import { assemble, layoutOf, listKey, stageOf } from "../model/screenList.ts";
 import { top } from "../nav/Nav.ts";
 
 import type { Snapshot } from "../data/Snapshot.ts";
-import type { ScreenList } from "../model/screenList.ts";
+import type { ListKey, ScreenList, Stage } from "../model/screenList.ts";
 import type { Nav } from "../nav/Nav.ts";
 
 export const SEARCH_DEBOUNCE_MILLIS = 150;
@@ -48,6 +48,19 @@ export const settledFilter = (nav: Atom.Atom<Nav>): Atom.Atom<string> => {
     );
 };
 
+interface Staged {
+    readonly key: ListKey;
+    readonly snapshot: Snapshot;
+    readonly stage: Stage;
+}
+
+/** Whether a stage built from `before` holds for `after`: the parts of a snapshot that `stageOf` reads are the same. */
+const sameLists = (before: Snapshot, after: Snapshot): boolean =>
+    before.runs === after.runs &&
+    before.runOrder === after.runOrder &&
+    before.traces === after.traces &&
+    before.status.phase === after.status.phase;
+
 export const listAtom = (
     snapshot: Atom.Atom<Snapshot>,
     nav: Atom.Atom<Nav>,
@@ -57,7 +70,17 @@ export const listAtom = (
     const key = Atom.make((get) => listKey(top(get(nav)), get(filter), get(snapshot), get(now))).pipe(
         Atom.withEquality(Equal.equals),
     );
-    const stage = Atom.make((get) => stageOf(get(key), get(snapshot)));
+    // A publish that changed no trace, such as the one at each `CaughtUp` while following, keeps the stage, so a list
+    // over every trace of a run is not built again for the status bar's sake.
+    const staged = Atom.make((get): Staged => {
+        const next = get(key);
+        const latest = get(snapshot);
+        const shown = get.self<Staged>();
+        return Option.isSome(shown) && Equal.equals(shown.value.key, next) && sameLists(shown.value.snapshot, latest)
+            ? shown.value
+            : { key: next, snapshot: latest, stage: stageOf(next, latest) };
+    });
+    const stage = Atom.map(staged, (current) => current.stage);
     const layout = Atom.make((get) => layoutOf(get(stage), top(get(nav)))).pipe(Atom.withEquality(Equal.equals));
     return Atom.make((get) => assemble(get(stage), get(layout)));
 };
