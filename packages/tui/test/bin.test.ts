@@ -1,13 +1,15 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "@effect/vitest";
+import { Effect, Schema } from "effect";
 
 const bin = fileURLToPath(new URL("../src/bin.ts", import.meta.url));
 const sample = fileURLToPath(new URL("fixtures/sample/spans.jsonl", import.meta.url));
+const PackageJson = Schema.fromJsonString(Schema.Struct({ version: Schema.String }));
 
 // Piped stdio, so the process never sees a terminal.
 const otelscope = (...argv: ReadonlyArray<string>) => {
@@ -28,9 +30,14 @@ describe("otelscope bin", () => {
         expect(stderr).toContain("Missing required argument: file");
     });
 
-    it("prints the version and exits 0", () => {
-        expect(otelscope("--version")).toEqual({ status: 0, stdout: "otelscope 0.1.0\n", stderr: "" });
-    });
+    it.effect("prints the version and exits 0", () =>
+        Effect.gen(function* () {
+            const { version } = yield* Schema.decodeEffect(PackageJson)(
+                readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+            );
+            expect(otelscope("--version")).toEqual({ status: 0, stdout: `otelscope ${version}\n`, stderr: "" });
+        }),
+    );
 
     it("leaves NODE_ENV as the user had it, for every process it starts", () => {
         const { NODE_ENV: _, ...env } = process.env;

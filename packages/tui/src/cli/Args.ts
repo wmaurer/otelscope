@@ -1,8 +1,20 @@
-import { Console, Effect, Exit, Option, Path, Ref, Runtime, Schema } from "effect";
+import { Console, Effect, Exit, FileSystem, Option, Path, Ref, Runtime, Schema } from "effect";
 import { Argument, CliConfig, CliOutput, Command, Flag, GlobalFlag } from "effect/cli";
 import { TestConsole } from "effect/testing";
 
-const version = "0.1.0";
+// `src/cli/Args.ts` and `dist/cli/Args.js` both sit two levels below the package root, and npm always ships
+// `package.json`.
+const packageJson = new URL("../../package.json", import.meta.url);
+
+const PackageJson = Schema.fromJsonString(Schema.Struct({ version: Schema.String }));
+
+const readVersion = Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const text = yield* fs.readFileString(yield* path.fromFileUrl(packageJson));
+    const { version } = yield* Schema.decodeEffect(PackageJson)(text);
+    return version;
+}).pipe(Effect.orDie);
 
 export interface CliArgs {
     /** Absolute. */
@@ -65,7 +77,7 @@ export const parse = Effect.fnUntraced(function* (argv: ReadonlyArray<string>) {
     const parsed = yield* Ref.make(Option.none<CliArgs>());
     const run = Command.runWith(
         command((args) => Ref.set(parsed, Option.some(args))),
-        { version },
+        { version: yield* readVersion },
     );
     const recorder = yield* TestConsole.make;
     const replay = Effect.fnUntraced(function* (usageError: boolean) {

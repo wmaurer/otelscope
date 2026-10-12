@@ -12,8 +12,8 @@ otelscope --help | --version
 
 - Package `@wmaurer/otelscope`, bin `otelscope`, so `npx @wmaurer/otelscope spans.jsonl` runs it.
 - **Parsed with `effect/cli`** (`Command`, `Argument`, `Flag`) in `src/cli/`. Only the `Help` and `Version` built-ins
-  are enabled, which drops `--wizard`, `--completions` and `--log-level`. `--version` prints `otelscope 0.1.0` (the
-  package version).
+  are enabled, which drops `--wizard`, `--completions` and `--log-level`. `--version` prints `otelscope <version>`, the
+  `version` field of the package's `package.json`, read at run time.
 - **`<file>`**: one required positional argument. No default path (`JsonlTrace.layer` has none) and no `-` for stdin,
   which would rule out following, the head-hash guard and `bodies/`.
 - **`--no-follow`**: read the file once, with no watcher and no Reset handling. The phase reads `read once` when done.
