@@ -97,6 +97,11 @@ that Effect captures when the span opens, and are `null` when Effect captured no
 `fiber` is the id of the fiber that opened the span. It is the same number as `effect.fiberId` on the span's log
 events. It is `null` when no fiber ran with the span as its current span.
 
+### Changes in 0.3.1
+
+- `withSites` is exported, for a program that builds its own tracer. See
+  [Building the tracer yourself](#building-the-tracer-yourself).
+
 ### Changes in 0.3
 
 - `ms` is no longer a whole number. It is exact to the microsecond, as are `offsetMs` and the new `startMs`.
@@ -126,6 +131,30 @@ A body over 1,000,000 characters is truncated before it is stored, so for such a
 truncated text while `bytes` measures the full one.
 
 Without `bodies: true`, `.body` attributes stay inline like any other attribute.
+
+## Building the tracer yourself
+
+`JsonlTrace.layer` is made of parts that the package exports. Use them when a program must do more with each
+batch than append it to a file, for example also send it to a collector. `ReceiverClient.layer` gives
+`OtlpTracer` an `HttpClient` that passes each batch to your function in the same process. `JsonlSink.make`
+gives a function that appends spans to the file, and `spansOf` takes the spans out of a batch.
+
+Wrap the tracer with `withSites`. It sets the attributes that become `site`, `def` and `fiber`. Without it,
+those fields are `null` in every record:
+
+```ts
+import { Effect, Layer, Tracer } from "effect";
+import { OtlpSerialization, OtlpTracer } from "effect/observability";
+import { ReceiverClient, withSites } from "@wmaurer/otelscope-effect";
+
+const otlp = OtlpTracer.layer({ url: "http://receiver.invalid/v1/traces", resource: { serviceName: "my-app" } }).pipe(
+    Layer.provide(OtlpSerialization.layerJson),
+    Layer.provide(ReceiverClient.layer(ingest)),
+);
+const tracer = Layer.effect(Tracer.Tracer, Effect.map(Tracer.Tracer, withSites)).pipe(Layer.provide(otlp));
+```
+
+The URL is never contacted, because `ReceiverClient` answers every request itself.
 
 ## Reading the format
 
