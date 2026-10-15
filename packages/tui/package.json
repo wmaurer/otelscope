@@ -31,12 +31,12 @@
         "prepublishOnly": "pnpm build && pnpm test"
     },
     "dependencies": {
-        "@effect/atom-react": "4.0.1",
-        "@effect/platform-node": "4.0.1",
+        "@effect/atom-react": "^4.0.1",
+        "@effect/platform-node": "^4.0.1",
         "@opentui/core": "0.5.14",
         "@opentui/react": "0.5.14",
         "@wmaurer/otelscope-effect": "workspace:^",
-        "effect": "4.0.1",
+        "effect": "^4.0.1",
         "react": "~19.2.0",
         "scheduler": "^0.27.0"
     },

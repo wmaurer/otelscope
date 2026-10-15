@@ -72,12 +72,12 @@ Files with JSX are `.tsx`; everything else is `.ts`. Nothing outside `ui/` and `
         "prepublishOnly": "pnpm build && pnpm test"
     },
     "dependencies": {
-        "@effect/atom-react": "<effect version>",
-        "@effect/platform-node": "<effect version>",
+        "@effect/atom-react": "^<effect version>",
+        "@effect/platform-node": "^<effect version>",
         "@opentui/core": "0.5.14",
         "@opentui/react": "0.5.14",
         "@wmaurer/otelscope-effect": "workspace:^",
-        "effect": "<effect version>",
+        "effect": "^<effect version>",
         "react": "~19.2.0",
         "scheduler": "^0.27.0"
     },
@@ -89,9 +89,13 @@ Files with JSX are `.tsx`; everything else is `.ts`. Nothing outside `ui/` and `
 }
 ```
 
-- `<effect version>` is one exact version for all four Effect packages ([README](README.md#packages-and-pinned-versions)),
+- `<effect version>` is one version for all four Effect packages ([README](README.md#packages-and-pinned-versions)),
   matching `packages/effect`'s dev dependency. Bump them together.
-- `workspace:^` publishes as `^0.3.0`. Effect is a normal, exactly pinned dependency because this is an app.
+- The three runtime Effect packages take a caret range, not an exact pin. The published package has no lockfile, and
+  `@effect/platform-node` depends on `@effect/platform-node-shared` by caret range. With `effect` pinned exactly, a
+  fresh install pulls the newest `platform-node-shared`, which can need a newer `effect` than the pin and fail at
+  import. A caret range lets npm resolve one matching set. The lockfile still pins the version the tests run on.
+- `workspace:^` publishes as `^0.3.0`.
 - `scheduler` is listed because `@effect/atom-react` declares it as a peer; `^0.27.0` is what `react-reconciler`
   0.33 uses. If OpenTUI moves to `react-reconciler` 0.34, check the peer range before upgrading.
 - **Bin only**: no programmatic API in v1.

@@ -57,10 +57,10 @@ importers:
   packages/tui:
     dependencies:
       '@effect/atom-react':
-        specifier: 4.0.1
+        specifier: ^4.0.1
         version: 4.0.1(effect@4.0.1)(react@19.2.8)(scheduler@0.27.0)
       '@effect/platform-node':
-        specifier: 4.0.1
+        specifier: ^4.0.1
         version: 4.0.1(effect@4.0.1)(redis@6.3.0)
       '@opentui/core':
         specifier: 0.5.14
@@ -72,7 +72,7 @@ importers:
         specifier: workspace:^
         version: link:../effect
       effect:
-        specifier: 4.0.1
+        specifier: ^4.0.1
         version: 4.0.1
       react:
         specifier: ~19.2.0

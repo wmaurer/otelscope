@@ -54,7 +54,7 @@ closed and resolves the places where they had drifted apart (see [Settled while 
 
 The viewer's dependencies are pinned as [02-package.md](02-package.md) lists. The ones that must move together:
 
-- `effect`, `@effect/platform-node`, `@effect/atom-react` and `@effect/vitest` at **one exact version**, the one in
+- `effect`, `@effect/platform-node`, `@effect/atom-react` and `@effect/vitest` at **one version**, the one in
   the lockfile when work starts (4.0.1 today; `@effect/atom-react` 4.0.2 needs `effect ^4.0.2`, so bumping all four to
   4.0.2 together is fine). The Atom core is `effect/reactivity` inside `effect`; there is no separate atom package.
 - `@opentui/core` and `@opentui/react` at the same exact version (0.5.14 today), with `react ~19.2.0`.
