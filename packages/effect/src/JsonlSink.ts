@@ -1,4 +1,5 @@
-import { Array as Arr, Console, Crypto, Effect, FileSystem, Path, PlatformError, Ref } from "effect";
+import { Array as Arr, Console, Effect, FileSystem, Path, PlatformError, Ref } from "effect";
+import { Digest } from "effect/crypto";
 
 import { type Body, type SlimSpan, slimSpan } from "./format/Bodies.ts";
 import { toLines } from "./format/Jsonl.ts";
@@ -25,8 +26,6 @@ export interface JsonlSinkOptions {
 export const make = Effect.fn(function* (options: JsonlSinkOptions) {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    // The writer runs in the exporter's fiber, which does not carry the services this sink is opened with.
-    const context = yield* Effect.context<Crypto.Crypto>();
     const bodiesDir = path.join(path.dirname(options.file), "bodies");
 
     const writing = yield* Ref.make(true);
@@ -72,5 +71,5 @@ export const make = Effect.fn(function* (options: JsonlSinkOptions) {
                 ),
                 { flag: "a" },
             );
-        }).pipe(Effect.catch(stopWriting), Effect.provideContext(context));
+        }).pipe(Effect.catch(stopWriting), Effect.provide(Digest.layerWebCrypto));
 });

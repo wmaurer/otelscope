@@ -1,6 +1,6 @@
-import { NodeServices } from "@effect/platform-node";
 import { assert, describe, it } from "@effect/vitest";
 import { Effect } from "effect";
+import { Digest } from "effect/crypto";
 
 import { PREVIEW_CHARS, slimSpan } from "../../src/format/Bodies.ts";
 import { plainAttributes } from "../../src/format/Jsonl.ts";
@@ -24,7 +24,7 @@ describe("slimSpan", () => {
             assert.strictEqual(attrs["ticket.key"], "PROJ-412");
             assert.isFalse("prompt.body" in attrs);
             assert.deepStrictEqual(bodies, [{ sha256: String(attrs["prompt.sha256"]), text: "hello world" }]);
-        }).pipe(Effect.provide(NodeServices.layer)),
+        }).pipe(Effect.provide(Digest.layerWebCrypto)),
     );
 
     it.effect("caps the preview but reports the full UTF-8 byte length", () =>
@@ -36,7 +36,7 @@ describe("slimSpan", () => {
             const attrs = plainAttributes(span.attributes);
             assert.lengthOf(String(attrs["response.preview"]), PREVIEW_CHARS);
             assert.strictEqual(attrs["response.bytes"], 1500);
-        }).pipe(Effect.provide(NodeServices.layer)),
+        }).pipe(Effect.provide(Digest.layerWebCrypto)),
     );
 
     it.effect("truncates a body past the cap and says so in the stored text", () =>
@@ -48,7 +48,7 @@ describe("slimSpan", () => {
 
             assert.strictEqual(bodies[0]?.text, `${"y".repeat(100)}\ntruncated 150 chars`);
             assert.strictEqual(plainAttributes(span.attributes)["prompt.bytes"], 250);
-        }).pipe(Effect.provide(NodeServices.layer)),
+        }).pipe(Effect.provide(Digest.layerWebCrypto)),
     );
 
     it.effect("leaves a span without a .body attribute unchanged", () =>
@@ -58,6 +58,6 @@ describe("slimSpan", () => {
 
             assert.deepStrictEqual(span, original);
             assert.lengthOf(bodies, 0);
-        }).pipe(Effect.provide(NodeServices.layer)),
+        }).pipe(Effect.provide(Digest.layerWebCrypto)),
     );
 });

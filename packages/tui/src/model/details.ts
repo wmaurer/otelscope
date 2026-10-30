@@ -32,7 +32,8 @@ export interface DetailsEnv {
     readonly width: number;
 }
 
-const HIDDEN: ReadonlySet<string> = new Set(["span.label", "status.interrupted"]);
+// `effect.fiber.interrupted` since Effect 4.1; `span.label` and `status.interrupted` in files written under 4.0.
+const HIDDEN: ReadonlySet<string> = new Set(["effect.fiber.interrupted", "span.label", "status.interrupted"]);
 const BODY_SUFFIXES = [".sha256", ".bytes", ".preview"];
 const PROBLEMS_SHOWN = 20;
 

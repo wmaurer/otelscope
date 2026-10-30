@@ -11,12 +11,12 @@ or network is involved. Every exported span is appended to the file as one JSON 
 pnpm add @wmaurer/otelscope-effect effect
 ```
 
-`effect` (v4) is a peer dependency.
+`effect` (4.1 or later) is a peer dependency.
 
 ## Usage
 
 Provide `JsonlTrace.layer` as the outermost layer, so the tracer is installed before any other layer is
-built. It needs `FileSystem`, `Path` and `Crypto`, which `NodeServices.layer` from `@effect/platform-node`
+built. It needs `FileSystem` and `Path`, which `NodeServices.layer` from `@effect/platform-node`
 provides:
 
 ```ts
@@ -96,6 +96,15 @@ that Effect captures when the span opens, and are `null` when Effect captured no
 
 `fiber` is the id of the fiber that opened the span. It is the same number as `effect.fiberId` on the span's log
 events. It is `null` when no fiber ran with the span as its current span.
+
+### Changes in 0.4
+
+- `effect` 4.1 or later is required. 4.1 removed the `Crypto` service that 0.3 imports, so 0.3 fails at import
+  under 4.1.
+- `JsonlTrace.layer` and `JsonlSink.make` no longer need `Crypto`, only `FileSystem` and `Path`. `slimSpan` needs
+  `Digest` from `effect/crypto`.
+- An interrupted span carries Effect's `effect.fiber.interrupted` attribute instead of `span.label` and
+  `status.interrupted`. Its `exit` is still `Interrupted`.
 
 ### Changes in 0.3.1
 

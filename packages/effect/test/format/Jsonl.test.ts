@@ -55,8 +55,8 @@ describe("toRecord", () => {
         const interrupted = otlpSpan({
             name: "cut",
             spanId: "s2",
-            status: { code: 1, message: "Interrupted" },
-            attributes: [{ key: "status.interrupted", value: { boolValue: true } }],
+            status: { code: 0 },
+            attributes: [{ key: "effect.fiber.interrupted", value: { boolValue: true } }],
         });
         const ok = otlpSpan({ name: "good", spanId: "s3" });
 

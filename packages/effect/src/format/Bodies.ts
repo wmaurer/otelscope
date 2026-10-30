@@ -1,5 +1,5 @@
-import { Array as Arr, Crypto, Effect } from "effect";
-import { Hex } from "effect/encoding";
+import { Array as Arr, Effect } from "effect";
+import { Digest } from "effect/crypto";
 
 import type { KeyValue, Span } from "./TraceData.ts";
 
@@ -33,9 +33,9 @@ export const capBody = (content: string, maxChars: number): string => {
 // `sha256` addresses the stored text, which is truncated past `maxChars`. `bytes` measures the full text, so
 // the two describe different strings for a body over the cap.
 const extract = Effect.fn(function* (prefix: string, content: string, maxChars: number) {
-    const crypto = yield* Crypto.Crypto;
+    const digest = yield* Digest.Digest;
     const text = capBody(content, maxChars);
-    const sha256 = Hex.encode(yield* crypto.digest("SHA-256", utf8.encode(text)));
+    const sha256 = yield* digest.digestHex(Digest.sha256, utf8.encode(text));
     const attributes: ReadonlyArray<KeyValue> = [
         { key: `${prefix}.sha256`, value: { stringValue: sha256 } },
         { key: `${prefix}.bytes`, value: { intValue: utf8.encode(content).length } },

@@ -74,6 +74,14 @@ describe("JsonlTrace.layer", () => {
         assert.isTrue(Arr.every(rows, (r) => r.service === "test"));
     });
 
+    it("writes Interrupted for a span whose fiber was interrupted", async () => {
+        const file = tempFile();
+        await run(Effect.never.pipe(Effect.withSpan("cut"), Effect.timeout("10 millis"), Effect.ignore), file);
+
+        const cut = named(records(file), "cut");
+        assert.strictEqual(cut?.exit, "Interrupted");
+    });
+
     it("writes lines that JsonlSpanRecord decodes", async () => {
         const file = tempFile();
         await run(program, file);

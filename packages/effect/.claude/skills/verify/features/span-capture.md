@@ -57,5 +57,5 @@ Preconditions:
   `parent` and `span`, never by line order.
 - `startMs`, `ms` and `offsetMs` are milliseconds to the microsecond and differ on every run. Assert ranges, not
   exact values.
-- An interrupted span carries extra attributes from Effect (`span.label`, `status.interrupted`). They are
-  Effect's, not this package's.
+- An interrupted span carries an extra attribute from Effect (`effect.fiber.interrupted`). It is Effect's, not
+  this package's.

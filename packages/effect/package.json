@@ -43,13 +43,13 @@
         "prepublishOnly": "pnpm build && pnpm test"
     },
     "devDependencies": {
-        "@effect/platform-node": "4.0.1",
-        "@effect/vitest": "4.0.1",
-        "effect": "4.0.1",
+        "@effect/platform-node": "4.1.0",
+        "@effect/vitest": "4.1.0",
+        "effect": "4.1.0",
         "vitest": "^5.0.3"
     },
     "peerDependencies": {
-        "effect": "^4.0.1"
+        "effect": "^4.1.0"
     },
     "engines": {
         "node": ">=22.18"

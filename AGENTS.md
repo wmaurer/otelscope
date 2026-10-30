@@ -38,11 +38,11 @@ Commit messages must not carry a `Co-Authored-By` line naming Claude, because th
 
 ## Effect Package (`packages/effect/`)
 
-`@wmaurer/otelscope-effect` is published to npm. `JsonlTrace.layer` installs Effect's OTLP tracer and appends every exported span to a JSONL file, one `JsonlSpanRecord` per line. `ReceiverClient` answers the tracer's export requests in process, so no collector or network is involved. The layer needs `FileSystem`, `Path` and `Crypto` from the caller, and it must be provided outermost, so the tracer is installed before any other layer is built.
+`@wmaurer/otelscope-effect` is published to npm. `JsonlTrace.layer` installs Effect's OTLP tracer and appends every exported span to a JSONL file, one `JsonlSpanRecord` per line. `ReceiverClient` answers the tracer's export requests in process, so no collector or network is involved. The layer needs `FileSystem` and `Path` from the caller, and it must be provided outermost, so the tracer is installed before any other layer is built.
 
 Tracing must never fail the program it observes. The sink's writer never fails: its first write failure prints one warning to stderr and stops further writes. `ReceiverClient` always answers 200, because on any other status the exporter drops its buffer and stops exporting for 60 seconds; a batch that cannot be decoded is reported on stderr and dropped instead. Keep both properties when changing these modules.
 
-`effect` is a peer dependency (`^4`), and a dev dependency pinned to the version tested against. Sources import each other with `.ts` extensions; `tsc -p tsconfig.build.json` rewrites them to `.js` in `dist/`. The package ships `dist/` and `src/`.
+`effect` is a peer dependency (`^4.1.0`), and a dev dependency pinned to the version tested against. Sources import each other with `.ts` extensions; `tsc -p tsconfig.build.json` rewrites them to `.js` in `dist/`. The package ships `dist/` and `src/`.
 
 To release: bump `version` in `packages/effect/package.json`, commit, and run `pnpm publish` from `packages/effect`. Its `prepublishOnly` script rebuilds `dist/` and runs the tests first. A published version can never be reused, even after an unpublish, so publish only when the user asks. The user's npm account may need a one-time code, so the user may prefer to run the publish themselves. Update `README.md` when the public API or the record format changes, since it is the npm page.
 

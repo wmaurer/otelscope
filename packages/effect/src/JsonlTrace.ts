@@ -1,4 +1,4 @@
-import { Crypto, DateTime, Effect, FileSystem, Layer, Path, Random, Tracer } from "effect";
+import { DateTime, Effect, FileSystem, Layer, Path, Random, Tracer } from "effect";
 import { OtlpSerialization, OtlpTracer } from "effect/observability";
 
 import { spansOf } from "./format/TraceData.ts";
@@ -29,9 +29,7 @@ export const makeRunId: Effect.Effect<string> = Effect.gen(function* () {
 
 // Installs Effect's OTLP tracer and writes every span it exports to `file`. Provide it as the outermost layer,
 // so the tracer is installed before any other layer is built.
-export const layer = (
-    options: JsonlTraceOptions,
-): Layer.Layer<never, never, FileSystem.FileSystem | Path.Path | Crypto.Crypto> =>
+export const layer = (options: JsonlTraceOptions): Layer.Layer<never, never, FileSystem.FileSystem | Path.Path> =>
     Layer.unwrap(
         Effect.gen(function* () {
             const runId = options.runId ?? (yield* makeRunId);

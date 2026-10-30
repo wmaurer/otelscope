@@ -81,8 +81,8 @@ const location = (attrs: Attributes, keys: LocationKeys): Location | null =>
 
 const exitOf = (span: Span, attrs: Attributes): JsonlSpanRecord["exit"] => {
     if (span.status.code === STATUS_ERROR) return "Failure";
-    // Effect's tracer reports an interrupted span with status Ok and this attribute.
-    return attrs["status.interrupted"] === true ? "Interrupted" : "Success";
+    // Effect's tracer reports an interrupted span with status Unset and this attribute.
+    return attrs["effect.fiber.interrupted"] === true ? "Interrupted" : "Success";
 };
 
 export const toRecord = (run: string, service: string, span: Span): JsonlSpanRecord => {

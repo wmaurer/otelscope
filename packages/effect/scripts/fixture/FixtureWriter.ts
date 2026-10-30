@@ -1,7 +1,6 @@
 import {
     Array as Arr,
     Clock,
-    Crypto,
     DateTime,
     Effect,
     FileSystem,
@@ -13,6 +12,7 @@ import {
     Record,
     Tracer,
 } from "effect";
+import { Digest } from "effect/crypto";
 import { OtlpSerialization, OtlpTracer } from "effect/observability";
 
 import {
@@ -110,13 +110,11 @@ const RECEIVER_URL = "http://otelscope.invalid/v1/traces";
 // - it exports once, at shutdown, so no file I/O interleaves with the program while it runs;
 // - each record is normalised before it is written;
 // - each write is held, so virtual time stands still during file I/O. Without it, spans are dropped at shutdown.
-export const layer = (options: Options): Layer.Layer<never, never, FileSystem.FileSystem | Path.Path | Crypto.Crypto> =>
+export const layer = (options: Options): Layer.Layer<never, never, FileSystem.FileSystem | Path.Path> =>
     Layer.unwrap(
         Effect.gen(function* () {
             const fs = yield* FileSystem.FileSystem;
             const path = yield* Path.Path;
-            // The writer runs in the exporter's fiber, which does not carry the services this layer is built with.
-            const context = yield* Effect.context<Crypto.Crypto>();
             const bodiesDir = path.join(path.dirname(options.file), "bodies");
             yield* Effect.orDie(fs.makeDirectory(bodiesDir, { recursive: true }));
 
@@ -131,7 +129,7 @@ export const layer = (options: Options): Layer.Layer<never, never, FileSystem.Fi
                         (s) => `${JSON.stringify(options.normalise(toRecord(options.run, options.service, s.span)))}\n`,
                     );
                     yield* fs.writeFileString(options.file, Arr.join(lines, ""), { flag: "a" });
-                }).pipe(Effect.orDie, Effect.provideContext(context), options.hold);
+                }).pipe(Effect.orDie, Effect.provide(Digest.layerWebCrypto), options.hold);
 
             const otlp = OtlpTracer.layer({
                 url: RECEIVER_URL,

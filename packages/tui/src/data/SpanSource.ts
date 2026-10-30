@@ -27,7 +27,7 @@ const noBytes = new Uint8Array(0);
 
 interface Reading {
     readonly _tag: "Reading";
-    readonly ino: Option.Option<number>;
+    readonly ino: Option.Option<bigint>;
     readonly offset: number;
     readonly pending: Uint8Array;
     readonly nextLine: number;
@@ -40,7 +40,7 @@ type Tail = { readonly _tag: "Unreported" } | { readonly _tag: "ReportedMissing"
 const unreported: Tail = { _tag: "Unreported" };
 const reportedMissing: Tail = { _tag: "ReportedMissing" };
 
-const fresh = (ino: Option.Option<number>): Reading => ({
+const fresh = (ino: Option.Option<bigint>): Reading => ({
     _tag: "Reading",
     ino,
     offset: 0,
@@ -94,7 +94,7 @@ const rewrittenUnderOffset = (file: FileSystem.File, tail: Reading) =>
 const resetReason = Effect.fnUntraced(function* (
     file: FileSystem.File,
     tail: Reading,
-    ino: Option.Option<number>,
+    ino: Option.Option<bigint>,
     size: number,
 ) {
     if (Option.isSome(tail.ino) && Option.isSome(ino) && tail.ino.value !== ino.value) {

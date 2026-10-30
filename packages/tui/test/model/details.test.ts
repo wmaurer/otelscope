@@ -165,11 +165,12 @@ describe("the span sections", () => {
 });
 
 describe("shownAttributes", () => {
-    it("hides span.label, status.interrupted and each body's keys, and sorts the rest", () => {
+    it("hides the interrupted markers of Effect 4.1 and 4.0 and each body's keys, and sorts the rest", () => {
         const s = record({
             span: "s",
             attrs: {
                 "z.last": true,
+                "effect.fiber.interrupted": true,
                 "span.label": "x",
                 "status.interrupted": true,
                 "b.sha256": "h",

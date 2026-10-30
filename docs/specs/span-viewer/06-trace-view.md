@@ -211,7 +211,8 @@ selection changes) and has no cursor.
    `<prefix>.preview`. A truncated body's row is marked `⚠ truncated`, and a body whose file is missing `⚠ missing`, from
    `Bodies.stat` (the file's size against `.bytes`). A click on a row opens it in the Body screen.
 4. **Attributes**: sorted by key, `key  value`, values as strings (arrays and `null` as JSON), long values wrapped.
-   Hidden: `span.label`, `status.interrupted` (the exit says it), and each body's `.sha256`, `.bytes` and `.preview`
+   Hidden: `effect.fiber.interrupted`, and `span.label` and `status.interrupted` from files written under Effect 4.0
+   (the exit says it), and each body's `.sha256`, `.bytes` and `.preview`
    (shown under Bodies).
 5. **Events (n)**: every event in offset order, `+offset  name  key=value …` with the offset from the span's start.
    A log shows its level; an `exception` event shows `exception  Type: message` without the stack (Cause has it).
