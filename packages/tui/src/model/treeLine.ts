@@ -50,7 +50,7 @@ export const guides = (entry: TreeEntry): string => {
     return `⋯${entry.depth} ${railCells(entry.rails, SHOWN_LEVELS - 1)}${own}`;
 };
 
-const foldMark = (fold: Fold): string => (fold === "open" ? "▾" : fold === "folded" ? "▸" : " ");
+const foldMark = { open: "▾", folded: "▸", leaf: " " } satisfies Readonly<Record<Fold, string>>;
 
 const glyphs = {
     origin: chunk("✗ ", "failure"),
@@ -106,7 +106,7 @@ export const treeLeft = (entry: TreeEntry, env: TreeLineEnv, selected: boolean):
                     glyphs[kind],
                     ...nameCells(
                         guides(entry),
-                        foldMark(entry.fold),
+                        foldMark[entry.fold],
                         highlighted(
                             name,
                             kind === "origin" ? "failure" : "text",
@@ -148,7 +148,7 @@ export const treeLeft = (entry: TreeEntry, env: TreeLineEnv, selected: boolean):
                     blank(GUTTER + GLYPH),
                     ...nameCells(
                         "",
-                        foldMark(entry.fold),
+                        foldMark[entry.fold],
                         [chunk(`⋯ missing parent ${shortId(entry.parentId)}…`, "muted")],
                         entry.fold === "folded" ? search.belowMissing(entry.parentId) : 0,
                         nameColumn,

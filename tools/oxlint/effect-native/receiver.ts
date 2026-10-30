@@ -66,9 +66,9 @@ function lookup(scope: Scope | null, name: string): Variable | undefined {
  *  disqualifies the name — an import, a local `const`, a parameter. Only an unbound name is the
  *  global.
  *
- *  Exported rather than copied. `nested-array-pipeline` duplicates `lookup` deliberately, because
- *  that copy belongs to a "prove this is an array" story it does not join; here the question is
- *  identical, so a second copy could drift into a second answer. */
+ *  Exported rather than copied: every rule that asks whether a name is the global asks the same
+ *  question, so a second copy could drift into a second answer. `effect-import.ts` keeps its own
+ *  `lookup`, because it asks which import a name is bound to, which this module does not ask. */
 export function isGlobalNamespace(name: string, node: ESTree.Node, sourceCode: SourceCode): boolean {
     const found = lookup(sourceCode.getScope(node), name);
     return found === undefined || found.defs.length === 0;

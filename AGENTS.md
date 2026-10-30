@@ -32,7 +32,7 @@ The packages are not hoisted to the root `node_modules/`. Reach them through a w
 
 The git `pre-push` hook runs `pnpm pre-push`, which is `fmt:check`, `lint`, `typecheck` and `test`. Run it yourself before you claim work is done. Do not edit `.git/hooks/pre-push`; edit the `pre-push` script in `package.json` instead.
 
-Generated and vendored files carry a "do not edit" banner: everything under `tools/oxlint/`, the five bundles in `scripts/`, `effect-rules.ts`, `correctness-rules.ts` and `tsconfig.effect.json`. They come from `../project-setup` and are replaced wholesale on upgrade. Change the source there, not the copy here.
+Generated and vendored files carry a "do not edit" banner: everything under `tools/oxlint/`, the six bundles in `scripts/`, `effect-rules.ts`, `correctness-rules.ts` and `tsconfig.effect.json`. They come from `../project-setup` and are replaced wholesale on upgrade. Change the source there, not the copy here.
 
 Commit messages must not carry a `Co-Authored-By` line naming Claude, because the `commit-msg` hook rejects them.
 

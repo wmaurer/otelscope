@@ -54,12 +54,11 @@ export const shownAttributes = (span: JsonlSpanRecord): ReadonlyArray<readonly [
 
 const plain = (line: Line): DetailRow => ({ line, body: Option.none() });
 
-const exitChunk = (span: JsonlSpanRecord): Chunk =>
-    span.exit === "Failure"
-        ? chunk("✗ Failure", "failure")
-        : span.exit === "Interrupted"
-          ? chunk("⊘ Interrupted", "interrupted")
-          : chunk("Success", "text");
+const exitChunk = {
+    Failure: chunk("✗ Failure", "failure"),
+    Interrupted: chunk("⊘ Interrupted", "interrupted"),
+    Success: chunk("Success", "text"),
+} satisfies Readonly<Record<JsonlSpanRecord["exit"], Chunk>>;
 
 const header = (span: JsonlSpanRecord, env: DetailsEnv): ReadonlyArray<Line> => {
     const { trace } = env.facts;
@@ -78,7 +77,7 @@ const header = (span: JsonlSpanRecord, env: DetailsEnv): ReadonlyArray<Line> => 
               ]
             : [];
     return [
-        [chunk(span.name, "text", true), chunk("  ", "text"), exitChunk(span)],
+        [chunk(span.name, "text", true), chunk("  ", "text"), exitChunk[span.exit]],
         [
             chunk(
                 `${duration(span.ms)} · ${offset(span.startMs - trace.startMs)} · ${clockTime(span.startMs, "millis")}`,

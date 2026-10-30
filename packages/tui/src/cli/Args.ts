@@ -25,7 +25,7 @@ export interface CliArgs {
 }
 
 /** The usage has already been printed to stderr when this fails. */
-export class UsageError extends Schema.TaggedError<UsageError>()("UsageError", {}) {
+export class UsageError extends Schema.TaggedError<UsageError, { readonly brand: unique symbol }>()("UsageError", {}) {
     override readonly [Runtime.errorExitCode] = 2;
 }
 

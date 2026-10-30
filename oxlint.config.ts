@@ -9,7 +9,7 @@ import { effectRules } from "./effect-rules.ts";
 // The `effecttsgo` plugin only exists because scripts/patch-tsgo.js patches oxlint's
 // tsgolint binding, and that patch is built against one specific oxlint build. A mismatch
 // already fails loudly (`Unknown plugin: 'effecttsgo'`, exit 1) but does not name the cause.
-const OXLINT_PINNED = "1.86.0";
+const OXLINT_PINNED = "1.90.0";
 const installedOxlint = createRequire(import.meta.url)("oxlint/package.json").version;
 if (installedOxlint !== OXLINT_PINNED) {
     throw new Error(
@@ -84,7 +84,7 @@ export default defineConfig({
         // rule that quietly stops firing. Spread first, so a severity below wins.
         ...correctnessRules,
 
-        // Every Effect rule, generated — see effect-rules.ts. All 118, including
+        // Every Effect rule, generated — see effect-rules.ts. All 135, including
         // the ones the `effecttsgo` plugin enables by itself: the generated file
         // states the whole rule set rather than only the part the plugin leaves
         // alone, so a severity is never left implicit. That is where the 13 the
@@ -96,7 +96,7 @@ export default defineConfig({
         // resolves.
         ...effectRules,
 
-        // Off, because it fires on the APIs this scaffold requires. Effect 4.0.1 marks
+        // Off, because it fires on the APIs this scaffold requires. Effect 4.1.0 marks
         // all of `effect/process` and `effect/cli` `@stability unstable`, and CLAUDE.md
         // sends every `node:child_process` call to `effect/process/ChildProcess` — so at
         // "warn" the rule fails `--max-warnings=0` on the first spawned process, with no
@@ -116,11 +116,13 @@ export default defineConfig({
         // `// oxlint-disable-next-line anti-slop/no-runtime-typeof` rather than
         // downgrading the rule for the whole repo. Adopting this in a codebase
         // that already has violations is the one case for starting at "warn".
+        "anti-slop/no-array-filter-map": "error",
         "anti-slop/no-chained-type-assertions": "error",
         "anti-slop/no-conditional-empty-object-spread": "error",
         "anti-slop/no-known-value-widening": "error",
         "anti-slop/no-module-mocking": "error",
         "anti-slop/no-object-parameters": "error",
+        "anti-slop/no-reduce-accumulator-copy": "error",
         "anti-slop/no-reflect-apply": "error",
         "anti-slop/no-reflect-get": "error",
         "anti-slop/no-runtime-typeof": "error",
@@ -131,8 +133,15 @@ export default defineConfig({
         "anti-slop/no-unsafe-dictionary-type": "error",
         "anti-slop/no-widen-then-assert": "error",
         "anti-slop/require-safety-comment-for-type-assertion": "error",
+        // Not enabled. It sets where blank lines go, which is a style choice and not a
+        // question of evidence like the rules above; see docs/features/anti-slop.md.
+        // "anti-slop/require-readable-spacing": "error",
 
+        "anti-slop-effect/no-manual-effect-error-tag": "error",
+        "anti-slop-effect/no-manual-tag-comparison": "error",
+        "anti-slop-effect/no-manual-tagged-construction": "error",
         "anti-slop-effect/no-service-constructor-imports": "error",
+        "anti-slop-effect/prefer-effect-match": "error",
 
         // prose: the English in comments. A fresh scaffold has no comments to violate these, so
         // "error" from the start costs nothing - the same argument anti-slop makes above. A
@@ -166,6 +175,17 @@ export default defineConfig({
         // message names what to build instead; there is no fixer. `"error"` for the same
         // exit-code reason as the three above.
         "effect-native/imperative-collection-build": "error",
+
+        // `JSON.parse(text)` passed straight to a Schema decoder, which throws on text that is not
+        // JSON instead of failing the decode. Upstream's `effecttsgo/prefer-schema-over-json`
+        // reports only inside an Effect context. Keep it on in tests: the fix,
+        // `Schema.fromJsonString`, checks the same JSON boundary a test wants to check.
+        "effect-native/json-parse-into-decode": "error",
+
+        // A row type passed to `sql` as a type argument, `` sql<Row>`...` ``, which states the row
+        // type without checking it. The fix is `SqlSchema` with a `Result` schema. Only a file that
+        // imports from Effect's SQL modules is checked, so another typed tag stays silent.
+        "effect-native/sql-type-argument": "error",
     },
 
     // These ten rules describe how production Effect code is written. The test tree deliberately
@@ -208,6 +228,11 @@ export default defineConfig({
             plugins: ["react"],
             rules: {
                 "react/rules-of-hooks": "error",
+                // Off until the viewer is moved over. Turning them on reports 171 `_tag` comparisons and 28
+                // `_tag` object literals across about 50 files, many on the index and render paths that
+                // `pnpm --filter @wmaurer/otelscope perf` gates, so the change needs a perf run of its own.
+                "anti-slop-effect/no-manual-tag-comparison": "off",
+                "anti-slop-effect/no-manual-tagged-construction": "off",
             },
         },
     ],
@@ -234,5 +259,7 @@ export default defineConfig({
         // repos
         "scripts/repos.js",
         ".repos",
+        // agent-skills
+        "scripts/agent-skills.js",
     ],
 });

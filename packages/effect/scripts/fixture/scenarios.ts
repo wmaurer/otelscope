@@ -1,4 +1,4 @@
-import { Array as Arr, Data, Duration, Effect, Option, Random, Ref, Schedule, Schema } from "effect";
+import { Array as Arr, Data, Duration, Effect, Option, Predicate, Random, Ref, Schedule, Schema } from "effect";
 
 // The four programs behind the fixture, one per run. Every choice that shapes a trace is fixed by index or drawn
 // from a seeded `Random`, so the traces come out the same on every run. Only `Scale` differs between the sample,
@@ -123,7 +123,7 @@ const chargePayment = Effect.fn("payment.charge", { attributes: { "payment.provi
         Effect.retry({
             schedule: Schedule.exponential("40 millis"),
             times: 3,
-            while: (error) => error._tag === "PaymentGatewayError",
+            while: Predicate.isTagged("PaymentGatewayError"),
         }),
     );
 });

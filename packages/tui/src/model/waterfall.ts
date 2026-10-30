@@ -1,4 +1,4 @@
-import { Array as Arr, Data, Number as Num, Option, Order, pipe } from "effect";
+import { Array as Arr, Data, Match, Number as Num, Option, Order, pipe } from "effect";
 
 import { duration } from "./format.ts";
 import { levelOf, levelRole, severity } from "./levels.ts";
@@ -138,13 +138,16 @@ const toneRole = {
     interrupted: "interrupted",
 } satisfies Readonly<Record<Tone, Role>>;
 
-const markerRank = (kind: MarkerKind): number =>
-    kind === "exception" ? Number.MAX_SAFE_INTEGER : kind === "other" ? -1 : severity(kind);
+const markerRank = Match.type<MarkerKind>().pipe(
+    Match.when("exception", () => Number.MAX_SAFE_INTEGER),
+    Match.when("other", () => -1),
+    Match.orElse(severity),
+);
+
+const markerRole = { ...levelRole, other: "muted" } satisfies Readonly<Record<Exclude<MarkerKind, "exception">, Role>>;
 
 const markerCell = (kind: MarkerKind): Cell =>
-    kind === "exception"
-        ? { char: "✗", role: "failure" }
-        : { char: "◆", role: kind === "other" ? "muted" : levelRole[kind] };
+    kind === "exception" ? { char: "✗", role: "failure" } : { char: "◆", role: markerRole[kind] };
 
 /** One marker per cell; sorted least first, so the Map keeps the strongest of a cell. */
 const markerPaint = (scale: Scale, markers: ReadonlyArray<Marker>): Paint => {

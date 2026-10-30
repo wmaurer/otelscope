@@ -1,4 +1,4 @@
-import { Cause, Console, Effect, Layer, Schema } from "effect";
+import { Cause, Console, Effect, Layer, Predicate, Schema } from "effect";
 import { HttpClient, type HttpClientRequest, HttpClientResponse } from "effect/http";
 
 import { TraceData } from "./format/TraceData.ts";
@@ -8,7 +8,7 @@ const decodeTraceData = Schema.decodeUnknownEffect(Schema.fromJsonString(TraceDa
 // `OtlpSerialization.layerJson` always sends a `Uint8Array` body. Any other body decodes as the empty
 // string, which fails as invalid JSON.
 const bodyText = (request: HttpClientRequest.HttpClientRequest): string =>
-    request.body._tag === "Uint8Array" ? new TextDecoder().decode(request.body.body) : "";
+    Predicate.isTagged(request.body, "Uint8Array") ? new TextDecoder().decode(request.body.body) : "";
 
 // Give this client to `OtlpTracer` only. The tracer then posts each batch here instead of to the network, and
 // `ingest` receives it in the same process. The client always answers 200: on any other status the exporter

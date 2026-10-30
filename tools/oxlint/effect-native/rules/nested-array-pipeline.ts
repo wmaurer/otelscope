@@ -1,16 +1,12 @@
 import { defineRule } from "@oxlint/plugins";
 
-import type { ESTree, Scope, SourceCode, Variable } from "@oxlint/plugins";
+import { isEffectModule } from "../effect-import.ts";
 
-/** The two ways Effect's array module gets imported, both of which this rule follows.
- *
- *  `import { Array as Arr } from "effect"` is what every site in this repo uses and what the rule
- *  was originally blind to; `import * as Arr from "effect/Array"` is the deep-import form. Only the
- *  array module: the plugin is named for arrays and the message names `Array` functions, so
- *  accepting `effect/Record` here would make both the name and the advice lie. */
-const ARRAY_SUBMODULE = "effect/Array";
-const EFFECT_BARREL = "effect";
-const ARRAY_EXPORT = "Array";
+import type { ESTree, SourceCode } from "@oxlint/plugins";
+
+/** Only the array module counts. The plugin is named for arrays and the message names `Array`
+ *  functions, so accepting `effect/Record` here would make both the name and the advice wrong. */
+const ARRAY_MODULE = "Array";
 
 /** How many nested calls it takes before nesting is worse than `pipe`.
  *
@@ -26,50 +22,6 @@ const MIN_CHAIN = 3;
  *  shorter chain, and a shorter chain is the silent answer. */
 const MAX_CHAIN = 16;
 
-/** The variable `name` resolves to at `scope`, or undefined if nothing binds it.
- *
- *  Duplicated from `receiver.ts` rather than exported from it: that module's copy is part of the
- *  "prove this is an array" story and is not otherwise this rule's business. */
-function lookup(scope: Scope | null, name: string): Variable | undefined {
-    for (let current = scope; current !== null; current = current.upper) {
-        const found = current.set.get(name);
-        if (found !== undefined) return found;
-    }
-    return undefined;
-}
-
-/** True when `node` names Effect's array module, however it was imported.
- *
- *  Resolved through the scope rather than by matching the name `Array` or `Arr`, so any alias works
- *  and — the point of doing it this way — a local binding that shadows the import disqualifies the
- *  name instead of being mistaken for it. This is `receiver.ts`'s shadowing trap in the other
- *  direction: there an unbound `Array` is the global, here only an import counts, so the global
- *  `Array` can never satisfy this.
- *
- *  Both import forms are accepted deliberately. Checking only the deep import would have made the
- *  rule silent on every site in this repo, which all take `Array` off the `effect` barrel. */
-function isEffectArrayNamespace(node: ESTree.Node, sourceCode: SourceCode): boolean {
-    if (node.type !== "Identifier") return false;
-    const variable = lookup(sourceCode.getScope(node), node.name);
-    if (variable === undefined) return false;
-    return variable.defs.some((definition) => {
-        if (definition.type !== "ImportBinding") return false;
-        if (definition.parent?.type !== "ImportDeclaration") return false;
-        const source = definition.parent.source.value;
-
-        // `import * as Arr from "effect/Array"`
-        if (definition.node.type === "ImportNamespaceSpecifier") return source === ARRAY_SUBMODULE;
-
-        // `import { Array as Arr } from "effect"` — the alias is `local`, so the name that has to
-        // match is `imported`, which is `Array` whatever the binding ended up being called.
-        if (definition.node.type === "ImportSpecifier") {
-            const imported = definition.node.imported;
-            return source === EFFECT_BARREL && imported.type === "Identifier" && imported.name === ARRAY_EXPORT;
-        }
-        return false;
-    });
-}
-
 /** How many `Array.*` calls this node chains through its DATA position.
  *
  *  Only argument 0 is followed, because that is what makes a nest a pipeline: in
@@ -83,7 +35,7 @@ function chainLength(node: ESTree.Node, sourceCode: SourceCode, depth = 0): numb
     const callee = node.callee;
     if (callee.type !== "MemberExpression" || callee.computed) return 0;
     if (callee.property.type !== "Identifier") return 0;
-    if (!isEffectArrayNamespace(callee.object, sourceCode)) return 0;
+    if (!isEffectModule(callee.object, ARRAY_MODULE, sourceCode)) return 0;
 
     const first = node.arguments[0];
     // A spread argument is not a value this can follow into.

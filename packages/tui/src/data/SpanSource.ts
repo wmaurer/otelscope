@@ -132,10 +132,7 @@ export class SpanSource extends Context.Service<SpanSource, { readonly events: S
                         const before = yield* Ref.get(tail);
                         const opened = yield* fs.open(input.file).pipe(
                             Effect.asSome,
-                            Effect.catchIf(
-                                ({ reason }) => reason._tag === "NotFound",
-                                () => Effect.succeedNone,
-                            ),
+                            Effect.catchReason("PlatformError", "NotFound", () => Effect.succeedNone),
                         );
                         if (Option.isNone(opened)) {
                             if (before._tag === "Reading") {

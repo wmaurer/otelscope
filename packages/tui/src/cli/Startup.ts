@@ -2,27 +2,34 @@ import { Effect, FileSystem, Option, Path, type PlatformError, Schema } from "ef
 
 import type { CliArgs } from "./Args.ts";
 
-export class NoSuchDirectory extends Schema.TaggedError<NoSuchDirectory>()("NoSuchDirectory", {
-    dir: Schema.String,
-}) {
+export class NoSuchDirectory extends Schema.TaggedError<NoSuchDirectory, { readonly brand: unique symbol }>()(
+    "NoSuchDirectory",
+    {
+        dir: Schema.String,
+    },
+) {
     override get message() {
         return `no such directory: ${this.dir}`;
     }
 }
 
-export class IsDirectory extends Schema.TaggedError<IsDirectory>()("IsDirectory", { path: Schema.String }) {
+export class IsDirectory extends Schema.TaggedError<IsDirectory, { readonly brand: unique symbol }>()("IsDirectory", {
+    path: Schema.String,
+}) {
     override get message() {
         return `is a directory: ${this.path}`;
     }
 }
 
-export class NoSuchFile extends Schema.TaggedError<NoSuchFile>()("NoSuchFile", { path: Schema.String }) {
+export class NoSuchFile extends Schema.TaggedError<NoSuchFile, { readonly brand: unique symbol }>()("NoSuchFile", {
+    path: Schema.String,
+}) {
     override get message() {
         return `no such file: ${this.path}`;
     }
 }
 
-export class CannotRead extends Schema.TaggedError<CannotRead>()("CannotRead", {
+export class CannotRead extends Schema.TaggedError<CannotRead, { readonly brand: unique symbol }>()("CannotRead", {
     path: Schema.String,
     reason: Schema.String,
 }) {
@@ -31,7 +38,7 @@ export class CannotRead extends Schema.TaggedError<CannotRead>()("CannotRead", {
     }
 }
 
-export class NotATty extends Schema.TaggedError<NotATty>()("NotATty", {}) {
+export class NotATty extends Schema.TaggedError<NotATty, { readonly brand: unique symbol }>()("NotATty", {}) {
     override get message() {
         return "needs an interactive terminal";
     }
@@ -64,10 +71,7 @@ const reasonOf = ({ reason }: PlatformError.PlatformError): string =>
 const statIfExists = (fs: FileSystem.FileSystem, path: string) =>
     fs.stat(path).pipe(
         Effect.asSome,
-        Effect.catchIf(
-            ({ reason }) => reason._tag === "NotFound",
-            () => Effect.succeedNone,
-        ),
+        Effect.catchReason("PlatformError", "NotFound", () => Effect.succeedNone),
     );
 
 /** Fails with the first failing check in the order the CLI spec lists them; the terminal check is last. */

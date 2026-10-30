@@ -168,7 +168,7 @@ const table = (results: ReadonlyArray<Result>): string => {
     return Arr.join([line(header), ...Arr.map(rows, line)], "\n");
 };
 
-class ChildFailed extends Schema.TaggedError<ChildFailed>()("ChildFailed", {
+class ChildFailed extends Schema.TaggedError<ChildFailed, { readonly brand: unique symbol }>()("ChildFailed", {
     args: Schema.Array(Schema.String),
     exitCode: Schema.Finite,
     stderr: Schema.String,
@@ -796,7 +796,7 @@ const whileFollowing = Effect.fnUntraced(function* (huge: string, targets: Targe
     };
 }, Effect.scoped);
 
-class BudgetsMissed extends Schema.TaggedError<BudgetsMissed>()("BudgetsMissed", {
+class BudgetsMissed extends Schema.TaggedError<BudgetsMissed, { readonly brand: unique symbol }>()("BudgetsMissed", {
     metrics: Schema.Array(Schema.String),
 }) {
     override get message(): string {

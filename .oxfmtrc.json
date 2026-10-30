@@ -43,6 +43,8 @@
         // repos
         "scripts/repos.js",
         ".repos/**",
+        // agent-skills
+        "scripts/agent-skills.js",
         // claude. Per-user Claude Code settings, never tracked; Claude Code rewrites it in its own style.
         ".claude/settings.local.json"
     ]

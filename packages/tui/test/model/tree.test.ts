@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, HashSet, Option, Order, pipe, Schema } from "effect";
+import { Array as Arr, HashSet, Match, Option, Order, pipe, Schema } from "effect";
 
 import { Index } from "../../src/data/Index.ts";
 import { anchorOf, flatten, parentRow, pinsOf, visibilityOf, shownIndex } from "../../src/model/tree.ts";
@@ -35,7 +35,11 @@ const tree = traceOf([
 const wide = traceOf([
     span("root", null, 0),
     ...siblings("row", "root", "import.row", 25, 1, (i) => ({
-        exit: i === 2 ? "Failure" : i === 7 ? "Interrupted" : "Success",
+        exit: Match.value(i).pipe(
+            Match.when(2, () => "Failure" as const),
+            Match.when(7, () => "Interrupted" as const),
+            Match.orElse(() => "Success" as const),
+        ),
     })),
     span("deep", "row-010", 50),
     span("after", "root", 60),

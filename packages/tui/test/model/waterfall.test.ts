@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, Schema } from "effect";
+import { Array as Arr, Match, Schema } from "effect";
 
 import {
     axisSegments,
@@ -307,19 +307,22 @@ describe("bar properties", () => {
     const barOf = (seed: typeof GeneratedBar.Type): Bar => {
         const startMs = seed.start / 10;
         const ms = seed.length / 10;
-        return seed.tag === "None"
-            ? Bar.None()
-            : seed.tag === "Envelope"
-              ? Bar.Envelope({ startMs, endMs: startMs + ms })
-              : Bar.Span({
-                    startMs,
-                    ms,
-                    tone: seed.tone,
-                    markers: Arr.map(seed.markers, (marker) => ({
-                        atMs: startMs + marker.offset / 10,
-                        kind: kinds[marker.kind] ?? "other",
-                    })),
-                });
+        return Match.value(seed).pipe(
+            Match.discriminatorsExhaustive("tag")({
+                None: () => Bar.None(),
+                Envelope: () => Bar.Envelope({ startMs, endMs: startMs + ms }),
+                Span: () =>
+                    Bar.Span({
+                        startMs,
+                        ms,
+                        tone: seed.tone,
+                        markers: Arr.map(seed.markers, (marker) => ({
+                            atMs: startMs + marker.offset / 10,
+                            kind: kinds[marker.kind] ?? "other",
+                        })),
+                    }),
+            }),
+        );
     };
 
     it.prop(

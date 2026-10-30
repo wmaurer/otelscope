@@ -13,16 +13,19 @@ export interface BodyText {
     readonly path: string;
 }
 
-export class BodyMissing extends Schema.TaggedError<BodyMissing>()("BodyMissing", {
+export class BodyMissing extends Schema.TaggedError<BodyMissing, { readonly brand: unique symbol }>()("BodyMissing", {
     sha256: Schema.String,
     path: Schema.String,
 }) {}
 
-export class BodyReadFailed extends Schema.TaggedError<BodyReadFailed>()("BodyReadFailed", {
-    sha256: Schema.String,
-    path: Schema.String,
-    message: Schema.String,
-}) {}
+export class BodyReadFailed extends Schema.TaggedError<BodyReadFailed, { readonly brand: unique symbol }>()(
+    "BodyReadFailed",
+    {
+        sha256: Schema.String,
+        path: Schema.String,
+        message: Schema.String,
+    },
+) {}
 
 export const MAX_CACHE_BYTES = 32 * 1024 * 1024;
 
