@@ -1,4 +1,4 @@
-import { Context, Data, Effect, FileSystem, Layer, Option, Path, Queue, Ref, Stream } from "effect";
+import { Context, Data, Effect, FileSystem, Layer, Option, Path, Predicate, Queue, Ref, Stream } from "effect";
 
 import { InputFile } from "./InputFile.ts";
 import { splitLines } from "./Lines.ts";
@@ -36,22 +36,23 @@ interface Reading {
 }
 
 type Tail = { readonly _tag: "Unreported" } | { readonly _tag: "ReportedMissing" } | Reading;
+const Tail = Data.taggedEnum<Tail>();
 
-const unreported: Tail = { _tag: "Unreported" };
-const reportedMissing: Tail = { _tag: "ReportedMissing" };
+const unreported: Tail = Tail.Unreported();
+const reportedMissing: Tail = Tail.ReportedMissing();
 
-const fresh = (ino: Option.Option<bigint>): Reading => ({
-    _tag: "Reading",
-    ino,
-    offset: 0,
-    pending: noBytes,
-    nextLine: 1,
-    head: noBytes,
-    reportedCaughtUp: false,
-});
+const fresh = (ino: Option.Option<bigint>): Reading =>
+    Tail.Reading({
+        ino,
+        offset: 0,
+        pending: noBytes,
+        nextLine: 1,
+        head: noBytes,
+        reportedCaughtUp: false,
+    });
 
 const forgetCaughtUp = (tail: Tail): Tail =>
-    tail._tag === "Reading" ? { ...tail, reportedCaughtUp: false } : unreported;
+    Predicate.isTagged(tail, "Reading") ? { ...tail, reportedCaughtUp: false } : unreported;
 
 const extendHead = (head: Uint8Array, chunk: Uint8Array): Uint8Array => {
     if (head.length >= HEAD_BYTES) {
@@ -135,10 +136,10 @@ export class SpanSource extends Context.Service<SpanSource, { readonly events: S
                             Effect.catchReason("PlatformError", "NotFound", () => Effect.succeedNone),
                         );
                         if (Option.isNone(opened)) {
-                            if (before._tag === "Reading") {
+                            if (Predicate.isTagged(before, "Reading")) {
                                 yield* emit(TailEvent.Reset({ reason: "removed" }));
                             }
-                            if (before._tag !== "ReportedMissing") {
+                            if (!Predicate.isTagged(before, "ReportedMissing")) {
                                 yield* emit(TailEvent.Missing());
                             }
                             return yield* Ref.set(tail, reportedMissing);
@@ -146,7 +147,7 @@ export class SpanSource extends Context.Service<SpanSource, { readonly events: S
                         const file = opened.value;
                         const info = yield* file.stat;
                         const size = Number(info.size);
-                        let current = before._tag === "Reading" ? before : fresh(info.ino);
+                        let current = Predicate.isTagged(before, "Reading") ? before : fresh(info.ino);
                         const reason = yield* resetReason(file, current, info.ino, size);
                         if (Option.isSome(reason)) {
                             yield* emit(TailEvent.Reset({ reason: reason.value }));

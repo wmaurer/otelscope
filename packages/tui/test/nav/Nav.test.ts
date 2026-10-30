@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@effect/vitest";
+import { assert, describe, expect, it } from "@effect/vitest";
 import { Array as Arr, Option, Schema } from "effect";
 
 import * as Nav from "../../src/nav/Nav.ts";
@@ -88,7 +88,9 @@ describe("Nav", () => {
     it("updates the top view only when the top has the expected tag", () => {
         const nav = Nav.push(Nav.initial, tracesFor("run-1", defaultRunsView));
         const sorted = Nav.update(nav, "Traces", (view) => ({ ...view, sort: "duration" }));
-        expect(Nav.top(sorted)).toMatchObject({ _tag: "Traces", view: { sort: "duration" } });
+        const top = Nav.top(sorted);
+        assert(Screen.$is("Traces")(top), "the top stays a Traces screen");
+        expect(top.view.sort).toBe("duration");
         expect(sorted.stack[0], "the screens below are untouched").toBe(nav.stack[0]);
         expect(
             Nav.update(nav, "Runs", (view) => ({ ...view, filter: "x" })),

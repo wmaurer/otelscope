@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, Option, Schema } from "effect";
+import { Array as Arr, Option, Predicate, Schema } from "effect";
 
 import * as Nav from "../../src/nav/Nav.ts";
 import { matchPrefix, PrefixMatch, presence, Presence, resolvePrefixes } from "../../src/nav/Resolve.ts";
@@ -226,7 +226,7 @@ describe("openArrivedTrace", () => {
     ]);
     const selected = (nav: Nav.Nav) => {
         const screen = Nav.top(nav);
-        return screen._tag === "Trace" ? screen.view.selected : Option.none();
+        return Predicate.isTagged(screen, "Trace") ? screen.view.selected : Option.none();
     };
 
     it("does nothing while the trace is absent", () => {

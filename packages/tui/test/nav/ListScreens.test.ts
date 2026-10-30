@@ -1,10 +1,10 @@
-import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, HashSet, Option } from "effect";
+import { assert, describe, expect, it } from "@effect/vitest";
+import { Array as Arr, HashSet, Option, Predicate } from "effect";
 
 import { Action } from "../../src/keys/Action.ts";
 import { newRowsText } from "../../src/model/list.ts";
 import * as Nav from "../../src/nav/Nav.ts";
-import { defaultRunsView, TraceRow, TreeRow, tracesFor } from "../../src/nav/Screen.ts";
+import { defaultRunsView, Screen, TraceRow, TreeRow, tracesFor } from "../../src/nav/Screen.ts";
 import { stepScreen } from "../../src/nav/Step.ts";
 import { listFor, namedTraces, rootSpan } from "../support/lists.ts";
 import { record } from "../support/records.ts";
@@ -35,7 +35,7 @@ const traces = (view: Partial<TracesView> = {}) =>
     Nav.update(Nav.push(Nav.initial, tracesFor("run-1", defaultRunsView)), "Traces", (v) => ({ ...v, ...view }));
 const tracesView = (nav: Nav.Nav) => {
     const top = Nav.top(nav);
-    if (top._tag !== "Traces") {
+    if (!Predicate.isTagged(top, "Traces")) {
         throw new Error(`expected Traces, got ${top._tag}`);
     }
     return top.view;
@@ -46,7 +46,9 @@ describe("the Runs reducer", () => {
     it("opens the selected run with the filter seeded", () => {
         const filtered = Nav.update(runs, "Runs", (view) => ({ ...view, filter: "health" }));
         const opened = step(filtered, Action.Open()).nav;
-        expect(Nav.top(opened)).toMatchObject({ _tag: "Traces", runId: "run-1", view: { filter: "health" } });
+        const top = Nav.top(opened);
+        assert(Screen.$is("Traces")(top), "the run opens as Traces");
+        expect(top).toMatchObject({ runId: "run-1", view: { filter: "health" } });
     });
 
     it("cycles the sort and reverses", () => {
@@ -86,7 +88,9 @@ describe("the Runs reducer", () => {
         const view = Nav.top(newest);
         const built = listFor(newest, after);
         expect(
-            view._tag === "Runs" && built._tag === "Runs" ? newRowsText(built.list, view.view) : Option.none(),
+            Predicate.isTagged(view, "Runs") && Predicate.isTagged(built, "Runs")
+                ? newRowsText(built.list, view.view)
+                : Option.none(),
         ).toEqual(Option.some("↑ 1 new"));
     });
 });
@@ -94,8 +98,9 @@ describe("the Runs reducer", () => {
 describe("the Traces reducer", () => {
     it("opens a trace with the filter seeded as its search and the opening selection", () => {
         const opened = step(selecting(TraceRow.Trace({ traceId: "o003" })), Action.Open()).nav;
-        expect(Nav.top(opened)).toMatchObject({
-            _tag: "Trace",
+        const top = Nav.top(opened);
+        assert(Screen.$is("Trace")(top), "the trace opens as Trace");
+        expect(top).toMatchObject({
             traceId: "o003",
             viaRun: Option.some("run-1"),
             view: { selected: Option.some(TreeRow.Span({ spanId: "o003-root" })), search: "" },

@@ -1,4 +1,4 @@
-import { HashSet, Option } from "effect";
+import { HashSet, Option, Predicate } from "effect";
 
 import { openingFor } from "../model/opening.ts";
 import { push, top, update } from "./Nav.ts";
@@ -47,7 +47,7 @@ export const openSingleRun = (nav: Nav, snapshot: Snapshot): Nav => {
  */
 export const openArrivedTrace = (nav: Nav, snapshot: Snapshot): Nav => {
     const screen = top(nav);
-    if (screen._tag !== "Trace" || screen.idIsPrefix || Option.isSome(screen.view.selected)) {
+    if (!Predicate.isTagged(screen, "Trace") || screen.idIsPrefix || Option.isSome(screen.view.selected)) {
         return nav;
     }
     const trace = snapshot.traces.get(screen.traceId);

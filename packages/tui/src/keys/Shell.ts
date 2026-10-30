@@ -1,4 +1,4 @@
-import { Data, Option } from "effect";
+import { Data, Match, Option, Predicate } from "effect";
 
 import { back } from "../nav/Nav.ts";
 import { activeQuery, clearQuery, setQuery, submitQuery, typeQuery } from "../nav/Query.ts";
@@ -57,16 +57,16 @@ export interface ShellStep {
 const scrolled = (scroll: number, action: ScreenAction, extent: Extent): Option.Option<number> => {
     const last = Math.max(0, extent.total - extent.viewport);
     const clamp = (n: number) => Math.min(last, Math.max(0, n));
-    switch (action._tag) {
-        case "Move": {
-            const by = moveRows(action.by, extent.viewport);
-            return Option.some(clamp(scroll + (action.dir === "next" ? by : -by)));
-        }
-        case "Jump":
-            return Option.some(action.to === "start" ? 0 : last);
-        default:
-            return Option.none();
-    }
+    return Match.value(action).pipe(
+        Match.tags({
+            Move: ({ by, dir }) => {
+                const rows = moveRows(by, extent.viewport);
+                return Option.some(clamp(scroll + (dir === "next" ? rows : -rows)));
+            },
+            Jump: ({ to }) => Option.some(to === "start" ? 0 : last),
+        }),
+        Match.orElse(() => Option.none()),
+    );
 };
 
 const editInput = (
@@ -95,69 +95,63 @@ export const stepShell = (state: KeyState, context: KeyContext, action: Action):
     });
     const withShell = (next: Shell): KeyState => ({ ...state, shell: next });
     if (!isShellAction(action)) {
-        if (shell._tag === "Overlay") {
+        if (Predicate.isTagged(shell, "Overlay")) {
             return Option.match(scrolled(shell.scroll, action, context.overlay), {
                 onNone: () => step({}),
                 onSome: (scroll) => step({ state: withShell(Shell.Overlay({ kind: shell.kind, scroll })) }),
             });
         }
-        if (shell._tag === "Input") {
+        if (Predicate.isTagged(shell, "Input")) {
             return step({});
         }
         return step(stepScreen(nav, context, action));
     }
-    switch (action._tag) {
-        case "Quit":
-            return step({ effects: [ShellEffect.Quit()] });
-        case "Suspend":
-            return step({ effects: [ShellEffect.Suspend()] });
-        case "OpenHelp":
-            return step({ state: withShell(Shell.Overlay({ kind: "help", scroll: 0 })) });
-        case "OpenBadLines":
-            return snapshot.badLines.malformed + snapshot.badLines.legacy > 0
+    return Match.valueTags(action, {
+        Quit: () => step({ effects: [ShellEffect.Quit()] }),
+        Suspend: () => step({ effects: [ShellEffect.Suspend()] }),
+        OpenHelp: () => step({ state: withShell(Shell.Overlay({ kind: "help", scroll: 0 })) }),
+        OpenBadLines: () =>
+            snapshot.badLines.malformed + snapshot.badLines.legacy > 0
                 ? step({ state: withShell(Shell.Overlay({ kind: "badLines", scroll: 0 })) })
-                : step({ effects: [ShellEffect.Say({ text: "no bad lines" })] });
-        case "CloseOverlay":
-            return step({ state: withShell(Shell.Screen()) });
-        case "ClearQuery":
-            return step({ nav: clearQuery(nav) });
-        case "Back":
-            return step({ nav: back(nav) });
-        case "OpenQuery": {
+                : step({ effects: [ShellEffect.Say({ text: "no bad lines" })] }),
+        CloseOverlay: () => step({ state: withShell(Shell.Screen()) }),
+        ClearQuery: () => step({ nav: clearQuery(nav) }),
+        Back: () => step({ nav: back(nav) }),
+        OpenQuery: () => {
             const original = activeQuery(nav);
             return step({
                 state: withShell(Shell.Input({ cursor: original.length, original, recall: Option.none() })),
             });
-        }
-        case "SubmitInput": {
+        },
+        SubmitInput: () => {
             const text = activeQuery(nav);
             const kept = text.trim() === "" ? "" : text;
             return step({
                 state: { shell: Shell.Screen(), history: remember(state.history, kept) },
                 nav: submitQuery(setQuery(nav, kept), context),
             });
-        }
-        case "CancelInput":
-            return shell._tag === "Input"
+        },
+        CancelInput: () =>
+            Predicate.isTagged(shell, "Input")
                 ? step({ state: withShell(Shell.Screen()), nav: setQuery(nav, shell.original) })
-                : step({ state: withShell(Shell.Screen()) });
-        case "InsertText":
-            return shell._tag === "Input"
-                ? step(editInput(state, nav, snapshot, shell, (line) => insert(line, action.text)))
-                : step({});
-        case "EditInput":
-            return shell._tag === "Input"
-                ? step(editInput(state, nav, snapshot, shell, (line) => edit(line, action.op)))
-                : step({});
-        case "RecallQuery": {
-            if (shell._tag !== "Input") {
+                : step({ state: withShell(Shell.Screen()) }),
+        InsertText: ({ text }) =>
+            Predicate.isTagged(shell, "Input")
+                ? step(editInput(state, nav, snapshot, shell, (line) => insert(line, text)))
+                : step({}),
+        EditInput: ({ op }) =>
+            Predicate.isTagged(shell, "Input")
+                ? step(editInput(state, nav, snapshot, shell, (line) => edit(line, op)))
+                : step({}),
+        RecallQuery: ({ dir }) => {
+            if (!Predicate.isTagged(shell, "Input")) {
                 return step({});
             }
-            const recalled = recall(state.history, activeQuery(nav), shell.recall, action.dir);
+            const recalled = recall(state.history, activeQuery(nav), shell.recall, dir);
             return step({
                 state: withShell(Shell.Input({ ...shell, cursor: recalled.text.length, recall: recalled.recall })),
                 nav: typeQuery(nav, recalled.text, snapshot),
             });
-        }
-    }
+        },
+    });
 };

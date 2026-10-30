@@ -1,9 +1,10 @@
-import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, Cause, Option } from "effect";
+import { assert, describe, expect, it } from "@effect/vitest";
+import { Array as Arr, Cause, Option, Predicate } from "effect";
 import { AsyncResult, Atom, AtomRegistry } from "effect/reactivity";
 
 import { bodyModelAtom } from "../../src/bridge/Body.ts";
 import { BodyMissing, BodyReadFailed } from "../../src/data/Bodies.ts";
+import { BodyContent } from "../../src/model/bodyModel.ts";
 import * as Nav from "../../src/nav/Nav.ts";
 import { bodyFor } from "../../src/nav/Screen.ts";
 import { indexed } from "../support/store.ts";
@@ -57,7 +58,7 @@ const setup = (first: Result = AsyncResult.success(textOf(request)), prefix = "l
     return { registry, navAtom, snapshotAtom, result, keys, model, setView, current };
 };
 
-const docOfModel = (model: BodyModel) => (model.content._tag === "Loading" ? undefined : model.content.doc);
+const docOfModel = (model: BodyModel) => (BodyContent.$is("Loading")(model.content) ? undefined : model.content.doc);
 
 describe("bodyModelAtom", () => {
     it("reads the screen's body by its sha256 and declared bytes, with the span's bodies for the tab row", () => {
@@ -89,19 +90,23 @@ describe("bodyModelAtom", () => {
         setView({ search: "user" });
         const searched = current();
         expect(docOfModel(searched)).toBe(docOfModel(before));
-        expect(searched.content._tag === "Stored" ? searched.content.matches.starts.length : -1).toBe(1);
+        expect(Predicate.isTagged(searched.content, "Stored") ? searched.content.matches.starts.length : -1).toBe(1);
         setView({ raw: true });
         expect(docOfModel(current())?.text).toBe(request);
     });
 
     it("shows the preview when the file is missing, and the error when it cannot be read", () => {
         const missing = setup(AsyncResult.failure(Cause.fail(new BodyMissing({ sha256: SHA, path: "/x" }))));
-        expect(missing.current().content).toMatchObject({ _tag: "Preview", problem: Option.none() });
+        const absent = missing.current().content;
+        assert(BodyContent.$is("Preview")(absent), "a missing file shows the preview");
+        expect(absent.problem).toEqual(Option.none());
         expect(docOfModel(missing.current())).toMatchObject({ kind: "text", text: '{"model":"m",' });
         const failed = setup(
             AsyncResult.failure(Cause.fail(new BodyReadFailed({ sha256: SHA, path: "/x", message: "EACCES" }))),
         );
-        expect(failed.current().content).toMatchObject({ _tag: "Preview", problem: Option.some("EACCES") });
+        const unreadable = failed.current().content;
+        assert(BodyContent.$is("Preview")(unreadable), "an unreadable file shows the preview");
+        expect(unreadable.problem).toEqual(Option.some("EACCES"));
     });
 
     it("is None for a prefix the span no longer carries, and off the Body screen", () => {

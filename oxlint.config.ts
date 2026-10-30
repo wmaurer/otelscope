@@ -228,11 +228,6 @@ export default defineConfig({
             plugins: ["react"],
             rules: {
                 "react/rules-of-hooks": "error",
-                // Off until the viewer is moved over. Turning them on reports 171 `_tag` comparisons and 28
-                // `_tag` object literals across about 50 files, many on the index and render paths that
-                // `pnpm --filter @wmaurer/otelscope perf` gates, so the change needs a perf run of its own.
-                "anti-slop-effect/no-manual-tag-comparison": "off",
-                "anti-slop-effect/no-manual-tagged-construction": "off",
             },
         },
     ],

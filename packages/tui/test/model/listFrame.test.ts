@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, Option } from "effect";
+import { Array as Arr, Option, Predicate } from "effect";
 
 import { listFrame } from "../../src/model/listFrame.ts";
 import { lineText } from "../../src/model/text.ts";
@@ -31,7 +31,7 @@ const frame = (nav: Nav.Nav, snapshot: Snapshot): ListFrame =>
 
 const runs = (filter = "") => Nav.update(Nav.initial, "Runs", (view) => ({ ...view, filter }));
 
-const messageOf = (f: ListFrame) => (f.body._tag === "Message" ? Arr.map(f.body.lines, lineText) : []);
+const messageOf = (f: ListFrame) => (Predicate.isTagged(f.body, "Message") ? Arr.map(f.body.lines, lineText) : []);
 
 describe("listFrame", () => {
     it("replaces the Runs table with what the file is doing when there is nothing to list", () => {

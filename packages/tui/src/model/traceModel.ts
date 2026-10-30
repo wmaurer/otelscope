@@ -1,4 +1,4 @@
-import { Option } from "effect";
+import { Option, Predicate } from "effect";
 
 import { logList } from "./logs.ts";
 import { rowKey, rowOf, shownIndex } from "./tree.ts";
@@ -24,7 +24,9 @@ export interface TraceModel {
 /** The record of the span the selection shows as; None on a group or missing-parent row. */
 export const shownSpan = (model: TraceModel): Option.Option<JsonlSpanRecord> =>
     Option.flatMap(model.entry, (entry) =>
-        entry._tag === "Span" ? Option.fromUndefinedOr(model.facts.trace.spans.get(entry.spanId)) : Option.none(),
+        Predicate.isTagged(entry, "Span")
+            ? Option.fromUndefinedOr(model.facts.trace.spans.get(entry.spanId))
+            : Option.none(),
     );
 
 export interface Chosen {

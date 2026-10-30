@@ -1,10 +1,10 @@
-import { Array as Arr, Predicate } from "effect";
+import { Array as Arr, Data, Option, Predicate } from "effect";
 
-import { termKey } from "./Query.ts";
+import { Term, termKey } from "./Query.ts";
 
 import type { Exit, Run, RunId, SpanId, Trace, TraceId } from "../data/Snapshot.ts";
 import type { LogLevel } from "../model/levels.ts";
-import type { Needle, Query, Term } from "./Query.ts";
+import type { Needle, Query } from "./Query.ts";
 import type { AttributeValue, Attributes, JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
 
 /** Whether a string contains a needle. */
@@ -29,13 +29,12 @@ const testOf = (needle: Needle): Test => {
     if (known !== undefined) {
         return known;
     }
-    const made: Test =
-        needle._tag === "Exact"
-            ? (haystack) => haystack.includes(needle.text)
-            : (
-                  (pattern: RegExp) => (haystack: string) =>
-                      pattern.test(haystack)
-              )(foldedPattern(needle.lower, "iu"));
+    const made: Test = Predicate.isTagged(needle, "Exact")
+        ? (haystack) => haystack.includes(needle.text)
+        : (
+              (pattern: RegExp) => (haystack: string) =>
+                  pattern.test(haystack)
+          )(foldedPattern(needle.lower, "iu"));
     tests.set(needle, made);
     return made;
 };
@@ -101,46 +100,59 @@ const attrHas = (attrs: Attributes, key: string, value: Test | undefined): boole
     return found !== undefined && (value === undefined || valueHas(found, value));
 };
 
-/** The test of a text term's needle or an attribute term's value, looked up once per trace rather than per span. */
-const termTest = (term: Term): Test | undefined => {
-    switch (term._tag) {
-        case "Text":
-            return testOf(term.needle);
-        case "Attr":
-            return term.value._tag === "Some" ? testOf(term.value.value) : undefined;
-        case "Exit":
-        case "Level":
-        case "Never":
-            return undefined;
-    }
-};
+type SpanTest = (span: JsonlSpanRecord) => boolean;
 
-const spanHas = (span: JsonlSpanRecord, term: Term, test: Test | undefined): boolean => {
-    switch (term._tag) {
-        case "Text":
-            return test !== undefined && textHas(span, test);
-        case "Attr": {
-            if (attrHas(span.attrs, term.key, test)) {
+const noSpan: SpanTest = () => false;
+
+const attrIn =
+    (key: string, value: Test | undefined): SpanTest =>
+    (span) => {
+        if (attrHas(span.attrs, key, value)) {
+            return true;
+        }
+        for (const event of span.events) {
+            if (attrHas(event.attrs, key, value)) {
                 return true;
             }
-            for (const event of span.events) {
-                if (attrHas(event.attrs, term.key, test)) {
-                    return true;
-                }
-            }
-            return false;
         }
-        case "Exit":
-            return span.exit === term.exit;
-        case "Level":
-        case "Never":
-            return false;
+        return false;
+    };
+
+const spanTestOf: (term: Term) => SpanTest = Term.$match({
+    Text: ({ needle }): SpanTest => {
+        const test = testOf(needle);
+        return (span) => textHas(span, test);
+    },
+    Attr: ({ key, value }) => attrIn(key, Option.isSome(value) ? testOf(value.value) : undefined),
+    Exit:
+        ({ exit }): SpanTest =>
+        (span) =>
+            span.exit === exit,
+    Level: () => noSpan,
+    Never: () => noSpan,
+});
+
+const spanTests = new WeakMap<Term, SpanTest>();
+
+/** A term's test of one span, made once per term so the scan loops do not branch on the term for every span. */
+const spanTest = (term: Term): SpanTest => {
+    const known = spanTests.get(term);
+    if (known !== undefined) {
+        return known;
     }
+    const made = spanTestOf(term);
+    spanTests.set(term, made);
+    return made;
 };
+
+const isText = Term.$is("Text");
+const isAttr = Term.$is("Attr");
+const isExit = Term.$is("Exit");
+const isLevel = Term.$is("Level");
 
 export const spanMatches = (query: Query, span: JsonlSpanRecord): boolean => {
     for (const term of query) {
-        if (!spanHas(span, term, termTest(term))) {
+        if (!spanTest(term)(span)) {
             return false;
         }
     }
@@ -198,10 +210,10 @@ export const traceScans = (): number => scanned;
 
 const scan = (term: Term, trace: Trace): ReadonlyArray<RunId> => {
     scanned += 1;
-    const test = termTest(term);
+    const matches = spanTest(term);
     if (trace.runs.length === 1) {
         for (const span of trace.spans.values()) {
-            if (spanHas(span, term, test)) {
+            if (matches(span)) {
                 return trace.runs;
             }
         }
@@ -209,7 +221,7 @@ const scan = (term: Term, trace: Trace): ReadonlyArray<RunId> => {
     }
     const runs: Array<RunId> = [];
     for (const span of trace.spans.values()) {
-        if (!Arr.contains(runs, span.run) && spanHas(span, term, test)) {
+        if (!Arr.contains(runs, span.run) && matches(span)) {
             runs[runs.length] = span.run;
         }
     }
@@ -217,7 +229,7 @@ const scan = (term: Term, trace: Trace): ReadonlyArray<RunId> => {
 };
 
 const traceHits = (term: Term, trace: Trace): ReadonlyArray<RunId> => {
-    if (term._tag === "Level" || term._tag === "Never") {
+    if (Predicate.isTagged(term, "Level") || Predicate.isTagged(term, "Never")) {
         return NONE;
     }
     const cache = traceCaches.forTerm(term);
@@ -250,7 +262,7 @@ export const spanScans = (): number => spansScanned;
  * before.
  */
 export const spanHits = (term: Term, trace: Trace): ReadonlySet<SpanId> => {
-    if (term._tag === "Level" || term._tag === "Never") {
+    if (Predicate.isTagged(term, "Level") || Predicate.isTagged(term, "Never")) {
         return NO_SPANS;
     }
     const { records, traces } = spanCaches.forTerm(term);
@@ -259,12 +271,12 @@ export const spanHits = (term: Term, trace: Trace): ReadonlySet<SpanId> => {
         return known;
     }
     const hits: Array<SpanId> = [];
-    const test = termTest(term);
+    const matches = spanTest(term);
     for (const span of trace.spans.values()) {
         let verdict = records.get(span);
         if (verdict === undefined) {
             spansScanned += 1;
-            verdict = spanHas(span, term, test);
+            verdict = matches(span);
             records.set(span, verdict);
         }
         if (verdict) {
@@ -286,7 +298,7 @@ export const traceMatches = (query: Query, trace: Trace): boolean => {
 };
 
 const runHas = (term: Term, run: Run, traces: ReadonlyMap<TraceId, Trace>): boolean => {
-    if (term._tag === "Text" && has(run.id, term.needle)) {
+    if (Predicate.isTagged(term, "Text") && has(run.id, term.needle)) {
         return true;
     }
     for (const id of run.traceIds) {
@@ -320,31 +332,31 @@ export interface LogLine {
 }
 
 const logHas = (line: LogLine, term: Term): boolean => {
-    switch (term._tag) {
-        case "Text": {
-            const { needle } = term;
-            return (
-                has(line.message, needle) ||
-                has(line.level, needle) ||
-                has(line.fiber, needle) ||
-                has(line.spanName, needle) ||
-                Arr.some(line.annotations, ([key, value]) => has(key, needle) || has(value, needle))
-            );
-        }
-        case "Attr": {
-            const value = term.value._tag === "Some" ? term.value.value : undefined;
-            return Arr.some(
-                line.annotations,
-                ([key, found]) => key === term.key && (value === undefined || has(found, value)),
-            );
-        }
-        case "Level":
-            return line.level.toLowerCase() === term.level;
-        case "Exit":
-            return line.exit === term.exit;
-        case "Never":
-            return false;
+    if (isText(term)) {
+        const { needle } = term;
+        return (
+            has(line.message, needle) ||
+            has(line.level, needle) ||
+            has(line.fiber, needle) ||
+            has(line.spanName, needle) ||
+            Arr.some(line.annotations, ([key, value]) => has(key, needle) || has(value, needle))
+        );
     }
+    if (isAttr(term)) {
+        const value = Predicate.isTagged(term.value, "Some") ? term.value.value : undefined;
+        return Arr.some(
+            line.annotations,
+            ([key, found]) => key === term.key && (value === undefined || has(found, value)),
+        );
+    }
+    if (isLevel(term)) {
+        return line.level.toLowerCase() === term.level;
+    }
+    if (isExit(term)) {
+        return line.exit === term.exit;
+    }
+    term satisfies Data.TaggedEnum.Value<Term, "Never">;
+    return false;
 };
 
 /** Every term must match the log line: 08's log-line level. */

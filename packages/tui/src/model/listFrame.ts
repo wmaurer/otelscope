@@ -1,4 +1,4 @@
-import { Array as Arr, Option } from "effect";
+import { Array as Arr, Data, Option, Predicate } from "effect";
 
 import { basename, count } from "./format.ts";
 import { newRowsText, selectedIndex } from "./list.ts";
@@ -36,6 +36,7 @@ export interface Message {
 }
 
 export type ListBody = Table | Message;
+export const ListBody = Data.taggedEnum<ListBody>();
 
 export interface ListFrame {
     readonly body: ListBody;
@@ -44,10 +45,8 @@ export interface ListFrame {
     readonly count: string;
 }
 
-const message = (...texts: ReadonlyArray<string>): Message => ({
-    _tag: "Message",
-    lines: Arr.map(texts, (text, i) => [chunk(text, i === 0 ? "text" : "muted")]),
-});
+const message = (...texts: ReadonlyArray<string>): Message =>
+    ListBody.Message({ lines: Arr.map(texts, (text, i) => [chunk(text, i === 0 ? "text" : "muted")]) });
 
 const noMatch = (noun: string, filter: string): Message =>
     message(`No ${noun} match "${filter}".`, "Esc clears the filter");
@@ -93,17 +92,17 @@ const tableFrame = <Row extends Keyed, K, Id extends string>(
         Option.orElse(kind.empty, () =>
             list.matched === 0 && list.filter !== "" ? Option.some(noMatch(kind.noun, list.filter)) : Option.none(),
         ),
-        (): ListBody => ({
-            _tag: "Table",
-            header: header(kind.placed, kind.sorted, view.reverse, width),
-            size: list.rows.length,
-            selected: selectedIndex(list, view),
-            keyAt: (i) => list.rows[i]?.key ?? "",
-            line: (i, isSelected) => {
-                const row = list.rows[i];
-                return row === undefined ? [] : kind.line(row, isSelected);
-            },
-        }),
+        (): ListBody =>
+            ListBody.Table({
+                header: header(kind.placed, kind.sorted, view.reverse, width),
+                size: list.rows.length,
+                selected: selectedIndex(list, view),
+                keyAt: (i) => list.rows[i]?.key ?? "",
+                line: (i, isSelected) => {
+                    const row = list.rows[i];
+                    return row === undefined ? [] : kind.line(row, isSelected);
+                },
+            }),
     ),
     query:
         view.filter === ""
@@ -114,7 +113,7 @@ const tableFrame = <Row extends Keyed, K, Id extends string>(
 });
 
 export const listFrame = (screen: Screen, built: ScreenList, env: ListEnv): Option.Option<ListFrame> => {
-    if (screen._tag === "Runs" && built._tag === "Runs") {
+    if (Predicate.isTagged(screen, "Runs") && Predicate.isTagged(built, "Runs")) {
         const { list } = built;
         const placed = runLayout(env.width);
         const context = { placed, phase: env.snapshot.status.phase, now: env.now, query: list.query, width: env.width };
@@ -128,7 +127,7 @@ export const listFrame = (screen: Screen, built: ScreenList, env: ListEnv): Opti
             }),
         );
     }
-    if (screen._tag === "Traces" && built._tag === "Traces") {
+    if (Predicate.isTagged(screen, "Traces") && Predicate.isTagged(built, "Traces")) {
         const { list } = built;
         const placed = traceLayout(env.width);
         const context = { placed, run: list.run, query: list.query, filtered: list.query.length > 0, width: env.width };

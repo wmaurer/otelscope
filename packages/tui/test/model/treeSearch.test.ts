@@ -2,14 +2,13 @@ import { describe, expect, it } from "@effect/vitest";
 import { Array as Arr, Option } from "effect";
 
 import { Index } from "../../src/data/Index.ts";
+import { TreeEntry } from "../../src/model/tree.ts";
 import { factsOf } from "../../src/model/treeFacts.ts";
 import { matchText, searchOf } from "../../src/model/treeSearch.ts";
 import { spanScans } from "../../src/query/Match.ts";
 import { line, record } from "../support/records.ts";
 import { ingestAll, status } from "../support/store.ts";
 import { siblings, span, traceOf } from "../support/traces.ts";
-
-import type { TreeEntry } from "../../src/model/tree.ts";
 
 const trace = traceOf([
     span("root", null, 0, { name: "POST /orders" }),
@@ -21,7 +20,7 @@ const trace = traceOf([
 const facts = factsOf(trace);
 
 const entry = (spanId: string): Option.Option<TreeEntry> =>
-    Option.some({ _tag: "Span", key: `s:${spanId}`, spanId, depth: 1, rails: undefined, last: false, fold: "leaf" });
+    Option.some(TreeEntry.Span({ key: `s:${spanId}`, spanId, depth: 1, rails: undefined, last: false, fold: "leaf" }));
 
 describe("searchOf", () => {
     it("finds the spans matching every term, in tree order", () => {

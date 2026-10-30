@@ -3,6 +3,7 @@ import { AsyncResult, Atom } from "effect/reactivity";
 
 import { assemble, layoutOf, listKey, stageOf } from "../model/screenList.ts";
 import { top } from "../nav/Nav.ts";
+import { Screen } from "../nav/Screen.ts";
 
 import type { Snapshot } from "../data/Snapshot.ts";
 import type { ListKey, ScreenList, Stage } from "../model/screenList.ts";
@@ -16,18 +17,13 @@ interface Typed {
 }
 
 const typedOf = (nav: Nav): Typed => {
-    const screen = top(nav);
     const depth = nav.stack.length;
-    switch (screen._tag) {
-        case "Runs":
-            return { screen: `${depth}`, filter: screen.view.filter };
-        case "Traces":
-            return { screen: `${depth}:${screen.runId}`, filter: screen.view.filter };
-        case "Trace":
-            return { screen: `${depth}:${screen.traceId}`, filter: screen.view.logFilter };
-        case "Body":
-            return { screen: `${depth}`, filter: "" };
-    }
+    return Screen.$match(top(nav), {
+        Runs: ({ view }) => ({ screen: `${depth}`, filter: view.filter }),
+        Traces: ({ runId, view }) => ({ screen: `${depth}:${runId}`, filter: view.filter }),
+        Trace: ({ traceId, view }) => ({ screen: `${depth}:${traceId}`, filter: view.logFilter }),
+        Body: () => ({ screen: `${depth}`, filter: "" }),
+    });
 };
 
 /**

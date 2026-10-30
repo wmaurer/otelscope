@@ -1,7 +1,7 @@
-import { Array as Arr, Option, Order, Predicate, Record } from "effect";
+import { Array as Arr, Data, Option, Order, Predicate, Record } from "effect";
 
 import { LOG_LEVEL } from "../model/levels.ts";
-import { classify } from "./Decode.ts";
+import { Classified, classify } from "./Decode.ts";
 import { LayeredMap } from "./LayeredMap.ts";
 import { insertSorted, SortedIds } from "./SortedIds.ts";
 
@@ -150,6 +150,9 @@ const withFrozen = <K, B, A>(
 
 const emptyBadLines: BadLines = { legacy: 0, malformed: 0, samples: [] };
 
+const isSpan = Classified.$is("Span");
+const isLegacy = Classified.$is("Legacy");
+
 /**
  * One copy of each repeated string. `JSON.parse` shares object keys and values of up to about 10 characters, but makes a
  * new string for every longer value, so without this each record carries its own run, trace id, names, file paths and
@@ -214,15 +217,15 @@ export class Index {
             return;
         }
         const classified = classify(text);
-        switch (classified._tag) {
-            case "Span":
-                return this.add(classified.record, line, offset, text, arrivalAt);
-            case "Legacy":
-                this.badLines = { ...this.badLines, legacy: this.badLines.legacy + 1 };
-                return;
-            case "Malformed":
-                return this.malformed(line, offset, classified.issue, text);
+        if (isSpan(classified)) {
+            return this.add(classified.record, line, offset, text, arrivalAt);
         }
+        if (isLegacy(classified)) {
+            this.badLines = { ...this.badLines, legacy: this.badLines.legacy + 1 };
+            return;
+        }
+        classified satisfies Data.TaggedEnum.Value<Classified, "Malformed">;
+        return this.malformed(line, offset, classified.issue, text);
     }
 
     reset(): void {

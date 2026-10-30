@@ -1,4 +1,4 @@
-import { Array as Arr, Option } from "effect";
+import { Array as Arr, Data, Option, Predicate } from "effect";
 
 import { GROUP_MIN } from "./traceList.ts";
 
@@ -24,6 +24,7 @@ export interface Group {
 export type Sibling =
     | { readonly _tag: "One"; readonly spanId: SpanId }
     | { readonly _tag: "Group"; readonly group: Group };
+export const Sibling = Data.taggedEnum<Sibling>();
 
 export type SpanKind = "origin" | "propagated" | "interrupted" | "ok";
 
@@ -143,9 +144,9 @@ const siblingList = (trace: Trace, parent: SpanId | null): SiblingList => {
         Arr.map(children, (id): Option.Option<Sibling> => {
             const group = groups.get(nameOf(id));
             if (group === undefined) {
-                return Option.some({ _tag: "One", spanId: id });
+                return Option.some(Sibling.One({ spanId: id }));
             }
-            return group.members[0] === id ? Option.some({ _tag: "Group", group }) : Option.none();
+            return group.members[0] === id ? Option.some(Sibling.Group({ group })) : Option.none();
         }),
     );
     const list = { items, groups };
@@ -155,7 +156,7 @@ const siblingList = (trace: Trace, parent: SpanId | null): SiblingList => {
 
 /** Each sibling's spans in display order: a group stands for all its members. */
 const spread = (items: ReadonlyArray<Sibling>): ReadonlyArray<SpanId> =>
-    Arr.flatMap(items, (item) => (item._tag === "One" ? [item.spanId] : item.group.members));
+    Arr.flatMap(items, (item) => (Predicate.isTagged(item, "One") ? [item.spanId] : item.group.members));
 
 const buildOrder = (facts: TreeFacts): TreeOrder => {
     const { trace } = facts;

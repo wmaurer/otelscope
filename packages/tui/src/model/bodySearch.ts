@@ -1,4 +1,4 @@
-import { Option } from "effect";
+import { Option, Predicate } from "effect";
 
 import { foldInPlace } from "../query/Highlight.ts";
 import { needle } from "../query/Query.ts";
@@ -33,7 +33,9 @@ export const matchesOf = (doc: BodyDoc, search: string): BodyMatches => {
     const starts: Array<number> = [];
     if (search !== "") {
         const sought = needle(search);
-        const [hay, text] = sought._tag === "Exact" ? [doc.text, sought.text] : [foldedOf(doc), sought.lower];
+        const [hay, text] = Predicate.isTagged(sought, "Exact")
+            ? [doc.text, sought.text]
+            : [foldedOf(doc), sought.lower];
         for (let at = hay.indexOf(text); at >= 0; at = hay.indexOf(text, at + text.length)) {
             starts[starts.length] = at;
         }

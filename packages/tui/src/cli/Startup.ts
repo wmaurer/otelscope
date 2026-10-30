@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Option, Path, type PlatformError, Schema } from "effect";
+import { Effect, FileSystem, Option, Path, type PlatformError, Predicate, Schema } from "effect";
 
 import type { CliArgs } from "./Args.ts";
 
@@ -66,7 +66,7 @@ const systemReasons = {
 } satisfies Record<PlatformError.SystemErrorTag, string>;
 
 const reasonOf = ({ reason }: PlatformError.PlatformError): string =>
-    reason._tag === "BadArgument" ? (reason.description ?? reason.message) : systemReasons[reason._tag];
+    Predicate.isTagged(reason, "BadArgument") ? (reason.description ?? reason.message) : systemReasons[reason._tag];
 
 const statIfExists = (fs: FileSystem.FileSystem, path: string) =>
     fs.stat(path).pipe(

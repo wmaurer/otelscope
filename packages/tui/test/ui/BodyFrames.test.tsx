@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "@effect/vitest";
 import { RGBA } from "@opentui/core";
 import { testRender } from "@opentui/react/test-utils";
-import { Array as Arr, Cause, Option } from "effect";
+import { Array as Arr, Cause, Option, Predicate } from "effect";
 import { AsyncResult, Atom, AtomRegistry } from "effect/reactivity";
 import { act } from "react";
 
@@ -15,6 +15,7 @@ import { Action } from "../../src/keys/Action.ts";
 import { initialShell, Shell } from "../../src/keys/Shell.ts";
 import { matchesOf } from "../../src/model/bodySearch.ts";
 import { defaultPanes } from "../../src/model/panes.ts";
+import { ScreenList } from "../../src/model/screenList.ts";
 import * as Nav from "../../src/nav/Nav.ts";
 import { defaultBodyView, defaultTraceView, Screen } from "../../src/nav/Screen.ts";
 import { Frame } from "../../src/ui/Frame.tsx";
@@ -106,7 +107,7 @@ const props = (nav: Nav.Nav, size: "wide" | "narrow" = "wide", read = stored): F
     file,
     width: size === "wide" ? 120 : 80,
     height: size === "wide" ? 40 : 24,
-    list: { _tag: "None" },
+    list: ScreenList.None(),
     trace: Option.none(),
     panes: defaultPanes,
     bodyStats: new Map(),
@@ -129,7 +130,7 @@ const snapshotPath = (name: string) => `__snapshots__/BodyFrames/${name}.txt`;
 /** The offset of the `n`th match of `search` in the shown JSON of the chat request. */
 const matchAt = (search: string, n: number): number => {
     const model = Option.getOrThrow(modelFor(navFor(CHAT, "llm.request")));
-    if (model.content._tag !== "Stored") {
+    if (!Predicate.isTagged(model.content, "Stored")) {
         throw new Error("not stored");
     }
     return matchesOf(model.content.doc, search).starts[n] ?? -1;

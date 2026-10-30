@@ -1,13 +1,14 @@
-import { Array as Arr } from "effect";
+import { Array as Arr, Data, Predicate } from "effect";
 
 import { ranges } from "../query/Highlight.ts";
 import { count, duration, shortId } from "./format.ts";
 import { chunk, highlighted, underlay } from "./Role.ts";
 import { cells } from "./text.ts";
+import { TreeEntry } from "./tree.ts";
 import { hiddenText } from "./treeSearch.ts";
 
 import type { Chunk, Line } from "./Role.ts";
-import type { Fold, Rails, TreeEntry } from "./tree.ts";
+import type { Fold, Rails } from "./tree.ts";
 import type { SpanKind, TreeFacts } from "./treeFacts.ts";
 import type { SpanSearch } from "./treeSearch.ts";
 
@@ -40,7 +41,7 @@ const railCells = (rails: Rails | undefined, levels: number): string => {
 
 /** `│ ` or `  ` per ancestor level and `├ ` or `└ ` for the row's own; past 4 levels `⋯<depth> ` and the innermost 4. */
 export const guides = (entry: TreeEntry): string => {
-    if (entry._tag === "Missing" || entry.depth === 0) {
+    if (Predicate.isTagged(entry, "Missing") || entry.depth === 0) {
         return "";
     }
     const own = entry.last ? "└ " : "├ ";
@@ -90,72 +91,71 @@ const nameCells = (guide: string, mark: string, label: Line, hidden: number, wid
 
 const durationCells = (text: string): Chunk => chunk(`${text.padStart(DURATION)} `, "text");
 
+const isSpanEntry = TreeEntry.$is("Span");
+const isGroupEntry = TreeEntry.$is("Group");
+
 /** Gutter · exit glyph · guides, fold mark and name (`nameColumn` cells) · duration (8, right-aligned) · a space. */
 export const treeLeft = (entry: TreeEntry, env: TreeLineEnv, selected: boolean): Line => {
     const { facts, search, nameColumn } = env;
     const line = ((): Line => {
-        switch (entry._tag) {
-            case "Span": {
-                const span = facts.trace.spans.get(entry.spanId);
-                const name = span?.name ?? entry.spanId;
-                const kind = facts.kind(entry.spanId);
-                const matched = search.matches(entry.spanId);
-                const hidden = entry.fold === "folded" ? search.below(entry.spanId) : 0;
-                return [
-                    matched ? chunk("▌", "accent") : blank(GUTTER),
-                    glyphs[kind],
-                    ...nameCells(
-                        guides(entry),
-                        foldMark[entry.fold],
-                        highlighted(
-                            name,
-                            kind === "origin" ? "failure" : "text",
-                            search.active ? ranges(search.query, name) : [],
-                        ),
-                        hidden,
-                        nameColumn,
+        if (isSpanEntry(entry)) {
+            const span = facts.trace.spans.get(entry.spanId);
+            const name = span?.name ?? entry.spanId;
+            const kind = facts.kind(entry.spanId);
+            const matched = search.matches(entry.spanId);
+            const hidden = entry.fold === "folded" ? search.below(entry.spanId) : 0;
+            return [
+                matched ? chunk("▌", "accent") : blank(GUTTER),
+                glyphs[kind],
+                ...nameCells(
+                    guides(entry),
+                    foldMark[entry.fold],
+                    highlighted(
+                        name,
+                        kind === "origin" ? "failure" : "text",
+                        search.active ? ranges(search.query, name) : [],
                     ),
-                    durationCells(span === undefined ? "" : duration(span.ms)),
-                ];
-            }
-            case "Group": {
-                const { group } = entry;
-                const problems = [
-                    ...(group.failed > 0 ? [chunk(` · ${count(group.failed)} failed`, "failure")] : []),
-                    ...(group.interrupted > 0
-                        ? [chunk(` · ${count(group.interrupted)} interrupted`, "interrupted")]
-                        : []),
-                ];
-                const hidden = entry.open ? 0 : search.hiddenIn(group, entry.shown);
-                return [
-                    blank(GUTTER + GLYPH),
-                    ...nameCells(
-                        guides(entry),
-                        entry.open ? "▾" : "▸",
-                        [
-                            ...highlighted(group.name, "text", search.active ? ranges(search.query, group.name) : []),
-                            chunk(` ×${count(group.members.length)}`, "muted"),
-                            ...problems,
-                        ],
-                        hidden,
-                        nameColumn,
-                    ),
-                    durationCells(duration(group.endMs - group.startMs)),
-                ];
-            }
-            case "Missing":
-                return [
-                    blank(GUTTER + GLYPH),
-                    ...nameCells(
-                        "",
-                        foldMark[entry.fold],
-                        [chunk(`⋯ missing parent ${shortId(entry.parentId)}…`, "muted")],
-                        entry.fold === "folded" ? search.belowMissing(entry.parentId) : 0,
-                        nameColumn,
-                    ),
-                    durationCells(""),
-                ];
+                    hidden,
+                    nameColumn,
+                ),
+                durationCells(span === undefined ? "" : duration(span.ms)),
+            ];
         }
+        if (isGroupEntry(entry)) {
+            const { group } = entry;
+            const problems = [
+                ...(group.failed > 0 ? [chunk(` · ${count(group.failed)} failed`, "failure")] : []),
+                ...(group.interrupted > 0 ? [chunk(` · ${count(group.interrupted)} interrupted`, "interrupted")] : []),
+            ];
+            const hidden = entry.open ? 0 : search.hiddenIn(group, entry.shown);
+            return [
+                blank(GUTTER + GLYPH),
+                ...nameCells(
+                    guides(entry),
+                    entry.open ? "▾" : "▸",
+                    [
+                        ...highlighted(group.name, "text", search.active ? ranges(search.query, group.name) : []),
+                        chunk(` ×${count(group.members.length)}`, "muted"),
+                        ...problems,
+                    ],
+                    hidden,
+                    nameColumn,
+                ),
+                durationCells(duration(group.endMs - group.startMs)),
+            ];
+        }
+        entry satisfies Data.TaggedEnum.Value<TreeEntry, "Missing">;
+        return [
+            blank(GUTTER + GLYPH),
+            ...nameCells(
+                "",
+                foldMark[entry.fold],
+                [chunk(`⋯ missing parent ${shortId(entry.parentId)}…`, "muted")],
+                entry.fold === "folded" ? search.belowMissing(entry.parentId) : 0,
+                nameColumn,
+            ),
+            durationCells(""),
+        ];
     })();
     return selected ? underlay(line, "selectionBg") : line;
 };
@@ -165,10 +165,10 @@ export const treeLeft = (entry: TreeEntry, env: TreeLineEnv, selected: boolean):
  * anything else selects the row.
  */
 export const hitOf = (entry: TreeEntry, column: number): "mark" | "row" => {
-    if (entry._tag === "Group") {
+    if (Predicate.isTagged(entry, "Group")) {
         return "mark";
     }
-    if (entry._tag === "Span" && entry.fold === "leaf") {
+    if (Predicate.isTagged(entry, "Span") && entry.fold === "leaf") {
         return "row";
     }
     const mark = GUTTER + GLYPH + cells(guides(entry));

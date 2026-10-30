@@ -1,4 +1,4 @@
-import { Context, Effect, FileSystem, Layer, Option, Path, Schema } from "effect";
+import { Context, Effect, FileSystem, Layer, Option, Path, Predicate, Schema } from "effect";
 
 import { InputFile } from "./InputFile.ts";
 
@@ -93,7 +93,7 @@ export class Bodies extends Context.Service<
                         Effect.map((data): Stored => ({ text: utf8.decode(data), fileBytes: data.length })),
                         Effect.tap((stored) => Effect.sync(() => cache.set(sha256, stored))),
                         Effect.mapError((error) =>
-                            error.reason._tag === "NotFound"
+                            Predicate.isTagged(error.reason, "NotFound")
                                 ? new BodyMissing({ sha256, path: file })
                                 : new BodyReadFailed({ sha256, path: file, message: error.message }),
                         ),

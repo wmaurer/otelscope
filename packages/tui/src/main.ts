@@ -1,5 +1,5 @@
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
-import { Array as Arr, Cause, Console, Effect, Exit, Option, type PlatformError, Runtime } from "effect";
+import { Array as Arr, Cause, Console, Effect, Exit, Option, type PlatformError, Predicate, Runtime } from "effect";
 
 import * as Args from "./cli/Args.ts";
 import * as Startup from "./cli/Startup.ts";
@@ -12,7 +12,7 @@ const report = (cause: Cause.Cause<Args.UsageError | Startup.StartupError | Plat
         : Option.match(Cause.findErrorOption(cause), {
               onNone: () => Console.error(Cause.pretty(cause)),
               onSome: (error) =>
-                  error._tag === "UsageError" ? Effect.void : Console.error(`otelscope: ${error.message}`),
+                  Predicate.isTagged(error, "UsageError") ? Effect.void : Console.error(`otelscope: ${error.message}`),
           });
 
 // Quit, SIGINT and SIGTERM all end the program normally, and Effect's default maps an interrupt to 130.

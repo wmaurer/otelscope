@@ -1,10 +1,10 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, HashSet, Option, Order, Schema } from "effect";
+import { Array as Arr, HashSet, Option, Order, Predicate, Schema } from "effect";
 
 import { Index } from "../../src/data/Index.ts";
 import { lineText } from "../../src/model/text.ts";
 import { headingStats, moreText, traceLayout, traceLine } from "../../src/model/traceLine.ts";
-import { collect, pinnedBy, traceList } from "../../src/model/traceList.ts";
+import { collect, pinnedBy, traceList, TraceListRow } from "../../src/model/traceList.ts";
 import { TraceRow } from "../../src/nav/Screen.ts";
 import { parse } from "../../src/query/Query.ts";
 import { namedTraces, rootSpan } from "../support/lists.ts";
@@ -12,7 +12,7 @@ import { exception, line, record } from "../support/records.ts";
 import { indexed, ingestAll, status } from "../support/store.ts";
 
 import type { Snapshot } from "../../src/data/Snapshot.ts";
-import type { Collected, TraceList, TraceListRow } from "../../src/model/traceList.ts";
+import type { Collected, TraceList } from "../../src/model/traceList.ts";
 import type { TracesView } from "../../src/nav/Screen.ts";
 
 const failing = new Set([3, 7, 11, 15, 19, 22]);
@@ -35,16 +35,11 @@ const build = (
     return traceList(collected, view.openGroups, pinned);
 };
 
-const label = (row: TraceListRow): string => {
-    switch (row._tag) {
-        case "Trace":
-            return `${row.member ? "  " : ""}${row.item.trace.id}`;
-        case "Heading":
-            return `▸ ${row.group.name}`;
-        case "More":
-            return `⋯ ${row.group.name}`;
-    }
-};
+const label: (row: TraceListRow) => string = TraceListRow.$match({
+    Trace: ({ member, item }) => `${member ? "  " : ""}${item.trace.id}`,
+    Heading: ({ group }) => `▸ ${group.name}`,
+    More: ({ group }) => `⋯ ${group.name}`,
+});
 const labels = (list: TraceList) => Arr.map(list.rows, label);
 
 describe("groups", () => {
@@ -62,11 +57,11 @@ describe("groups", () => {
             "h3",
         ]);
         const nineteen = build({}, "", indexed([...namedTraces("o", "POST /orders", 19, 10_000), ...health]));
-        expect(Arr.filter(nineteen.rows, (row) => row._tag !== "Trace")).toEqual([]);
+        expect(Arr.filter(nineteen.rows, (row) => !Predicate.isTagged(row, "Trace"))).toEqual([]);
         const twenty = build({}, "", indexed([...namedTraces("o", "POST /orders", 20, 10_000), ...health]));
         expect(
             Arr.map(
-                Arr.filter(twenty.rows, (row) => row._tag !== "Trace"),
+                Arr.filter(twenty.rows, (row) => !Predicate.isTagged(row, "Trace")),
                 label,
             ),
         ).toEqual(["▸ POST /orders", "⋯ POST /orders"]);
@@ -103,13 +98,13 @@ describe("groups", () => {
 
     it("shows every member of an open group", () => {
         const list = build({ openGroups: HashSet.make("POST /orders") });
-        expect(Arr.filter(list.rows, (row) => row._tag === "Trace" && row.member).length).toBe(25);
-        expect(Arr.some(list.rows, (row) => row._tag === "More")).toBe(false);
+        expect(Arr.filter(list.rows, (row) => Predicate.isTagged(row, "Trace") && row.member).length).toBe(25);
+        expect(Arr.some(list.rows, (row) => Predicate.isTagged(row, "More"))).toBe(false);
     });
 
     it("counts what the more row hides by state, leaving zero counts out", () => {
-        const more = Arr.findFirst(build().rows, (row) => row._tag === "More");
-        expect(Option.map(more, (row) => (row._tag === "More" ? moreText(row.group.hidden) : ""))).toEqual(
+        const more = Arr.findFirst(build().rows, (row) => Predicate.isTagged(row, "More"));
+        expect(Option.map(more, (row) => (Predicate.isTagged(row, "More") ? moreText(row.group.hidden) : ""))).toEqual(
             Option.some("⋯ 1 more failed · 19 ok"),
         );
         const states = ["ok", "partial", "recovered", "running", "interrupted", "failed"] as const;
@@ -177,8 +172,8 @@ describe("the pinned selection", () => {
         expect(pinnedBy(collected, HashSet.make("POST /orders"), select("o010")), "open").toEqual(Option.none());
         const list = build({}, "", snapshot, Option.some("o010"));
         expect(labels(list).slice(1, 5)).toEqual(["▸ POST /orders", "  o003", "  o007", "  o010"]);
-        const more = Arr.findFirst(list.rows, (row) => row._tag === "More");
-        expect(Option.map(more, (row) => (row._tag === "More" ? moreText(row.group.hidden) : ""))).toEqual(
+        const more = Arr.findFirst(list.rows, (row) => Predicate.isTagged(row, "More"));
+        expect(Option.map(more, (row) => (Predicate.isTagged(row, "More") ? moreText(row.group.hidden) : ""))).toEqual(
             Option.some("⋯ 1 more failed · 18 ok"),
         );
     });
@@ -220,7 +215,7 @@ describe("headings", () => {
         const source = indexed([...errors, ...namedTraces("j", "job", 17, 10_000)]);
         const heading = build({}, "", source).rows[0]!;
         expect(heading._tag).toBe("Heading");
-        const stats = heading._tag === "Heading" ? headingStats(heading.group) : undefined;
+        const stats = Predicate.isTagged(heading, "Heading") ? headingStats(heading.group) : undefined;
         expect(stats).toMatchObject({ p50Ms: 10, failedTraces: 3, error: "2× PaymentDeclined · 1 other error" });
     });
 
@@ -232,7 +227,7 @@ describe("headings", () => {
         ]);
         const error = (view: Partial<TracesView>) => {
             const heading = build(view, "", source).rows[0]!;
-            return heading._tag === "Heading" ? headingStats(heading.group).error : "";
+            return Predicate.isTagged(heading, "Heading") ? headingStats(heading.group).error : "";
         };
         expect(error({})).toBe("1× Timeout · 1 other error");
         expect(error({ reverse: true })).toBe("1× PaymentDeclined · 1 other error");
@@ -245,7 +240,7 @@ describe("headings", () => {
                 Array.from({ length: count }, (_, i) => rootSpan(`d${i}`, "job", 1000 + i, "Success", { ms: i + 1 })),
             );
             const heading = build({}, "", source).rows[0]!;
-            return heading._tag === "Heading" ? headingStats(heading.group).p50Ms : -1;
+            return Predicate.isTagged(heading, "Heading") ? headingStats(heading.group).p50Ms : -1;
         };
         expect(p50(20)).toBe(10);
         expect(p50(21)).toBe(11);
@@ -260,7 +255,7 @@ describe("headings", () => {
             );
             const heading = build({}, "", source).rows[0]!;
             const sorted = Arr.sort(durations, Order.Number);
-            expect(heading._tag === "Heading" ? headingStats(heading.group).p50Ms : -1).toBe(
+            expect(Predicate.isTagged(heading, "Heading") ? headingStats(heading.group).p50Ms : -1).toBe(
                 sorted[Math.floor((sorted.length - 1) / 2)],
             );
         },
@@ -276,7 +271,7 @@ describe("highlights", () => {
 
     it("highlights the match in an indented member and after a heading's arrow", () => {
         const list = build({}, "orders");
-        const member = Arr.findFirst(list.rows, (row) => row._tag === "Trace" && row.member);
+        const member = Arr.findFirst(list.rows, (row) => Predicate.isTagged(row, "Trace") && row.member);
         expect(Option.map(member, (row) => highlighted(row, list))).toEqual(Option.some(["orders"]));
         expect(highlighted(list.rows[0]!, list)).toEqual(["orders"]);
     });

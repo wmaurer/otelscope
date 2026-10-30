@@ -1,3 +1,5 @@
+import { Predicate } from "effect";
+
 import { top } from "../nav/Nav.ts";
 import { parse } from "../query/Query.ts";
 import { Action, Peel } from "./Action.ts";
@@ -48,13 +50,13 @@ export interface Binding {
 
 export const focusOf = (nav: Nav): Focus => {
     const screen = top(nav);
-    return screen._tag === "Trace" ? `Trace.${screen.view.pane}` : screen._tag;
+    return Predicate.isTagged(screen, "Trace") ? `Trace.${screen.view.pane}` : screen._tag;
 };
 
 export const holds = (guard: Guard, nav: Nav): boolean => {
     const screen = top(nav);
     // The same test as the status line's: a search counts once it has terms.
-    const treeSearch = screen._tag === "Trace" && parse(screen.view.search).length > 0;
+    const treeSearch = Predicate.isTagged(screen, "Trace") && parse(screen.view.search).length > 0;
     return guard === "treeSearch" ? treeSearch : !treeSearch;
 };
 

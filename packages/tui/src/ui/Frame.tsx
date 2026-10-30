@@ -1,4 +1,4 @@
-import { Option } from "effect";
+import { Option, Predicate } from "effect";
 
 import { Action } from "../keys/Action.ts";
 import { hintFacts, hintLine } from "../keys/Hints.ts";
@@ -60,7 +60,7 @@ export const Frame = (props: FrameProps): ReactNode => {
         ? Option.none()
         : listFrame(screen, props.list, { snapshot, now, file: props.file, width });
     const trace =
-        screen._tag === "Trace" && Option.isNone(placeholder)
+        Predicate.isTagged(screen, "Trace") && Option.isNone(placeholder)
             ? Option.map(props.trace, (model) =>
                   traceFrame(model, screen.view, {
                       size: { width, height },
@@ -72,7 +72,7 @@ export const Frame = (props: FrameProps): ReactNode => {
               )
             : Option.none();
     const body =
-        screen._tag === "Body" && Option.isNone(placeholder)
+        Predicate.isTagged(screen, "Body") && Option.isNone(placeholder)
             ? Option.map(props.body, (model) =>
                   bodyFrame(model, screen.view, { size: { width, height }, file: props.file }),
               )
@@ -82,34 +82,32 @@ export const Frame = (props: FrameProps): ReactNode => {
         Option.map(trace, (frame) => frame.count),
         Option.map(body, (frame) => frame.count),
     ]);
-    const bar =
-        shell._tag === "Input"
-            ? inputBar(
-                  activeQuery(nav),
-                  shell.cursor,
-                  Option.getOrElse(counted, () => ""),
-                  width,
-              )
-            : statusBar(
-                  {
-                      hints: hintLine(modeOf(shell), nav, hintFacts(props.trace)),
-                      message: props.message,
-                      query: Option.firstSomeOf([
-                          Option.flatMap(list, (frame) => frame.query),
-                          Option.flatMap(trace, (frame) => frame.query),
-                          Option.flatMap(body, (frame) => frame.query),
-                      ]),
-                      newRows: Option.flatMap(list, (frame) => frame.newRows),
-                      snapshot,
-                      file: props.file,
-                      now,
-                  },
-                  width,
-              );
-    const overlay =
-        shell._tag === "Overlay"
-            ? Option.some({ scroll: shell.scroll, content: overlayContent(shell.kind, nav, snapshot) })
-            : Option.none();
+    const bar = Predicate.isTagged(shell, "Input")
+        ? inputBar(
+              activeQuery(nav),
+              shell.cursor,
+              Option.getOrElse(counted, () => ""),
+              width,
+          )
+        : statusBar(
+              {
+                  hints: hintLine(modeOf(shell), nav, hintFacts(props.trace)),
+                  message: props.message,
+                  query: Option.firstSomeOf([
+                      Option.flatMap(list, (frame) => frame.query),
+                      Option.flatMap(trace, (frame) => frame.query),
+                      Option.flatMap(body, (frame) => frame.query),
+                  ]),
+                  newRows: Option.flatMap(list, (frame) => frame.newRows),
+                  snapshot,
+                  file: props.file,
+                  now,
+              },
+              width,
+          );
+    const overlay = Predicate.isTagged(shell, "Overlay")
+        ? Option.some({ scroll: shell.scroll, content: overlayContent(shell.kind, nav, snapshot) })
+        : Option.none();
     return (
         <box flexDirection="column" width={width} height={height}>
             <LineText line={breadcrumb(segments(nav, snapshot, now), width)} />
@@ -128,7 +126,7 @@ export const Frame = (props: FrameProps): ReactNode => {
                             )),
                             Option.map(trace, (frame) => (
                                 <TraceBody
-                                    key={`${nav.stack.length}:${screen._tag === "Trace" ? screen.traceId : ""}`}
+                                    key={`${nav.stack.length}:${Predicate.isTagged(screen, "Trace") ? screen.traceId : ""}`}
                                     frame={frame}
                                     size={{ width, height }}
                                     onAction={props.onAction}
@@ -137,7 +135,7 @@ export const Frame = (props: FrameProps): ReactNode => {
                             Option.map(body, (frame) => <BodyPager frame={frame} onAction={props.onAction} />),
                         ]),
                         () =>
-                            screen._tag === "Body" ? (
+                            Predicate.isTagged(screen, "Body") ? (
                                 <Placeholder lines={noBodyLines(screen.prefix)} />
                             ) : (
                                 <box flexGrow={1} />

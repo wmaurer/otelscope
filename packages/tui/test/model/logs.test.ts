@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, HashSet, Option, Schema } from "effect";
+import { Array as Arr, HashSet, Option, Predicate, Schema } from "effect";
 
 import {
     causeLine,
@@ -51,7 +51,7 @@ const keysOf = (logs: ReadonlyArray<LogEntry>) => Arr.map(logs, (entry) => entry
 const spanRow = (trace: Trace, spanId: string): Option.Option<TreeEntry> =>
     Arr.findFirst(
         flatten(factsOf(trace), { folded: HashSet.empty(), openGroups: HashSet.empty(), pins: [] }).rows,
-        (row) => row._tag === "Span" && row.spanId === spanId,
+        (row) => Predicate.isTagged(row, "Span") && row.spanId === spanId,
     );
 const rowWithKey = (trace: Trace, key: string): Option.Option<TreeEntry> =>
     Arr.findFirst(
@@ -60,7 +60,7 @@ const rowWithKey = (trace: Trace, key: string): Option.Option<TreeEntry> =>
     );
 const entryWithKey = (key: string): LogEntry => {
     const found = Arr.findFirst(logsOf(facts).all, (entry) => entry.key === key);
-    if (found._tag === "None") {
+    if (Predicate.isTagged(found, "None")) {
         throw new Error(`no log ${key}`);
     }
     return found.value;

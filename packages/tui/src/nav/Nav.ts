@@ -1,4 +1,4 @@
-import { Array as Arr } from "effect";
+import { Array as Arr, Predicate } from "effect";
 
 import { defaultRunsView, Screen } from "./Screen.ts";
 
@@ -26,7 +26,7 @@ export const replace = (nav: Nav, screen: Screen): Nav => {
     if (rest.length > 0) {
         return { stack: [head, ...Arr.dropRight(rest, 1), screen] };
     }
-    return screen._tag === "Runs" ? { stack: [screen] } : nav;
+    return Predicate.isTagged(screen, "Runs") ? { stack: [screen] } : nav;
 };
 
 export const back = (nav: Nav): Nav => {
@@ -49,7 +49,7 @@ const updateAt = <T extends ScreenTag>(nav: Nav, index: number, tag: T, f: (view
     // SAFETY: the same variant with its view replaced by one of the same type.
     const next = { ...screen, view } as Screen;
     if (index === 0) {
-        return next._tag === "Runs" ? { stack: [next, ...rest] } : nav;
+        return Predicate.isTagged(next, "Runs") ? { stack: [next, ...rest] } : nav;
     }
     return { stack: [head, ...Arr.map(rest, (s, i) => (i === index - 1 ? next : s))] };
 };

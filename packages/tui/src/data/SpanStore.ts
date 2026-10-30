@@ -95,30 +95,28 @@ export class SpanStore extends Context.Service<
 
             const handle = Effect.fnUntraced(function* (event: TailEvent) {
                 status = { ...status, phase: phaseAfter(status.phase, event, input.follow) };
-                switch (event._tag) {
-                    case "Lines":
-                        status = { ...status, bytesTotal: event.size, error: Option.none() };
-                        return yield* indexLines(event);
-                    case "CaughtUp":
-                        status = { ...status, bytesRead: event.size, bytesTotal: event.size, error: Option.none() };
-                        return yield* publish;
-                    case "Reset": {
-                        index.reset();
-                        const at = yield* Clock.currentTimeMillis;
-                        status = {
-                            ...status,
-                            bytesRead: 0,
-                            bytesTotal: 0,
-                            lastReset: Option.some({ reason: event.reason, at }),
-                        };
-                        return yield* publish;
-                    }
-                    case "Missing":
-                        return yield* publish;
-                    case "Failed":
-                        status = { ...status, error: Option.some(event.message) };
-                        return yield* publish;
-                }
+                return yield* TailEvent.$match(event, {
+                    Lines: (lines) => {
+                        status = { ...status, bytesTotal: lines.size, error: Option.none() };
+                        return indexLines(lines);
+                    },
+                    CaughtUp: ({ size }) => {
+                        status = { ...status, bytesRead: size, bytesTotal: size, error: Option.none() };
+                        return publish;
+                    },
+                    Reset: ({ reason }) =>
+                        Effect.gen(function* () {
+                            index.reset();
+                            const at = yield* Clock.currentTimeMillis;
+                            status = { ...status, bytesRead: 0, bytesTotal: 0, lastReset: Option.some({ reason, at }) };
+                            return yield* publish;
+                        }),
+                    Missing: () => publish,
+                    Failed: ({ message }) => {
+                        status = { ...status, error: Option.some(message) };
+                        return publish;
+                    },
+                });
             });
 
             yield* source.events.pipe(Stream.runForEach(handle), Effect.forkScoped);

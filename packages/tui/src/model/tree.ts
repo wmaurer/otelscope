@@ -1,10 +1,11 @@
-import { Array as Arr, Data, HashSet, Option } from "effect";
+import { Array as Arr, Data, HashSet, Option, Predicate } from "effect";
 
 import { TreeRow } from "../nav/Screen.ts";
+import { Sibling } from "./treeFacts.ts";
 
 import type { SpanId } from "../data/Snapshot.ts";
 import type { GroupKey, TraceView } from "../nav/Screen.ts";
-import type { Group, Sibling, TreeFacts } from "./treeFacts.ts";
+import type { Group, TreeFacts } from "./treeFacts.ts";
 
 export type Fold = "open" | "folded" | "leaf";
 
@@ -82,7 +83,7 @@ export const pinsOf = (facts: TreeFacts, view: Pick<TraceView, "selected" | "ope
     Option.match(view.selected, {
         onNone: () => [],
         onSome: (row) =>
-            row._tag !== "Span"
+            !Predicate.isTagged(row, "Span")
                 ? []
                 : Arr.filter(facts.lineage(row.spanId), (id) =>
                       Option.exists(
@@ -108,7 +109,7 @@ interface Pending {
     readonly last: boolean;
 }
 
-const one = (spanId: SpanId): Sibling => ({ _tag: "One", spanId });
+const one = (spanId: SpanId): Sibling => Sibling.One({ spanId });
 
 /** The visible rows, depth first. An explicit stack keeps a 41-level trace off the call stack. */
 export const flatten = (facts: TreeFacts, visibility: Visibility): Tree => {
@@ -129,7 +130,7 @@ export const flatten = (facts: TreeFacts, visibility: Visibility): Tree => {
         depth === 0 ? undefined : { more: !last, up: rails };
     const emit = (pending: Pending) => {
         const { item, depth, rails, last } = pending;
-        if (item._tag === "Group") {
+        if (Predicate.isTagged(item, "Group")) {
             const { group } = item;
             const open = HashSet.has(visibility.openGroups, group.key);
             const shown = open

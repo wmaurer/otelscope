@@ -1,6 +1,6 @@
-import { Array as Arr, Option } from "effect";
+import { Array as Arr, Option, Predicate } from "effect";
 
-import { problemText, shownOf } from "./bodyModel.ts";
+import { BodyContent, problemText, shownOf } from "./bodyModel.ts";
 import { clampedView, rowLine, rowsOf } from "./bodyRows.ts";
 import { matchText } from "./bodySearch.ts";
 import { basename, count, size } from "./format.ts";
@@ -36,26 +36,18 @@ export interface BodyFrame {
 /** The breadcrumb, the header and the status bar. */
 const CHROME_ROWS = 3;
 
-const noticeOf = (model: BodyModel, file: string): Option.Option<Line> => {
-    const { content } = model;
-    switch (content._tag) {
-        case "Loading":
-            return Option.none();
-        case "Stored":
-            return content.text.truncated
+const noticeOf = (model: BodyModel, file: string): Option.Option<Line> =>
+    BodyContent.$match(model.content, {
+        Loading: () => Option.none(),
+        Stored: ({ text }) =>
+            text.truncated
                 ? Option.some([
-                      chunk(
-                          `⚠ truncated: showing ${count(content.text.storedBytes)} of ${count(content.text.bytes)} bytes`,
-                          "warning",
-                      ),
+                      chunk(`⚠ truncated: showing ${count(text.storedBytes)} of ${count(text.bytes)} bytes`, "warning"),
                   ])
-                : Option.none();
-        case "Preview":
-            return Option.some([
-                chunk(`⚠ ${problemText(model.ref, content.problem)} next to ${basename(file)}`, "warning"),
-            ]);
-    }
-};
+                : Option.none(),
+        Preview: ({ problem }) =>
+            Option.some([chunk(`⚠ ${problemText(model.ref, problem)} next to ${basename(file)}`, "warning")]),
+    });
 
 /** The rows the body text gets: the height less the chrome, the tab row and the notice. */
 const viewportOf = (model: BodyModel, height: number): number =>
@@ -80,17 +72,16 @@ const headerLine = (model: BodyModel, view: BodyView, context: BodyContext, top:
     const { doc, matches } = shownOf(content);
     const { rows, viewport } = context;
     const last = Math.min(rows.count, top + viewport);
-    const loaded =
-        content._tag === "Loading"
-            ? []
-            : [
-                  SEPARATOR,
-                  chunk(`${doc.kind}${doc.raw ? " · raw" : ""}`, "muted"),
-                  ...(content._tag === "Preview" ? [SEPARATOR, chunk("preview only", "warning")] : []),
-                  SEPARATOR,
-                  chunk(`L ${count(Math.min(top + 1, last))}–${count(last)} / ${count(rows.count)}`, "muted"),
-                  ...(view.search === "" ? [] : [SEPARATOR, chunk(matchText(matches, view.current), "text")]),
-              ];
+    const loaded = Predicate.isTagged(content, "Loading")
+        ? []
+        : [
+              SEPARATOR,
+              chunk(`${doc.kind}${doc.raw ? " · raw" : ""}`, "muted"),
+              ...(Predicate.isTagged(content, "Preview") ? [SEPARATOR, chunk("preview only", "warning")] : []),
+              SEPARATOR,
+              chunk(`L ${count(Math.min(top + 1, last))}–${count(last)} / ${count(rows.count)}`, "muted"),
+              ...(view.search === "" ? [] : [SEPARATOR, chunk(matchText(matches, view.current), "text")]),
+          ];
     return cutLine(
         [
             chunk(model.ref.prefix, "text", true),
@@ -132,12 +123,11 @@ export const bodyFrame = (model: BodyModel, view: BodyView, env: BodyEnv): BodyF
         header: headerLine(model, view, context, top),
         tabs: tabsLine(model, width),
         notice: Option.map(noticeOf(model, env.file), (line) => cutLine(line, width)),
-        rows:
-            model.content._tag === "Loading"
-                ? [[chunk("loading…", "muted")]]
-                : Arr.makeBy(Math.min(viewport, rows.count - top), (i) =>
-                      rowLine(doc, rows, matches, view.current, top + i, { left, width }),
-                  ),
+        rows: Predicate.isTagged(model.content, "Loading")
+            ? [[chunk("loading…", "muted")]]
+            : Arr.makeBy(Math.min(viewport, rows.count - top), (i) =>
+                  rowLine(doc, rows, matches, view.current, top + i, { left, width }),
+              ),
         query: view.search === "" ? Option.none() : Option.some(`/ ${view.search} · ${found}`),
         count: found,
     };

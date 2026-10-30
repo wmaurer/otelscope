@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, Option } from "effect";
+import { Array as Arr, Option, Predicate } from "effect";
 
 import { Index } from "../../src/data/Index.ts";
 import { factsOf } from "../../src/model/treeFacts.ts";
@@ -51,11 +51,9 @@ describe("same-name groups", () => {
 
     it("folds 20 siblings with one name under a group at the first member's place, and leaves 19 alone", () => {
         const items = factsOf(wide).siblings("root");
-        expect(Arr.map(items, (item) => (item._tag === "One" ? item.spanId : `group ${item.group.name}`))).toEqual([
-            "first",
-            "group import.row",
-            ...Arr.makeBy(19, (i) => `few-${String(i).padStart(3, "0")}`),
-        ]);
+        expect(
+            Arr.map(items, (item) => (Predicate.isTagged(item, "One") ? item.spanId : `group ${item.group.name}`)),
+        ).toEqual(["first", "group import.row", ...Arr.makeBy(19, (i) => `few-${String(i).padStart(3, "0")}`)]);
     });
 
     it("keeps the members in start order, the failed and interrupted ones as problems, and the envelope", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest";
 import { RGBA } from "@opentui/core";
 import { testRender } from "@opentui/react/test-utils";
-import { Array as Arr, HashSet, Option } from "effect";
+import { Array as Arr, HashSet, Option, Predicate } from "effect";
 import { act } from "react";
 
 import { initialShell, Shell } from "../../src/keys/Shell.ts";
@@ -52,7 +52,7 @@ const shopRun = "2026-10-06T14-03-27-070-0001";
 const traces = Nav.push(Nav.initial, tracesFor(shopRun, defaultRunsView));
 const openGroup = Nav.update(traces, "Traces", (view) => ({ ...view, openGroups: HashSet.make("POST /orders") }));
 const filtered = (nav: Nav.Nav, filter: string): Nav.Nav =>
-    Nav.top(nav)._tag === "Runs"
+    Predicate.isTagged(Nav.top(nav), "Runs")
         ? Nav.update(nav, "Runs", (view) => ({ ...view, filter }))
         : Nav.update(nav, "Traces", (view) => ({ ...view, filter }));
 

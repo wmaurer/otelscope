@@ -1,9 +1,10 @@
-import { Array as Arr, Option } from "effect";
+import { Array as Arr, Data, Option } from "effect";
 
 import { ranges, shift } from "../query/Highlight.ts";
 import { count, duration, offset } from "./format.ts";
 import { traceMark } from "./marks.ts";
 import { cell, countText, layout, row } from "./table.ts";
+import { TraceListRow } from "./traceList.ts";
 
 import type { Run, Trace } from "../data/Snapshot.ts";
 import type { TraceSort } from "../nav/Screen.ts";
@@ -11,7 +12,7 @@ import type { Query } from "../query/Query.ts";
 import type { TraceState } from "./marks.ts";
 import type { Line, Role } from "./Role.ts";
 import type { Column, Placed } from "./table.ts";
-import type { Group, Item, TraceListRow } from "./traceList.ts";
+import type { Group, Item } from "./traceList.ts";
 
 const MORE_ORDER: ReadonlyArray<TraceState> = ["failed", "interrupted", "running", "recovered", "partial", "ok"];
 
@@ -216,31 +217,33 @@ const headingCell = (group: Group, column: Placed<TraceColumn>, context: TraceLi
     }
 };
 
+const isTraceRow = TraceListRow.$is("Trace");
+const isHeadingRow = TraceListRow.$is("Heading");
+
 export const traceLine = (listRow: TraceListRow, context: TraceLineContext, selected: boolean): Line => {
-    switch (listRow._tag) {
-        case "Trace":
-            return row(
-                Arr.map(context.placed, (column) => traceCell(listRow.item, listRow.member, column, context)),
-                context.width,
-                selected,
-            );
-        case "Heading":
-            return row(
-                Arr.map(context.placed, (column) => headingCell(listRow.group, column, context)),
-                context.width,
-                selected,
-            );
-        case "More": {
-            const [marks, ...rest] = context.placed;
-            const span = Arr.reduce(rest, 0, (sum, column) => sum + column.width + 1) - 1;
-            return row(
-                [
-                    cell("", marks?.width ?? 0, "left", "text"),
-                    cell(`  ${moreText(listRow.group.hidden)}`, span, "left", "muted"),
-                ],
-                context.width,
-                selected,
-            );
-        }
+    if (isTraceRow(listRow)) {
+        return row(
+            Arr.map(context.placed, (column) => traceCell(listRow.item, listRow.member, column, context)),
+            context.width,
+            selected,
+        );
     }
+    if (isHeadingRow(listRow)) {
+        return row(
+            Arr.map(context.placed, (column) => headingCell(listRow.group, column, context)),
+            context.width,
+            selected,
+        );
+    }
+    listRow satisfies Data.TaggedEnum.Value<TraceListRow, "More">;
+    const [marks, ...rest] = context.placed;
+    const span = Arr.reduce(rest, 0, (sum, column) => sum + column.width + 1) - 1;
+    return row(
+        [
+            cell("", marks?.width ?? 0, "left", "text"),
+            cell(`  ${moreText(listRow.group.hidden)}`, span, "left", "muted"),
+        ],
+        context.width,
+        selected,
+    );
 };

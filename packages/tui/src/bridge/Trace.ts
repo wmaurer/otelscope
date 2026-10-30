@@ -1,4 +1,4 @@
-import { Array as Arr, Equal, Option } from "effect";
+import { Array as Arr, Equal, Option, Predicate } from "effect";
 import { Atom } from "effect/reactivity";
 
 import { bodiesOf } from "../model/bodies.ts";
@@ -27,11 +27,11 @@ export const traceModelAtom = (
 ): Atom.Atom<Option.Option<TraceModel>> => {
     const trace = Atom.make((get): Trace | undefined => {
         const screen = top(get(nav));
-        return screen._tag === "Trace" ? get(snapshot).traces.get(screen.traceId) : undefined;
+        return Predicate.isTagged(screen, "Trace") ? get(snapshot).traces.get(screen.traceId) : undefined;
     });
     const view = Atom.make((get): TraceView | undefined => {
         const screen = top(get(nav));
-        return screen._tag === "Trace" ? screen.view : undefined;
+        return Predicate.isTagged(screen, "Trace") ? screen.view : undefined;
     });
     const facts = Atom.make((get) => {
         const found = get(trace);

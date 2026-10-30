@@ -2,7 +2,7 @@ import { Array as Arr, Option } from "effect";
 
 import { depth } from "../nav/Nav.ts";
 import { activeQuery } from "../nav/Query.ts";
-import { Action } from "./Action.ts";
+import { Action, BindingAction } from "./Action.ts";
 import { BINDINGS, focusOf, holds } from "./Bindings.ts";
 import { normalize, typed } from "./Key.ts";
 
@@ -48,6 +48,8 @@ const opens = (mode: "help" | "badLines", key: string): boolean =>
             has(binding, key),
     );
 
+const isPeel = BindingAction.$is("Peel");
+
 export const dispatch = (mode: Mode, nav: Nav, press: KeyPress): Option.Option<Action> => {
     const key = normalize(press);
     if ((mode === "help" || mode === "badLines") && opens(mode, key)) {
@@ -58,7 +60,7 @@ export const dispatch = (mode: Mode, nav: Nav, press: KeyPress): Option.Option<A
         return Option.map(typed(press), (text) => Action.InsertText({ text }));
     }
     return Option.flatMap(found, ({ action }) => {
-        if (action._tag !== "Peel") {
+        if (!isPeel(action)) {
             return Option.some(action);
         }
         if (activeQuery(nav) !== "") {

@@ -1,4 +1,4 @@
-import { Array as Arr } from "effect";
+import { Array as Arr, Predicate } from "effect";
 
 import { top } from "../nav/Nav.ts";
 import { BINDINGS, holds } from "./Bindings.ts";
@@ -30,7 +30,7 @@ const rowsOf = (nav: Nav, scopes: ReadonlyArray<Scope>): ReadonlyArray<HelpRow> 
         (rows, binding) => {
             const keys = Arr.join(Arr.map(binding.keys, keyLabel), "/");
             const last = Arr.last(rows);
-            return last._tag === "Some" && last.value.label === binding.label
+            return Predicate.isTagged(last, "Some") && last.value.label === binding.label
                 ? [...Arr.dropRight(rows, 1), { keys: `${last.value.keys}/${keys}`, label: binding.label }]
                 : [...rows, { keys, label: binding.label }];
         },
@@ -46,16 +46,15 @@ const panes: ReadonlyArray<Pane> = ["tree", "details", "logs"];
 
 export const helpSections = (nav: Nav): ReadonlyArray<HelpSection> => {
     const screen = top(nav);
-    const screenSections =
-        screen._tag === "Trace"
-            ? [
-                  section(nav, `Trace · ${screen.view.pane}`, [`Trace.${screen.view.pane}`], true),
-                  section(nav, "Trace · any pane", ["Trace"]),
-                  ...Arr.map(
-                      Arr.filter(panes, (pane) => pane !== screen.view.pane),
-                      (pane) => section(nav, `Trace · ${pane}`, [`Trace.${pane}`]),
-                  ),
-              ]
-            : [section(nav, screen._tag, [screen._tag])];
+    const screenSections = Predicate.isTagged(screen, "Trace")
+        ? [
+              section(nav, `Trace · ${screen.view.pane}`, [`Trace.${screen.view.pane}`], true),
+              section(nav, "Trace · any pane", ["Trace"]),
+              ...Arr.map(
+                  Arr.filter(panes, (pane) => pane !== screen.view.pane),
+                  (pane) => section(nav, `Trace · ${pane}`, [`Trace.${pane}`]),
+              ),
+          ]
+        : [section(nav, screen._tag, [screen._tag])];
     return [...screenSections, section(nav, "Movement", ["movement"]), section(nav, "Global", ["global", "always"])];
 };

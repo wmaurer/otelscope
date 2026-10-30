@@ -11,6 +11,7 @@ import { Index } from "../../src/data/Index.ts";
 import { initialShell } from "../../src/keys/Shell.ts";
 import { openingFor } from "../../src/model/opening.ts";
 import { defaultPanes } from "../../src/model/panes.ts";
+import { ScreenList } from "../../src/model/screenList.ts";
 import { factsOf } from "../../src/model/treeFacts.ts";
 import { searchOf } from "../../src/model/treeSearch.ts";
 import * as Nav from "../../src/nav/Nav.ts";
@@ -54,7 +55,7 @@ const props = (nav: Nav.Nav, size: "wide" | "narrow" = "wide", shell: Shell = in
         file,
         width: size === "wide" ? 120 : 80,
         height: size === "wide" ? 40 : 24,
-        list: { _tag: "None" },
+        list: ScreenList.None(),
         trace: traceModelFor(nav, sample),
         panes: defaultPanes,
         bodyStats: new Map(),

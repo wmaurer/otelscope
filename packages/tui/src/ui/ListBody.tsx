@@ -1,3 +1,5 @@
+import { Predicate } from "effect";
+
 import { LineText, Placeholder } from "./Chrome.tsx";
 import { WindowedList } from "./WindowedList.tsx";
 
@@ -10,7 +12,7 @@ export const ListBody = (props: {
     readonly onPick: (key: string) => void;
 }): ReactNode => {
     const { body } = props;
-    return body._tag === "Message" ? (
+    return Predicate.isTagged(body, "Message") ? (
         <Placeholder lines={body.lines} />
     ) : (
         <box flexGrow={1} flexDirection="column">

@@ -7,13 +7,13 @@ import { count, offset, plural, valueText } from "./format.ts";
 import { LOG_LEVEL, levelOf, levelRole } from "./levels.ts";
 import { chunk, highlighted } from "./Role.ts";
 import { cut, cutLine } from "./text.ts";
+import { TreeEntry } from "./tree.ts";
 
 import type { SpanId } from "../data/Snapshot.ts";
 import type { LogCursor, LogScope } from "../nav/Screen.ts";
 import type { LogLine } from "../query/Match.ts";
 import type { Query } from "../query/Query.ts";
 import type { Line, Role } from "./Role.ts";
-import type { TreeEntry } from "./tree.ts";
 import type { TreeFacts } from "./treeFacts.ts";
 import type { AttributeValue, JsonlSpanEvent, JsonlSpanRecord } from "@wmaurer/otelscope-effect/format";
 
@@ -114,7 +114,7 @@ const buildLogs = (facts: TreeFacts): TraceLogs => {
         for (let i = 0; i < span.events.length; i++) {
             const event = span.events[i];
             const entry = event === undefined ? Option.none() : entryOf(span, position, event, i);
-            if (entry._tag === "Some") {
+            if (Predicate.isTagged(entry, "Some")) {
                 byPosition[byPosition.length] = entry.value;
             }
         }
@@ -169,24 +169,27 @@ const logsOfSpans = (
     );
 };
 
+const isSpanEntry = TreeEntry.$is("Span");
+const isGroupEntry = TreeEntry.$is("Group");
+
 /** The logs in scope for the selected row (06); None → all. */
 export const scopedLogs = (
     facts: TreeFacts,
     entry: Option.Option<TreeEntry>,
     scope: LogScope,
 ): ReadonlyArray<LogEntry> => {
-    if (scope === "trace" || entry._tag === "None") {
+    if (scope === "trace" || Predicate.isTagged(entry, "None")) {
         return logsOf(facts).all;
     }
     const row = entry.value;
-    switch (row._tag) {
-        case "Span":
-            return logsOfSpans(facts, [row.spanId], scope);
-        case "Group":
-            return logsOfSpans(facts, row.group.members, scope);
-        case "Missing":
-            return logsOfSpans(facts, facts.trace.children.get(row.parentId) ?? [], scope);
+    if (isSpanEntry(row)) {
+        return logsOfSpans(facts, [row.spanId], scope);
     }
+    if (isGroupEntry(row)) {
+        return logsOfSpans(facts, row.group.members, scope);
+    }
+    row satisfies Data.TaggedEnum.Value<TreeEntry, "Missing">;
+    return logsOfSpans(facts, facts.trace.children.get(row.parentId) ?? [], scope);
 };
 
 export type LogRow = Data.TaggedEnum<{
@@ -253,7 +256,7 @@ export const logList = (
     for (const log of entries) {
         entryRow[entryRow.length] = rows.length;
         rows[rows.length] = LogRow.Entry({ key: log.key, entry: log });
-        if (log.cause._tag === "Some") {
+        if (Predicate.isTagged(log.cause, "Some")) {
             rows[rows.length] = LogRow.Cause({ key: `${log.key}#cause`, entry: log });
         }
     }
@@ -281,7 +284,7 @@ export const cursorEntry = (list: LogList, facts: TreeFacts, cursor: Option.Opti
     if (list.entries.length === 0) {
         return -1;
     }
-    if (cursor._tag === "None") {
+    if (Predicate.isTagged(cursor, "None")) {
         return 0;
     }
     const last = list.entries.length - 1;

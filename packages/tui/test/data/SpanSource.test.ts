@@ -177,7 +177,7 @@ describe("SpanSource", () => {
             writeFileSync(file, "one\n");
             chmodSync(file, 0o000);
             const { next } = yield* follow(file);
-            expect(yield* next, "the stream reports the error instead of failing").toMatchObject({ _tag: "Failed" });
+            expect(TailEvent.$is("Failed")(yield* next), "the stream reports the error instead of failing").toBe(true);
 
             chmodSync(file, 0o644);
             let event = yield* next;

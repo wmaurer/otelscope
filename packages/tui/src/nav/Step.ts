@@ -1,4 +1,4 @@
-import { Option } from "effect";
+import { Option, Predicate } from "effect";
 
 import { isBodyAction, isListAction, isTraceAction } from "../keys/Action.ts";
 import { stepBody } from "./BodyStep.ts";
@@ -15,12 +15,12 @@ import type { ScreenStep, StepContext } from "./ScreenStep.ts";
 export const stepScreen = (nav: Nav, context: StepContext, action: ScreenAction): ScreenStep => {
     const screen = top(nav);
     const { list } = context;
-    if (screen._tag === "Trace") {
+    if (Predicate.isTagged(screen, "Trace")) {
         return isTraceAction(action) && Option.isSome(context.trace)
             ? stepTrace(nav, screen, context.trace.value, action)
             : stepTo(nav);
     }
-    if (screen._tag === "Body") {
+    if (Predicate.isTagged(screen, "Body")) {
         return isBodyAction(action) && Option.isSome(context.body)
             ? stepBody(nav, screen, context.body.value, action)
             : stepTo(nav);
@@ -28,10 +28,10 @@ export const stepScreen = (nav: Nav, context: StepContext, action: ScreenAction)
     if (!isListAction(action)) {
         return stepTo(nav);
     }
-    if (screen._tag === "Runs" && list._tag === "Runs") {
+    if (Predicate.isTagged(screen, "Runs") && Predicate.isTagged(list, "Runs")) {
         return stepRuns(nav, screen.view, list.list, context, action);
     }
-    if (screen._tag === "Traces" && list._tag === "Traces") {
+    if (Predicate.isTagged(screen, "Traces") && Predicate.isTagged(list, "Traces")) {
         return stepTraces(nav, screen, list.list, context, action);
     }
     return stepTo(nav);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, HashSet, Match, Option, Order, pipe, Schema } from "effect";
+import { Array as Arr, HashSet, Match, Option, Order, pipe, Predicate, Schema } from "effect";
 
 import { Index } from "../../src/data/Index.ts";
 import { anchorOf, flatten, parentRow, pinsOf, visibilityOf, shownIndex } from "../../src/model/tree.ts";
@@ -50,7 +50,9 @@ describe("flatten", () => {
         const rows = flatten(factsOf(tree), visibility()).rows;
         expect(Arr.map(rows, (row) => row.key)).toEqual(["s:root", "s:a", "s:a1", "s:a2", "s:b"]);
         const described = Arr.map(rows, (row) =>
-            row._tag === "Span" ? `${row.depth} ${row.last ? "└" : "├"} ${row.fold} ${row.rails?.more ?? "-"}` : "",
+            Predicate.isTagged(row, "Span")
+                ? `${row.depth} ${row.last ? "└" : "├"} ${row.fold} ${row.rails?.more ?? "-"}`
+                : "",
         );
         expect(described).toEqual(["0 └ open -", "1 ├ open -", "2 ├ leaf true", "2 └ leaf true", "1 └ leaf -"]);
     });

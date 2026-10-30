@@ -1,7 +1,7 @@
-import { Array as Arr, Number as Num, Option } from "effect";
+import { Array as Arr, Match, Number as Num, Option, Predicate } from "effect";
 
 import { locationTarget } from "../editor.ts";
-import { moveRows } from "../keys/Action.ts";
+import { ClickTarget, moveRows } from "../keys/Action.ts";
 import { bodiesOf } from "../model/bodies.ts";
 import { originOf } from "../model/cause.ts";
 import { cursorEntry } from "../model/logs.ts";
@@ -89,21 +89,41 @@ export const stepTrace = (
         );
     const focused = (pane: Pane): TraceView => (view.pane === pane ? view : { ...view, pane });
 
-    switch (action._tag) {
-        case "FocusPane":
-            return set(focused(action.pane));
-        case "CyclePane":
-            return set({ ...view, pane: cyclePane(view.pane, action.dir) });
-        case "ResizeSplit":
-            return setPanes(resizeSplit(panes, action.delta));
-        case "SetSplit":
-            return setPanes(resizeSplit({ ...panes, split: action.percent }, 0));
-        case "ResizeNameColumn":
-            return setPanes(resizeName(panes, layout, action.delta));
-        case "CycleLogScope":
-            return set({ ...view, logScope: nextScope(view.logScope) });
-        case "OpenBody":
-            return Option.match(
+    const moveOrJump = (action: Extract<TraceAction, { readonly _tag: "Move" | "Jump" }>): ScreenStep => {
+        const toStart = Predicate.isTagged(action, "Jump") && action.to === "start";
+        const step = (viewport: number) =>
+            Predicate.isTagged(action, "Move") ? signed(action.dir, moveRows(action.by, viewport)) : 0;
+        switch (view.pane) {
+            case "tree":
+                return moveTree(
+                    Predicate.isTagged(action, "Move")
+                        ? model.index + step(layout.treeRows)
+                        : toStart
+                          ? 0
+                          : tree.rows.length,
+                );
+            case "details":
+                return set(
+                    Predicate.isTagged(action, "Move")
+                        ? scrollDetails(view, step(layout.detailsRows), detailsMax)
+                        : scrollDetails(view, toStart ? -view.detailsTop : detailsMax, detailsMax),
+                );
+            case "logs":
+                return moveLogs((current, last) =>
+                    Predicate.isTagged(action, "Move") ? current + step(layout.logsRows) : toStart ? 0 : last,
+                );
+        }
+    };
+
+    return Match.valueTags(action, {
+        FocusPane: ({ pane }) => set(focused(pane)),
+        CyclePane: ({ dir }) => set({ ...view, pane: cyclePane(view.pane, dir) }),
+        ResizeSplit: ({ delta }) => setPanes(resizeSplit(panes, delta)),
+        SetSplit: ({ percent }) => setPanes(resizeSplit({ ...panes, split: percent }, 0)),
+        ResizeNameColumn: ({ delta }) => setPanes(resizeName(panes, layout, delta)),
+        CycleLogScope: () => set({ ...view, logScope: nextScope(view.logScope) }),
+        OpenBody: () =>
+            Option.match(
                 Option.flatMap(selectedSpan, (span) =>
                     Option.map(Arr.head(bodiesOf(span)), (body) => [span.span, body.prefix] as const),
                 ),
@@ -111,95 +131,65 @@ export const stepTrace = (
                     onNone: () => said(nav, "no bodies on this span"),
                     onSome: ([spanId, prefix]) => openBody(view, spanId, prefix),
                 },
-            );
-        case "OpenEditor":
-            return Option.match(Option.flatMap(selectedSpan, locationTarget), {
+            ),
+        OpenEditor: () =>
+            Option.match(Option.flatMap(selectedSpan, locationTarget), {
                 onNone: () => said(nav, "no source location for this span"),
-                onSome: (target) => ({ nav, effects: [ShellEffect.Edit({ target })] }),
-            });
-        case "Move":
-        case "Jump": {
-            const toStart = action._tag === "Jump" && action.to === "start";
-            const step = (viewport: number) =>
-                action._tag === "Move" ? signed(action.dir, moveRows(action.by, viewport)) : 0;
-            switch (view.pane) {
-                case "tree":
-                    return moveTree(
-                        action._tag === "Move" ? model.index + step(layout.treeRows) : toStart ? 0 : tree.rows.length,
-                    );
-                case "details":
-                    return set(
-                        action._tag === "Move"
-                            ? scrollDetails(view, step(layout.detailsRows), detailsMax)
-                            : scrollDetails(view, toStart ? -view.detailsTop : detailsMax, detailsMax),
-                    );
-                case "logs":
-                    return moveLogs((current, last) =>
-                        action._tag === "Move" ? current + step(layout.logsRows) : toStart ? 0 : last,
-                    );
-            }
-        }
-        case "ScrollDetails":
-            return set(scrollDetails(view, action.rows, detailsMax));
-        case "ToggleFold":
-            return withEntry((entry) => toggleAt(view, entry));
-        case "FoldOrParent":
-            return withEntry((entry) => foldOrParent(view, facts, entry));
-        case "Unfold":
-            return withEntry((entry) => unfold(view, entry));
-        case "ExpandAll":
-            return set(expandAll(view, facts));
-        case "CollapseAll":
-            return set(collapseAll(view, facts));
-        case "NextProblem":
-            return revealStop(nextStop(facts.order().problems, anchor(), action.dir), "no problems", false);
-        case "NextMatch":
-            return revealStop(nextStop(model.search.positions, anchor(), action.dir), "no matches", true);
-        case "GoToOrigin":
-            return Option.match(
+                onSome: (target): ScreenStep => ({ nav, effects: [ShellEffect.Edit({ target })] }),
+            }),
+        Move: moveOrJump,
+        Jump: moveOrJump,
+        ScrollDetails: ({ rows }) => set(scrollDetails(view, rows, detailsMax)),
+        ToggleFold: () => withEntry((entry) => toggleAt(view, entry)),
+        FoldOrParent: () => withEntry((entry) => foldOrParent(view, facts, entry)),
+        Unfold: () => withEntry((entry) => unfold(view, entry)),
+        ExpandAll: () => set(expandAll(view, facts)),
+        CollapseAll: () => set(collapseAll(view, facts)),
+        NextProblem: ({ dir }) => revealStop(nextStop(facts.order().problems, anchor(), dir), "no problems", false),
+        NextMatch: ({ dir }) => revealStop(nextStop(model.search.positions, anchor(), dir), "no matches", true),
+        GoToOrigin: () =>
+            Option.match(
                 Option.flatMap(selectedSpan, (span) => originOf(facts, span.span)),
                 {
                     onNone: () => said(nav, "no cause origin"),
                     onSome: (origin) => set(reveal(view, facts, origin, false)),
                 },
-            );
-        case "GoToLogSpan":
-            return goToLog(view, cursorEntry(logs, facts, view.logCursor));
-        case "Click": {
-            const { target } = action;
-            const from = focused(action.pane);
-            switch (target._tag) {
-                case "Pane":
-                    return set(from);
-                case "Body":
-                    return Option.match(selectedSpan, {
-                        onNone: () => set(from),
-                        onSome: (span) => openBody(from, span.span, target.prefix),
-                    });
-                case "Row":
-                case "Mark": {
-                    if (action.pane === "logs") {
-                        const at = logs.entryIndex(target.key);
-                        const log = logs.entries[at];
-                        if (log === undefined) {
-                            return set(from);
-                        }
-                        return at === cursorEntry(logs, facts, view.logCursor)
-                            ? goToLog(from, at)
-                            : set({ ...from, logCursor: Option.some(log.key) });
-                    }
-                    const at = tree.indexOf(target.key);
-                    const entry = tree.rows[at];
-                    if (entry === undefined) {
+            ),
+        GoToLogSpan: () => goToLog(view, cursorEntry(logs, facts, view.logCursor)),
+        Click: ({ target, pane }) => {
+            const from = focused(pane);
+            const rowOrMark = (target: Extract<ClickTarget, { readonly _tag: "Row" | "Mark" }>): ScreenStep => {
+                if (pane === "logs") {
+                    const at = logs.entryIndex(target.key);
+                    const log = logs.entries[at];
+                    if (log === undefined) {
                         return set(from);
                     }
-                    const toggles = target._tag === "Mark" || at === model.index;
-                    const selected = selectRow(from, rowOf(entry));
-                    return set(toggles ? toggleAt(selected, entry) : selected);
+                    return at === cursorEntry(logs, facts, view.logCursor)
+                        ? goToLog(from, at)
+                        : set({ ...from, logCursor: Option.some(log.key) });
                 }
-            }
-        }
-    }
+                const at = tree.indexOf(target.key);
+                const entry = tree.rows[at];
+                if (entry === undefined) {
+                    return set(from);
+                }
+                const toggles = Predicate.isTagged(target, "Mark") || at === model.index;
+                const selected = selectRow(from, rowOf(entry));
+                return set(toggles ? toggleAt(selected, entry) : selected);
+            };
+            return ClickTarget.$match(target, {
+                Pane: () => set(from),
+                Body: ({ prefix }) =>
+                    Option.match(selectedSpan, {
+                        onNone: () => set(from),
+                        onSome: (span) => openBody(from, span.span, prefix),
+                    }),
+                Row: rowOrMark,
+                Mark: rowOrMark,
+            });
+        },
+    });
 };
 
 /**
@@ -208,7 +198,7 @@ export const stepTrace = (
  */
 export const seekMatch = (nav: Nav, snapshot: Snapshot): Nav => {
     const screen = top(nav);
-    if (screen._tag !== "Trace" || screen.view.pane === "logs") {
+    if (!Predicate.isTagged(screen, "Trace") || screen.view.pane === "logs") {
         return nav;
     }
     const trace = snapshot.traces.get(screen.traceId);

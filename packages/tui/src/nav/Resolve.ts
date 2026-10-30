@@ -1,4 +1,4 @@
-import { Array as Arr, Data, Option } from "effect";
+import { Array as Arr, Data, Option, Predicate } from "effect";
 
 import { Screen, TraceRow } from "./Screen.ts";
 
@@ -39,12 +39,12 @@ interface Resolved {
 const resolution = (screen: Screen, snapshot: Snapshot): Option.Option<Resolved> => {
     const resolve = (noun: Resolved["noun"], prefix: string, ids: ReadonlyMap<string, unknown>) => {
         const match = matchPrefix(prefix, ids);
-        return match._tag === "Found" ? Option.some({ noun, prefix, id: match.id }) : Option.none();
+        return Predicate.isTagged(match, "Found") ? Option.some({ noun, prefix, id: match.id }) : Option.none();
     };
-    if (screen._tag === "Traces" && screen.idIsPrefix) {
+    if (Predicate.isTagged(screen, "Traces") && screen.idIsPrefix) {
         return resolve("run", screen.runId, snapshot.runs);
     }
-    if (screen._tag === "Trace" && screen.idIsPrefix) {
+    if (Predicate.isTagged(screen, "Trace") && screen.idIsPrefix) {
         return resolve("trace", screen.traceId, snapshot.traces);
     }
     return Option.none();
@@ -87,7 +87,10 @@ const rewrite = (
                         above,
                         "trace",
                         (selected, prefix) =>
-                            Option.exists(selected, (row) => row._tag === "Trace" && row.traceId === prefix),
+                            Option.exists(
+                                selected,
+                                (row) => Predicate.isTagged(row, "Trace") && row.traceId === prefix,
+                            ),
                         (traceId) => Option.some(TraceRow.Trace({ traceId })),
                     ),
                 },
@@ -109,7 +112,7 @@ export const resolvePrefixes = (nav: Nav, snapshot: Snapshot): Nav => {
     }
     const at = (i: number) => Option.flatten(Arr.get(resolved, i));
     const [head, ...rest] = Arr.map(nav.stack, (screen, i) => rewrite(screen, at(i), at(i + 1), at(i - 1)));
-    return head._tag === "Runs" ? { stack: [head, ...rest] } : nav;
+    return Predicate.isTagged(head, "Runs") ? { stack: [head, ...rest] } : nav;
 };
 
 export type Noun = "run" | "trace" | "span";
@@ -129,14 +132,14 @@ export const presence = (screen: Screen, snapshot: Snapshot): Presence => {
             : ids.has(id)
               ? PrefixMatch.Found({ id })
               : PrefixMatch.NotFound();
-        if (match._tag === "Found") {
+        if (Predicate.isTagged(match, "Found")) {
             return Presence.Present();
         }
         const phase = snapshot.status.phase;
         if (phase === "waiting" || phase === "loading") {
             return Presence.Loading({ noun, id });
         }
-        return match._tag === "Ambiguous"
+        return Predicate.isTagged(match, "Ambiguous")
             ? Presence.Ambiguous({ noun, id, count: match.count })
             : Presence.NotInFile({ noun, id, resetAt: Option.map(snapshot.status.lastReset, ({ at }) => at) });
     };

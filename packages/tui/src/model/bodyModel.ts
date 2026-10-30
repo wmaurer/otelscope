@@ -20,6 +20,8 @@ export type BodyContent = Data.TaggedEnum<{
 }>;
 export const BodyContent = Data.taggedEnum<BodyContent>();
 
+const isLoading = BodyContent.$is("Loading");
+
 /** The top Body screen's body: no size and no scroll position, so scrolling rebuilds none of it. */
 export interface BodyModel {
     readonly spanName: string;
@@ -41,4 +43,4 @@ export const problemText = (ref: BodyRef, problem: Option.Option<string>): strin
     `bodies/${ref.sha256}.txt ${Option.getOrElse(problem, () => "not found")}`;
 
 /** The doc on screen and its matches; nothing while loading. */
-export const shownOf = (content: BodyContent): Shown => (content._tag === "Loading" ? nothingShown : content);
+export const shownOf = (content: BodyContent): Shown => (isLoading(content) ? nothingShown : content);

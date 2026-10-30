@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, HashSet, Option } from "effect";
+import { Array as Arr, HashSet, Option, Predicate } from "effect";
 
 import { Action, ClickTarget } from "../../src/keys/Action.ts";
 import { defaultPanes } from "../../src/model/panes.ts";
@@ -69,7 +69,7 @@ const navOf = (view: Partial<TraceView> = {}): Nav.Nav =>
 
 const viewOf = (nav: Nav.Nav): TraceView => {
     const screen = Nav.top(nav);
-    if (screen._tag !== "Trace") {
+    if (!Predicate.isTagged(screen, "Trace")) {
         throw new Error(`top is ${screen._tag}`);
     }
     return screen.view;
@@ -83,7 +83,7 @@ interface StepEnv {
 
 const step = (nav: Nav.Nav, action: TraceAction, env: StepEnv = {}): ScreenStep => {
     const screen = Nav.top(nav);
-    if (screen._tag !== "Trace") {
+    if (!Predicate.isTagged(screen, "Trace")) {
         throw new Error("not on a Trace screen");
     }
     const source = env.source ?? snapshot;

@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-react";
 import { useKeyboard, useTerminalDimensions } from "@opentui/react";
-import { Array as Arr, Option } from "effect";
+import { Array as Arr, Option, Predicate } from "effect";
 import { useRef, useState } from "react";
 
 import { dispatch } from "../keys/Dispatch.ts";
@@ -70,14 +70,13 @@ export const App = (props: AppProps): ReactNode => {
                 ),
                 body: Option.flatMap(registry.get(atoms.bodyModel), (model) => {
                     const screen = top(before);
-                    return screen._tag === "Body"
+                    return Predicate.isTagged(screen, "Body")
                         ? Option.some(bodyContext(model, screen.view, { width, height }))
                         : Option.none();
                 }),
-                overlay:
-                    state.shell._tag === "Overlay"
-                        ? overlayExtent(overlayContent(state.shell.kind, before, latest), { width, height })
-                        : { total: 0, viewport: 0 },
+                overlay: Predicate.isTagged(state.shell, "Overlay")
+                    ? overlayExtent(overlayContent(state.shell.kind, before, latest), { width, height })
+                    : { total: 0, viewport: 0 },
             },
             action,
         );

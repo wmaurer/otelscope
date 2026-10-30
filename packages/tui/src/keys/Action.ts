@@ -174,6 +174,7 @@ export const isBodyAction = (action: ScreenAction): action is BodyAction => body
 export interface Peel {
     readonly _tag: "Peel";
 }
-export const Peel: Peel = { _tag: "Peel" };
-
 export type BindingAction = Action | Peel;
+export const BindingAction = Data.taggedEnum<BindingAction>();
+
+export const Peel: Peel = BindingAction.Peel();

@@ -1,12 +1,11 @@
-import { Array as Arr, Equal, HashSet, Option } from "effect";
+import { Array as Arr, Equal, HashSet, Option, Predicate } from "effect";
 
 import { groupsToOpen } from "../model/opening.ts";
-import { parentRow } from "../model/tree.ts";
+import { parentRow, TreeEntry } from "../model/tree.ts";
 import { TreeRow } from "./Screen.ts";
 
 import type { SpanId } from "../data/Snapshot.ts";
 import type { Dir } from "../keys/Action.ts";
-import type { TreeEntry } from "../model/tree.ts";
 import type { TreeFacts } from "../model/treeFacts.ts";
 import type { GroupKey, LogScope, Pane, TraceView } from "./Screen.ts";
 
@@ -36,18 +35,16 @@ export const reveal = (view: TraceView, facts: TreeFacts, spanId: SpanId, openGr
 };
 
 /** ⏎ and Space: fold or unfold a row with children, open or close a group row; a leaf stays as it is. */
-export const toggleAt = (view: TraceView, entry: TreeEntry): TraceView => {
-    switch (entry._tag) {
-        case "Span":
-            return entry.fold === "leaf" ? view : { ...view, folded: toggled(view.folded, entry.spanId) };
-        case "Missing":
-            return { ...view, folded: toggled(view.folded, entry.parentId) };
-        case "Group":
-            return { ...view, openGroups: toggled(view.openGroups, entry.group.key) };
-    }
-};
+export const toggleAt = (view: TraceView, entry: TreeEntry): TraceView =>
+    TreeEntry.$match(entry, {
+        Span: (span): TraceView =>
+            span.fold === "leaf" ? view : { ...view, folded: toggled(view.folded, span.spanId) },
+        Missing: ({ parentId }): TraceView => ({ ...view, folded: toggled(view.folded, parentId) }),
+        Group: ({ group }): TraceView => ({ ...view, openGroups: toggled(view.openGroups, group.key) }),
+    });
 
-const isExpanded = (entry: TreeEntry): boolean => (entry._tag === "Group" ? entry.open : entry.fold === "open");
+const isExpanded = (entry: TreeEntry): boolean =>
+    Predicate.isTagged(entry, "Group") ? entry.open : entry.fold === "open";
 
 /** `h`: fold an expanded row (closing an open group), else go to the parent row. */
 export const foldOrParent = (view: TraceView, facts: TreeFacts, entry: TreeEntry): TraceView =>
@@ -60,7 +57,7 @@ export const foldOrParent = (view: TraceView, facts: TreeFacts, entry: TreeEntry
 
 /** `l`: unfold a folded row, or open a closed group. */
 export const unfold = (view: TraceView, entry: TreeEntry): TraceView =>
-    entry._tag === "Group"
+    Predicate.isTagged(entry, "Group")
         ? entry.open
             ? view
             : toggleAt(view, entry)

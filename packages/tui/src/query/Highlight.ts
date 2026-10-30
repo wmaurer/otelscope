@@ -1,4 +1,4 @@
-import { Array as Arr, Order } from "effect";
+import { Array as Arr, Order, Predicate } from "effect";
 
 import { foldedPattern } from "./Match.ts";
 
@@ -40,11 +40,11 @@ const patternOf = (needle: Needle & { readonly _tag: "Folded" }): RegExp => {
 export const ranges = (query: Query, text: string): Ranges => {
     const found: Array<readonly [number, number]> = [];
     for (const term of query) {
-        if (term._tag !== "Text") {
+        if (!Predicate.isTagged(term, "Text")) {
             continue;
         }
         const { needle } = term;
-        if (needle._tag === "Exact") {
+        if (Predicate.isTagged(needle, "Exact")) {
             for (let at = text.indexOf(needle.text); at >= 0; at = text.indexOf(needle.text, at + 1)) {
                 found[found.length] = [at, at + needle.text.length];
             }

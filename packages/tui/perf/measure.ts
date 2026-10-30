@@ -22,6 +22,7 @@ import {
     Option,
     Order,
     Path,
+    Predicate,
     Schema,
     Stream,
 } from "effect";
@@ -501,7 +502,7 @@ const search = Effect.fnUntraced(function* (atoms: AtomsService, screen: Screen,
     yield* Effect.acquireRelease(
         Effect.sync(() =>
             atoms.registry.subscribe(atoms.list, (list) => {
-                if (Option.isSome(firedAt) && list._tag === "Traces" && list.list.filter === query) {
+                if (Option.isSome(firedAt) && Predicate.isTagged(list, "Traces") && list.list.filter === query) {
                     const fired = firedAt.value;
                     // React commits this change in a microtask queued before this one, so the frame shows it.
                     void Promise.resolve()

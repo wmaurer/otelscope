@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, Equal, HashSet, Option } from "effect";
+import { Array as Arr, Equal, HashSet, Option, Predicate } from "effect";
 
 import { Action } from "../../src/keys/Action.ts";
 import { dispatch } from "../../src/keys/Dispatch.ts";
@@ -96,7 +96,7 @@ describe("hintFacts", () => {
     /** Whether `o` changes the row the selection shows as. */
     const moves = (nav: Nav.Nav) => {
         const screen = Nav.top(nav);
-        if (screen._tag !== "Trace") {
+        if (!Predicate.isTagged(screen, "Trace")) {
             throw new Error("not on a Trace screen");
         }
         const context = traceContext(Option.getOrThrow(traceModelFor(nav, snapshot)), {

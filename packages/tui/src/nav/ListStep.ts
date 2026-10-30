@@ -1,4 +1,4 @@
-import { Data, Option } from "effect";
+import { Data, Match, Option } from "effect";
 
 import { moveRows } from "../keys/Action.ts";
 import { newestStart } from "../model/list.ts";
@@ -43,37 +43,37 @@ export const stepList = <Row extends Keyed, K>(
     pageRows: number,
 ): ListOutcome => {
     const size = list.rows.length;
-    switch (action._tag) {
-        case "Move": {
+    return Match.valueTags(action, {
+        Move: (move) => {
             if (size === 0) {
                 return ListOutcome.Stay();
             }
-            const by = moveRows(action.by, pageRows);
-            const target = Math.min(size - 1, Math.max(0, current + (action.dir === "next" ? by : -by)));
+            const by = moveRows(move.by, pageRows);
+            const target = Math.min(size - 1, Math.max(0, current + (move.dir === "next" ? by : -by)));
             return target === current ? ListOutcome.Stay() : ListOutcome.Select({ index: target });
-        }
-        case "Jump":
+        },
+        Jump: (jump) => {
             if (size === 0) {
                 return ListOutcome.Stay();
             }
-            if (list.timeSort && action.to === list.newestEnd) {
+            if (list.timeSort && jump.to === list.newestEnd) {
                 return ListOutcome.Follow();
             }
-            return ListOutcome.Select({ index: action.to === "start" ? 0 : size - 1 });
-        case "NextProblem":
-            return list.stops.length === 0
+            return ListOutcome.Select({ index: jump.to === "start" ? 0 : size - 1 });
+        },
+        NextProblem: ({ dir }) =>
+            list.stops.length === 0
                 ? ListOutcome.Say({ text: "no problems" })
-                : ListOutcome.Land({ index: nextStop(list.stops, current, action.dir), dir: action.dir });
-        case "Pick": {
-            const index = list.indexOf(action.key);
+                : ListOutcome.Land({ index: nextStop(list.stops, current, dir), dir }),
+        Pick: ({ key }) => {
+            const index = list.indexOf(key);
             if (index < 0) {
                 return ListOutcome.Stay();
             }
             return index === current ? ListOutcome.Activate({ index }) : ListOutcome.Select({ index });
-        }
-        case "Open":
-            return current < 0 ? ListOutcome.Stay() : ListOutcome.Activate({ index: current });
-    }
+        },
+        Open: () => (current < 0 ? ListOutcome.Stay() : ListOutcome.Activate({ index: current })),
+    });
 };
 
 export const select = <Row extends Keyed, K, V extends ListSelection<K>>(list: List<Row, K>, view: V, value: K): V => {

@@ -1,4 +1,4 @@
-import { Array as Arr, Cause, Equal, Option } from "effect";
+import { Array as Arr, Cause, Equal, Option, Predicate } from "effect";
 import { AsyncResult, Atom } from "effect/reactivity";
 
 import { bodiesOf } from "../model/bodies.ts";
@@ -41,7 +41,7 @@ export const bodyModelAtom = (
 ): Atom.Atom<Option.Option<BodyModel>> => {
     const target = Atom.make((get): Target | undefined => {
         const screen = top(get(nav));
-        if (screen._tag !== "Body") {
+        if (!Predicate.isTagged(screen, "Body")) {
             return undefined;
         }
         const span = get(snapshot).traces.get(screen.traceId)?.spans.get(screen.spanId);
@@ -56,11 +56,11 @@ export const bodyModelAtom = (
     }).pipe(Atom.withEquality(Equal.equals));
     const raw = Atom.make((get) => {
         const screen = top(get(nav));
-        return screen._tag === "Body" && screen.view.raw;
+        return Predicate.isTagged(screen, "Body") && screen.view.raw;
     });
     const search = Atom.make((get) => {
         const screen = top(get(nav));
-        return screen._tag === "Body" ? screen.view.search : "";
+        return Predicate.isTagged(screen, "Body") ? screen.view.search : "";
     });
     const result = Atom.make((get): BodyResult | undefined => {
         const shown = get(target);
@@ -99,7 +99,7 @@ export const bodyModelAtom = (
                   ? BodyContent.Stored({ text: loaded.value, doc: current, matches: found })
                   : BodyContent.Preview({
                         problem: Option.flatMap(Cause.findErrorOption(loaded.cause), (error) =>
-                            error._tag === "BodyReadFailed" ? Option.some(error.message) : Option.none(),
+                            Predicate.isTagged(error, "BodyReadFailed") ? Option.some(error.message) : Option.none(),
                         ),
                         doc: current,
                         matches: found,

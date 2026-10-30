@@ -1,4 +1,4 @@
-import { Array as Arr, Option } from "effect";
+import { Array as Arr, Data, Option, Predicate } from "effect";
 
 import { detailsOf } from "./details.ts";
 import { count, duration, plural, runLabel, shortId } from "./format.ts";
@@ -7,6 +7,7 @@ import { isLive } from "./marks.ts";
 import { chunk, underlay } from "./Role.ts";
 import { cutLine } from "./text.ts";
 import { traceLayout } from "./traceLayout.ts";
+import { TreeEntry } from "./tree.ts";
 import { hitOf, leftWidth, treeLeft } from "./treeLine.ts";
 import { matchText } from "./treeSearch.ts";
 import { axisSegments, Bar, barSegments, markersOf, scaleOf, startCell } from "./waterfall.ts";
@@ -19,7 +20,6 @@ import type { Panes } from "./panes.ts";
 import type { Line } from "./Role.ts";
 import type { TraceLayout } from "./traceLayout.ts";
 import type { TraceModel } from "./traceModel.ts";
-import type { TreeEntry } from "./tree.ts";
 import type { SpanKind, TreeFacts } from "./treeFacts.ts";
 import type { Scale, Segment, Tone } from "./waterfall.ts";
 import type { AsyncResult } from "effect/reactivity";
@@ -164,35 +164,37 @@ const startCells = (facts: TreeFacts, scale: Scale): ((spanId: SpanId | null) =>
     };
 };
 
+const isSpanEntry = TreeEntry.$is("Span");
+const isGroupEntry = TreeEntry.$is("Group");
+
 const barOf = (entry: TreeEntry, facts: TreeFacts): Bar => {
-    switch (entry._tag) {
-        case "Span": {
-            const span = facts.trace.spans.get(entry.spanId);
-            return span === undefined
-                ? Bar.None()
-                : Bar.Span({
-                      startMs: span.startMs,
-                      ms: span.ms,
-                      tone: tones[facts.kind(entry.spanId)],
-                      markers: markersOf(span),
-                  });
-        }
-        case "Group":
-            return Bar.Envelope({ startMs: entry.group.startMs, endMs: entry.group.endMs });
-        case "Missing":
-            return Bar.None();
+    if (isSpanEntry(entry)) {
+        const span = facts.trace.spans.get(entry.spanId);
+        return span === undefined
+            ? Bar.None()
+            : Bar.Span({
+                  startMs: span.startMs,
+                  ms: span.ms,
+                  tone: tones[facts.kind(entry.spanId)],
+                  markers: markersOf(span),
+              });
     }
+    if (isGroupEntry(entry)) {
+        return Bar.Envelope({ startMs: entry.group.startMs, endMs: entry.group.endMs });
+    }
+    entry satisfies Data.TaggedEnum.Value<TreeEntry, "Missing">;
+    return Bar.None();
 };
 
 const parentOf = (entry: TreeEntry, facts: TreeFacts): SpanId | null => {
-    switch (entry._tag) {
-        case "Span":
-            return facts.trace.spans.get(entry.spanId)?.parent ?? null;
-        case "Group":
-            return entry.group.parent;
-        case "Missing":
-            return null;
+    if (isSpanEntry(entry)) {
+        return facts.trace.spans.get(entry.spanId)?.parent ?? null;
     }
+    if (isGroupEntry(entry)) {
+        return entry.group.parent;
+    }
+    entry satisfies Data.TaggedEnum.Value<TreeEntry, "Missing">;
+    return null;
 };
 
 interface DetailsMemo {
@@ -297,11 +299,10 @@ export const traceFrame = (model: TraceModel, view: TraceView, env: TraceEnv): T
                 if (row === undefined) {
                     return [];
                 }
-                const line =
-                    row._tag === "Entry"
-                        ? logLine(row.entry, logs.query, trace.startMs, layout.logsWidth)
-                        : causeLine(row.entry, layout.logsWidth);
-                return selected || (row._tag === "Cause" && logs.entryRow[cursor] === index - 1)
+                const line = Predicate.isTagged(row, "Entry")
+                    ? logLine(row.entry, logs.query, trace.startMs, layout.logsWidth)
+                    : causeLine(row.entry, layout.logsWidth);
+                return selected || (Predicate.isTagged(row, "Cause") && logs.entryRow[cursor] === index - 1)
                     ? underlay(line, "selectionBg")
                     : line;
             },

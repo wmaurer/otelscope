@@ -1,9 +1,10 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, Effect, HashSet, Option } from "effect";
+import { Array as Arr, Effect, HashSet, Option, Predicate } from "effect";
 import { Atom, AtomRegistry } from "effect/reactivity";
 
 import { listAtom, SEARCH_DEBOUNCE_MILLIS, settledFilter } from "../../src/bridge/Lists.ts";
 import { Index } from "../../src/data/Index.ts";
+import { ScreenList } from "../../src/model/screenList.ts";
 import * as Nav from "../../src/nav/Nav.ts";
 import { defaultRunsView, TraceRow, tracesFor } from "../../src/nav/Screen.ts";
 import { namedTraces } from "../support/lists.ts";
@@ -11,7 +12,6 @@ import { line, record } from "../support/records.ts";
 import { indexed, ingestAll, status } from "../support/store.ts";
 
 import type { Snapshot } from "../../src/data/Snapshot.ts";
-import type { ScreenList } from "../../src/model/screenList.ts";
 import type { TracesView } from "../../src/nav/Screen.ts";
 
 const snapshot = indexed([
@@ -29,16 +29,11 @@ const setup = (nav: Nav.Nav = Nav.initial, source: Snapshot = snapshot, at = 0) 
     return { registry, navAtom, now, list: () => registry.get(list) };
 };
 
-const keys = (built: ScreenList): ReadonlyArray<string> => {
-    switch (built._tag) {
-        case "Runs":
-            return Arr.map(built.list.rows, (row) => row.key);
-        case "Traces":
-            return Arr.map(built.list.rows, (row) => row.key);
-        case "None":
-            return [];
-    }
-};
+const keys: (built: ScreenList) => ReadonlyArray<string> = ScreenList.$match({
+    Runs: ({ list }) => Arr.map(list.rows, (row) => row.key),
+    Traces: ({ list }) => Arr.map(list.rows, (row) => row.key),
+    None: () => [],
+});
 
 const settle = Effect.sleep(SEARCH_DEBOUNCE_MILLIS + 50);
 
@@ -150,8 +145,8 @@ describe("listAtom", () => {
         const { registry, now, list } = setup(onTraces(), following, at + 1000);
         const states = () => {
             const built = list();
-            return built._tag === "Traces"
-                ? Arr.map(built.list.rows, (row) => (row._tag === "Trace" ? row.item.state : row._tag))
+            return Predicate.isTagged(built, "Traces")
+                ? Arr.map(built.list.rows, (row) => (Predicate.isTagged(row, "Trace") ? row.item.state : row._tag))
                 : [];
         };
         expect(states()).toEqual(["running"]);

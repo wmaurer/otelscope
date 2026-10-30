@@ -1,4 +1,4 @@
-import { Array as Arr, Option, Order } from "effect";
+import { Array as Arr, Option, Order, Predicate } from "effect";
 
 import { spanHits } from "../query/Match.ts";
 import { parse } from "../query/Query.ts";
@@ -130,7 +130,7 @@ export const matchText = (
     const ordinal = Option.match(entry, {
         onNone: () => -1,
         onSome: (shown) =>
-            shown._tag === "Span" && search.matches(shown.spanId)
+            Predicate.isTagged(shown, "Span") && search.matches(shown.spanId)
                 ? indexIn(positions, facts.order().position(shown.spanId))
                 : -1,
     });

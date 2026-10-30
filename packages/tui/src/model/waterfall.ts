@@ -115,9 +115,11 @@ export type Bar = Data.TaggedEnum<{
 
 export const Bar = Data.taggedEnum<Bar>();
 
+const isNoBar = Bar.$is("None");
+
 /** The bar's start cell after clamping and the floor: max(startCell(start), floorCell). Children use it as their floor. */
 export const barStart = (scale: Scale, bar: Bar, floorCell: number): number =>
-    Num.clamp(bar._tag === "None" ? floorCell : Math.max(startCell(scale, bar.startMs), floorCell), {
+    Num.clamp(isNoBar(bar) ? floorCell : Math.max(startCell(scale, bar.startMs), floorCell), {
         minimum: 0,
         maximum: lastCell(scale),
     });

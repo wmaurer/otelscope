@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Array as Arr, Option } from "effect";
+import { Array as Arr, Option, Predicate } from "effect";
 
 import { Action } from "../../src/keys/Action.ts";
 import { dispatch } from "../../src/keys/Dispatch.ts";
@@ -59,7 +59,7 @@ const contextOf = (
     content: BodyContent = stored(pager, screen.view),
     bodies: ReadonlyArray<BodyRef> = refs,
 ): BodyContext => {
-    const doc = content._tag === "Loading" ? docOf("", Option.none(), false) : content.doc;
+    const doc = BodyContent.$is("Loading")(content) ? docOf("", Option.none(), false) : content.doc;
     return {
         model: { spanName: "llm.chat", refs: bodies, ref: bodies[0] ?? refOf("x"), content },
         rows: rowsOf(doc, WIDTH, screen.view.wrap),
@@ -73,7 +73,7 @@ const step = (screen: ScreenOf<"Body">, action: BodyAction, context = contextOf(
 
 const viewAfter = (screen: ScreenOf<"Body">, action: BodyAction, context = contextOf(screen)): BodyView => {
     const top = Nav.top(step(screen, action, context).nav);
-    if (top._tag !== "Body") {
+    if (!Predicate.isTagged(top, "Body")) {
         throw new Error("not on Body");
     }
     return top.view;
@@ -216,7 +216,7 @@ describe("stepBody: n and N", () => {
 describe("seekFirstMatch", () => {
     const seek = (screen: ScreenOf<"Body">, context = contextOf(screen)) => {
         const top = Nav.top(seekFirstMatch(navOf(screen), context));
-        return top._tag === "Body" ? top.view : undefined;
+        return Predicate.isTagged(top, "Body") ? top.view : undefined;
     };
 
     it("goes to the first match at or after the top row", () => {

@@ -1,3 +1,5 @@
+import { Match } from "effect";
+
 import { selectedIndex } from "../model/list.ts";
 import { follow, ListOutcome, select, stepList } from "./ListStep.ts";
 import { push, update } from "./Nav.ts";
@@ -7,6 +9,7 @@ import { said, stepTo } from "./ScreenStep.ts";
 import type { RunId } from "../data/Snapshot.ts";
 import type { ListAction } from "../keys/Action.ts";
 import type { RunList } from "../model/runList.ts";
+import type { Movement } from "./ListStep.ts";
 import type { Nav } from "./Nav.ts";
 import type { RunSort, RunsView } from "./Screen.ts";
 import type { ScreenStep, StepContext } from "./ScreenStep.ts";
@@ -27,32 +30,30 @@ export const stepRuns = (
     context: StepContext,
     action: ListAction,
 ): ScreenStep => {
-    switch (action._tag) {
-        case "Move":
-        case "Jump":
-        case "NextProblem":
-        case "Pick":
-        case "Open": {
-            const atRow = (index: number, f: (runId: RunId) => ScreenStep): ScreenStep => {
-                const row = list.rows[index];
-                return row === undefined ? stepTo(nav) : f(list.selectionOf(row));
-            };
-            const selectAt = ({ index }: { readonly index: number }) =>
-                atRow(index, (runId) => set(nav, (v) => select(list, v, runId)));
-            return ListOutcome.$match(stepList(list, selectedIndex(list, view), action, context.listRows), {
-                Select: selectAt,
-                Land: selectAt,
-                Follow: () => set(nav, follow),
-                Activate: ({ index }) => atRow(index, (runId) => stepTo(push(nav, tracesFor(runId, view)))),
-                Say: ({ text }) => said(nav, text),
-                Stay: () => stepTo(nav),
-            });
-        }
-        case "ToggleGroup":
-            return stepTo(nav);
-        case "CycleSort":
-            return set(nav, (v) => ({ ...v, sort: nextRunSort[v.sort] }));
-        case "Reverse":
-            return set(nav, (v) => ({ ...v, reverse: !v.reverse }));
-    }
+    const moved = (movement: Movement): ScreenStep => {
+        const atRow = (index: number, f: (runId: RunId) => ScreenStep): ScreenStep => {
+            const row = list.rows[index];
+            return row === undefined ? stepTo(nav) : f(list.selectionOf(row));
+        };
+        const selectAt = ({ index }: { readonly index: number }) =>
+            atRow(index, (runId) => set(nav, (v) => select(list, v, runId)));
+        return ListOutcome.$match(stepList(list, selectedIndex(list, view), movement, context.listRows), {
+            Select: selectAt,
+            Land: selectAt,
+            Follow: () => set(nav, follow),
+            Activate: ({ index }) => atRow(index, (runId) => stepTo(push(nav, tracesFor(runId, view)))),
+            Say: ({ text }) => said(nav, text),
+            Stay: () => stepTo(nav),
+        });
+    };
+    return Match.valueTags(action, {
+        Move: moved,
+        Jump: moved,
+        NextProblem: moved,
+        Pick: moved,
+        Open: moved,
+        ToggleGroup: () => stepTo(nav),
+        CycleSort: () => set(nav, (v) => ({ ...v, sort: nextRunSort[v.sort] })),
+        Reverse: () => set(nav, (v) => ({ ...v, reverse: !v.reverse })),
+    });
 };

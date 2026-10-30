@@ -1,4 +1,4 @@
-import { Array as Arr, Data, Equal, HashSet, Option, Order, Record } from "effect";
+import { Array as Arr, Data, Equal, HashSet, Option, Order, Predicate, Record } from "effect";
 
 import { TraceRow } from "../nav/Screen.ts";
 import { traceMatches } from "../query/Match.ts";
@@ -66,6 +66,7 @@ export type TraceListRow = Data.TaggedEnum<{
     Heading: { readonly key: string; readonly group: Group };
     More: { readonly key: string; readonly group: Group };
 }>;
+export const TraceListRow = Data.taggedEnum<TraceListRow>();
 
 export interface TraceList extends List<TraceListRow, TraceRow> {
     readonly run: Run;
@@ -80,27 +81,21 @@ const traceKey = (traceId: TraceId): string => `t:${traceId}`;
 const headingKey = (name: string): string => `h:${name}`;
 const moreKey = (name: string): string => `m:${name}`;
 
-const rowKey = (row: TraceRow): string => {
-    switch (row._tag) {
-        case "Trace":
-            return traceKey(row.traceId);
-        case "Heading":
-            return headingKey(row.name);
-        case "More":
-            return moreKey(row.name);
-    }
-};
+const rowKey: (row: TraceRow) => string = TraceRow.$match({
+    Trace: (row) => traceKey(row.traceId),
+    Heading: (row) => headingKey(row.name),
+    More: (row) => moreKey(row.name),
+});
 
-const rowValue = (row: TraceListRow): TraceRow => {
-    switch (row._tag) {
-        case "Trace":
-            return TraceRow.Trace({ traceId: row.item.trace.id });
-        case "Heading":
-            return TraceRow.Heading({ name: row.group.name });
-        case "More":
-            return TraceRow.More({ name: row.group.name });
-    }
-};
+const rowValue: (row: TraceListRow) => TraceRow = TraceListRow.$match({
+    Trace: (row) => TraceRow.Trace({ traceId: row.item.trace.id }),
+    Heading: (row) => TraceRow.Heading({ name: row.group.name }),
+    More: (row) => TraceRow.More({ name: row.group.name }),
+});
+
+const traceRow = TraceListRow.Trace;
+const headingRow = TraceListRow.Heading;
+const moreRow = TraceListRow.More;
 
 const orders = {
     duration: Order.flip(Order.mapInput(Order.Number, (item: Item) => item.durationMs)),
@@ -406,7 +401,7 @@ export const traceList = (
         if (item === newest) {
             followIndex = rows.length;
         }
-        rows[rows.length] = { _tag: "Trace", key: item.key, item, member };
+        rows[rows.length] = traceRow({ key: item.key, item, member });
     };
     let last: { readonly name: string; readonly group: Group | undefined } | undefined;
     for (const item of collected.sorted) {
@@ -420,7 +415,7 @@ export const traceList = (
             if (newest?.headName === group.name) {
                 followIndex = rows.length;
             }
-            rows[rows.length] = { _tag: "Heading", key: headingKey(group.name), group };
+            rows[rows.length] = headingRow({ key: headingKey(group.name), group });
             for (const member of group.open ? group.members : group.shown) {
                 addTrace(member, true);
             }
@@ -428,7 +423,7 @@ export const traceList = (
                 if (Arr.some(group.hidden, (hidden) => isProblem(hidden.state))) {
                     stops[stops.length] = rows.length;
                 }
-                rows[rows.length] = { _tag: "More", key: moreKey(group.name), group };
+                rows[rows.length] = moreRow({ key: moreKey(group.name), group });
             }
         }
     }
@@ -457,7 +452,7 @@ export const pinnedBy = (
     selected: Option.Option<TraceRow>,
 ): Option.Option<TraceId> =>
     Option.flatMap(selected, (row) => {
-        if (row._tag !== "Trace") {
+        if (!Predicate.isTagged(row, "Trace")) {
             return Option.none();
         }
         const trace = collected.snapshot.traces.get(row.traceId);

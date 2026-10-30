@@ -1,7 +1,7 @@
-import { Array as Arr, Number as Num, Option } from "effect";
+import { Array as Arr, Match, Number as Num, Option, Predicate } from "effect";
 
 import { moveRows } from "../keys/Action.ts";
-import { problemText, shownOf } from "../model/bodyModel.ts";
+import { BodyContent, problemText, shownOf } from "../model/bodyModel.ts";
 import { clampedView, SIDEWAYS } from "../model/bodyRows.ts";
 import { currentOf } from "../model/bodySearch.ts";
 import { size } from "../model/format.ts";
@@ -52,21 +52,18 @@ export const stepBody = (nav: Nav, screen: ScreenOf<"Body">, context: BodyContex
     const set = (next: BodyView): ScreenStep => stepTo(update(nav, "Body", () => next));
     const scrollTo = (line: number): ScreenStep =>
         set({ ...view, topLine: Num.clamp(line, { minimum: 0, maximum: maxTop }) });
-    switch (action._tag) {
-        case "Move":
-            return scrollTo(topRow + signed(action.dir, moveRows(action.by, viewport)));
-        case "Jump":
-            return scrollTo(action.to === "start" ? 0 : maxTop);
-        case "ScrollBody":
-            return scrollTo(topRow + action.rows);
-        case "Sideways":
-            return view.wrap
+    return Match.valueTags(action, {
+        Move: ({ dir, by }) => scrollTo(topRow + signed(dir, moveRows(by, viewport))),
+        Jump: ({ to }) => scrollTo(to === "start" ? 0 : maxTop),
+        ScrollBody: (scroll) => scrollTo(topRow + scroll.rows),
+        Sideways: ({ dir }) =>
+            view.wrap
                 ? stepTo(nav)
                 : set({
                       ...view,
-                      leftCol: Num.clamp(left + signed(action.dir, SIDEWAYS), { minimum: 0, maximum: maxLeft }),
-                  });
-        case "CycleBody": {
+                      leftCol: Num.clamp(left + signed(dir, SIDEWAYS), { minimum: 0, maximum: maxLeft }),
+                  }),
+        CycleBody: ({ dir }) => {
             const { refs } = model;
             if (refs.length < 2) {
                 return stepTo(nav);
@@ -75,7 +72,7 @@ export const stepBody = (nav: Nav, screen: ScreenOf<"Body">, context: BodyContex
                 Arr.findFirstIndex(refs, (ref) => ref.prefix === screen.prefix),
                 () => 0,
             );
-            const next = refs[(at + signed(action.dir, 1) + refs.length) % refs.length] ?? model.ref;
+            const next = refs[(at + signed(dir, 1) + refs.length) % refs.length] ?? model.ref;
             return stepTo(
                 replace(
                     nav,
@@ -86,12 +83,10 @@ export const stepBody = (nav: Nav, screen: ScreenOf<"Body">, context: BodyContex
                     }),
                 ),
             );
-        }
-        case "ToggleRaw":
-            return set({ ...view, raw: !view.raw, topLine: 0, leftCol: 0, current: Option.none() });
-        case "ToggleWrap":
-            return set({ ...view, wrap: !view.wrap, topLine: 0, leftCol: 0 });
-        case "NextMatch": {
+        },
+        ToggleRaw: () => set({ ...view, raw: !view.raw, topLine: 0, leftCol: 0, current: Option.none() }),
+        ToggleWrap: () => set({ ...view, wrap: !view.wrap, topLine: 0, leftCol: 0 }),
+        NextMatch: ({ dir }) => {
             const topStart = rows.start[topRow] ?? 0;
             const anchor = Option.getOrElse(
                 Option.filter(currentOf(matches, view.current), (at) => {
@@ -102,45 +97,40 @@ export const stepBody = (nav: Nav, screen: ScreenOf<"Body">, context: BodyContex
                 // top row, `N` the last one before it.
                 () => topStart - 0.5,
             );
-            return Option.match(nextStop(matches.starts, anchor, action.dir), {
+            return Option.match(nextStop(matches.starts, anchor, dir), {
                 onNone: () => said(nav, "no matches"),
                 onSome: (offset) => set(reveal(view, context, offset)),
             });
-        }
-        case "Copy": {
-            if (model.content._tag === "Loading") {
+        },
+        Copy: (): ScreenStep => {
+            if (Predicate.isTagged(model.content, "Loading")) {
                 return stepTo(nav);
             }
             const bytes = Buffer.byteLength(doc.text);
             return bytes > COPY_LIMIT
                 ? said(nav, `too large to copy (${size(bytes)}), use e`)
                 : { nav, effects: [ShellEffect.Copy({ text: doc.text, done: `copied ${size(bytes)}` })] };
-        }
-        case "OpenEditor":
-            switch (model.content._tag) {
-                case "Loading":
-                    return stepTo(nav);
-                case "Preview":
-                    return said(nav, problemText(model.ref, model.content.problem));
-                case "Stored":
-                    return {
-                        nav,
-                        effects: [
-                            ShellEffect.Say({ text: EDIT_WARNING }),
-                            ShellEffect.Edit({
-                                target: { file: model.content.text.path, line: Option.none(), col: Option.none() },
-                            }),
-                        ],
-                    };
-            }
-    }
+        },
+        OpenEditor: () =>
+            BodyContent.$match(model.content, {
+                Loading: () => stepTo(nav),
+                Preview: ({ problem }) => said(nav, problemText(model.ref, problem)),
+                Stored: ({ text }): ScreenStep => ({
+                    nav,
+                    effects: [
+                        ShellEffect.Say({ text: EDIT_WARNING }),
+                        ShellEffect.Edit({ target: { file: text.path, line: Option.none(), col: Option.none() } }),
+                    ],
+                }),
+            }),
+    });
 };
 
 /** `⏎` in the Body's `/` input: the first match at or after the top row, else the first one. */
 export const seekFirstMatch = (nav: Nav, context: BodyContext): Nav => {
     const screen = top(nav);
     const { matches } = shownOf(context.model.content);
-    if (screen._tag !== "Body" || matches.search !== screen.view.search) {
+    if (!Predicate.isTagged(screen, "Body") || matches.search !== screen.view.search) {
         return nav;
     }
     const { top: topRow } = clampedView(screen.view, context.rows, context.viewport, context.width);

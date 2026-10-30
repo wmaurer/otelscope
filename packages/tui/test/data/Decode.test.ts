@@ -1,4 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
+import { Predicate } from "effect";
 
 import { Classified, classify } from "../../src/data/Decode.ts";
 import { record } from "../support/records.ts";
@@ -12,7 +13,7 @@ describe("classify", () => {
     it("reports a line that is not JSON as malformed, with the parse error", () => {
         const result = classify("{not json");
         expect(result._tag).toBe("Malformed");
-        expect(result._tag === "Malformed" && result.issue).toMatch(/JSON/u);
+        expect(Predicate.isTagged(result, "Malformed") && result.issue).toMatch(/JSON/u);
     });
 
     it("reads a 0.2.x line, with run, trace and span but no startMs, as legacy", () => {

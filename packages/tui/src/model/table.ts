@@ -1,4 +1,4 @@
-import { Array as Arr } from "effect";
+import { Array as Arr, Predicate } from "effect";
 
 import { clip } from "../query/Highlight.ts";
 import { count } from "./format.ts";
@@ -56,7 +56,7 @@ export const layout = <Id extends string>(
                 ? column.width.fixed
                 : column.width.min +
                   extra(column.width.flex) +
-                  (firstFlex._tag === "Some" && firstFlex.value === i ? spare - given : 0),
+                  (Predicate.isTagged(firstFlex, "Some") && firstFlex.value === i ? spare - given : 0),
     }));
 };
 

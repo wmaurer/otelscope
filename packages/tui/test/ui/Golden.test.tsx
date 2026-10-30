@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "@effect/vitest";
-import { Effect, Layer, Option, Stream } from "effect";
+import { Effect, Layer, Option, Predicate, Stream } from "effect";
 import { AtomRegistry } from "effect/reactivity";
 
 import { SpanSource } from "../../src/data/SpanSource.ts";
@@ -66,7 +66,7 @@ describe("the sample through the real data layer", () => {
             await repeat("j", 5);
             await app.press("b");
             const body = await until(app.atoms.bodyModel, (model) =>
-                Option.exists(model, (shown) => shown.content._tag !== "Loading"),
+                Option.exists(model, (shown) => !Predicate.isTagged(shown.content, "Loading")),
             );
             expect(line(body, 0), "five rows down from the failure origin, to email.send").toBe(
                 "Runs › shop-api · 14:03:27 › POST /orders 1a654e13 › email",

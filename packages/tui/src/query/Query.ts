@@ -1,4 +1,4 @@
-import { Array as Arr, Data, Option } from "effect";
+import { Array as Arr, Data, Option, Predicate } from "effect";
 
 import type { Exit } from "../data/Snapshot.ts";
 
@@ -120,7 +120,7 @@ export const parse = (query: string): Query =>
             ),
     });
 
-const needleKey = (n: Needle): string => (n._tag === "Folded" ? `i${n.lower}` : `C${n.text}`);
+const needleKey = (n: Needle): string => (Predicate.isTagged(n, "Folded") ? `i${n.lower}` : `C${n.text}`);
 
 export const termKey = (term: Term): string =>
     Term.$match(term, {
