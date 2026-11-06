@@ -1,6 +1,6 @@
 # Span capture
 
-A program provided with `JsonlTrace.layer` appends one JSON line per finished span to the configured file. Runs
+A program provided with `OtelscopeTracer.layer` appends one JSON line per finished span to the configured file. Runs
 that share a file stay apart by `run`, children point at their parent, `Effect.log*` calls inside a span become
 its events, and `exit` says whether the span succeeded, failed or was interrupted.
 
@@ -19,8 +19,8 @@ its events, and `exit` says whether the span succeeded, failed or was interrupte
 
 ## How to get to it (user POV)
 
-- Provide `JsonlTrace.layer({ serviceName, file, runId? })` as the outermost layer, with `NodeServices.layer`
-  under it, and run the program.
+- Provide `OtelscopeTracer.layer({ serviceName, file, runId? })` as the outermost layer, with
+  `NodeServices.layer` and `FetchHttpClient.layer` under it, and run the program.
 
 ## Driving it with drive.sh
 
@@ -37,8 +37,8 @@ Preconditions:
   `"parent":null`, `attrs` `{"user.id":"u-42"}` and events `[["loading cart",<0-2>,<fiber>],["charge failed",<20-30>,<fiber>]]`;
   `load-cart`, `charge` and `abandoned` have `parent` equal to that run's `checkout` `span`; `charge` has
   `"exit":"Failure"` and one `exception` event; `abandoned` has `"exit":"Interrupted"`. Every record has
-  `"service":"verify-capture"` and `"def":null`. `site.file` is the run's `program.ts`, and `site.line` is 13 for
-  `load-cart`, 15 for `charge`, 18 for `abandoned` and 21 for `checkout`. `checkout`, `load-cart` and `charge`
+  `"service":"verify-capture"` and `"def":null`. `site.file` is the run's `program.ts`, and `site.line` is 14 for
+  `load-cart`, 16 for `charge`, 19 for `abandoned` and 22 for `checkout`. `checkout`, `load-cart` and `charge`
   share one `fiber`, equal to the `effect.fiberId` of `checkout`'s two log events. `abandoned` has a different
   `fiber`, the forked one. Run `jq -c 'keys_unsorted' <run>/out/spans.jsonl | sort -u`. One line: the fourteen
   keys of the record shape, in order.

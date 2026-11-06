@@ -33,7 +33,9 @@ const command = (onArgs: (args: CliArgs) => Effect.Effect<void>) =>
     Command.make(
         "otelscope",
         {
-            file: Argument.String("file").pipe(Argument.withDescription("The JSONL file that JsonlTrace.layer writes")),
+            file: Argument.String("file").pipe(
+                Argument.withDescription("The JSONL file that OtelscopeTracer.layer writes"),
+            ),
             noFollow: Flag.Boolean("no-follow").pipe(
                 Flag.withDescription("Read the file once instead of following it"),
                 Flag.withDefault(false),

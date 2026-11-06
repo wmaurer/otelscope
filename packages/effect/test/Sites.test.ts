@@ -2,7 +2,8 @@ import { assert, describe, it } from "@effect/vitest";
 import { Array as Arr, Effect, Layer, Option, Ref, Tracer } from "effect";
 import { OtlpSerialization, OtlpTracer } from "effect/observability";
 
-import { type JsonlSpanRecord, ReceiverClient, spansOf, toRecord, withSites } from "../src/index.ts";
+import { type JsonlSpanRecord, spansOf, toRecord, withSites } from "../src/index.ts";
+import * as ReceiverClient from "../src/ReceiverClient.ts";
 import { parseFrame } from "../src/Sites.ts";
 
 describe("parseFrame", () => {
@@ -31,7 +32,7 @@ const traced = Effect.fn("traced.fn")(function* () {
     yield* Effect.void;
 });
 
-// The tracer a program builds itself from `OtlpTracer` and `ReceiverClient`, instead of using `JsonlTrace.layer`.
+// A tracer built from `OtlpTracer` without `OtelscopeTracer.layer`, so `withSites` is the only hook on it.
 const recordsOf = (wrap: (tracer: Tracer.Tracer) => Tracer.Tracer) =>
     Effect.gen(function* () {
         const rows = yield* Ref.make<ReadonlyArray<JsonlSpanRecord>>([]);

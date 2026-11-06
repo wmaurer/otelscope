@@ -15,7 +15,7 @@ before it is stored.
 
 ## How to get to it (user POV)
 
-- Pass `bodies: true` to `JsonlTrace.layer`, and name an attribute with a `.body` suffix, such as
+- Pass `bodies: true` to `OtelscopeTracer.layer`, and name an attribute with a `.body` suffix, such as
   `llm.request.body`.
 
 ## Driving it with drive.sh

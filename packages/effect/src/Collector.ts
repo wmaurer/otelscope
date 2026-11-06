@@ -1,6 +1,8 @@
-import { Array as Arr, Brand, Config, Console, Duration, Effect, Option, Schema } from "effect";
+import { Array as Arr, Brand, Config, Console, Duration, Effect, Option, Ref, Schema, Version } from "effect";
+import { type Headers, HttpClient, HttpClientError } from "effect/http";
+import { OtlpExporter, type OtlpResource, OtlpSerialization } from "effect/observability";
 
-import type { Headers } from "effect/http";
+import type { Sink } from "./Sink.ts";
 
 // An absolute http or https URL. `localhost:4318` parses as a URL with the scheme `localhost:`, so it is not one.
 export type HttpUrl = string & Brand.Brand<"HttpUrl">;
@@ -101,3 +103,57 @@ export const settings: Effect.Effect<Option.Option<Settings>> = Effect.gen(funct
         requestTimeout: Duration.millis(Option.getOrElse(requestTimeout, () => 10_000)),
     });
 }).pipe(Effect.catchTag("ConfigError", (error) => off(oneLine(error))));
+
+// What `OtlpTracer.make` writes as the instrumentation scope.
+const scope = { name: "effect", version: Version.getCurrentVersion() };
+
+// A sink that pushes each span into an exporter of its own, so the collector keeps Effect's batching, gzip,
+// retries of transient failures, 60-second pause after a failed export, and final flush. Its finalizer
+// flushes it, so it must be acquired before the exporter that feeds it, which then flushes into it first.
+export const sink = Effect.fnUntraced(function* (settings: Settings, resource: OtlpResource.Resource) {
+    const warned = yield* Ref.make(false);
+    const warnOnce = (error: HttpClientError.HttpClientError) =>
+        Effect.flatMap(Ref.getAndSet(warned, true), (done) =>
+            done ? Effect.void : Console.error(`otelscope: the collector at ${settings.url} failed: ${error.message}`),
+        );
+    const client = (yield* HttpClient.HttpClient).pipe(
+        // So that an error status is reported too. The exporter also filters, then retries what is transient.
+        HttpClient.filterStatusOk,
+        // A collector that accepts the connection and never answers, such as a dead tunnel, would otherwise
+        // hold the export forever. A transport error is transient, so the exporter retries it.
+        HttpClient.transform((response, request) =>
+            Effect.timeoutOrElse(response, {
+                duration: settings.requestTimeout,
+                orElse: () =>
+                    Effect.fail(
+                        new HttpClientError.HttpClientError({
+                            reason: new HttpClientError.TransportError({
+                                request,
+                                description: `no answer within ${Duration.format(settings.requestTimeout)}`,
+                            }),
+                        }),
+                    ),
+            }),
+        ),
+        HttpClient.tapError(warnOnce),
+    );
+    const serialization = yield* OtlpSerialization.OtlpSerialization;
+    const exporter = yield* OtlpExporter.make({
+        // `OtlpTracer`'s label, so the collector sees the user agent `layerFromConfig` sends.
+        label: "OtlpTracer",
+        url: settings.url,
+        headers: settings.headers,
+        compression: settings.compression,
+        exportInterval: settings.exportInterval,
+        maxBatchSize: settings.maxBatchSize,
+        shutdownTimeout: settings.shutdownTimeout,
+        body: (spans) => [
+            serialization.traces({ resourceSpans: [{ resource, scopeSpans: [{ scope, spans }] }] }),
+            Effect.void,
+        ],
+    }).pipe(Effect.provideService(HttpClient.HttpClient, client), Effect.provide(OtlpExporter.layerFlusher));
+
+    return {
+        write: (batch) => Effect.sync(() => Arr.forEach(batch, (slim) => exporter.push(slim.span))),
+    } satisfies Sink;
+}, Effect.provide(OtlpSerialization.layerProtobuf));

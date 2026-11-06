@@ -6,7 +6,8 @@ description: Prove a change to @wmaurer/otelscope-effect works the way a consume
 # Verify @wmaurer/otelscope-effect
 
 The user-facing surface of this repo today is a library: `@wmaurer/otelscope-effect` on npm. A user adds
-`JsonlTrace.layer` to an Effect program, runs it, and reads the JSONL file it leaves behind. Proof means doing
+`OtelscopeTracer.layer` to an Effect program, runs it, and reads the JSONL file it leaves behind, or the spans
+that reached the collector the `OTEL_*` variables name. Proof means doing
 exactly that against this checkout's build, then reading the file. Unit tests (`pnpm test`) are not proof; they
 import `src/` directly and never touch the exports map or `dist/`.
 
@@ -74,6 +75,7 @@ dependencies. Write a new program when a change needs one; start from the closes
 | `programs/bodies.ts`      | `bodies: true`; a body, the same body again, one over the 1,000,000-char cap                                       |
 | `programs/unwritable.ts`  | JSONL path under a regular file; the program must still finish                                                     |
 | `programs/midrun.ts`      | Three runs share a file; it turns read-only before the third                                                       |
+| `programs/collector.ts`   | A file and a local HTTP collector; `COLLECTOR_GZIP=1`, `COLLECTOR_STATUS=<code>`                                   |
 | `programs/read-format.ts` | Reads a JSONL file through `/format` only; set `OTELSCOPE_FILE` (absolute)                                         |
 
 Inspect output with `jq`, for example:
@@ -94,7 +96,8 @@ A proof is the run directory, quoted by path, plus the lines from it that show t
   the failure behaviour exists precisely so that tracing problems do not change the exit code.
 - Check side effects on disk, not just stdout: `files.txt` lists every file written, and `bodies/<sha>.txt` must
   exist for every `*.sha256` attribute.
-- No mocks. `ReceiverClient` already keeps everything in process; nothing reaches the network.
+- No mocks. The file needs no network, and `programs/collector.ts` runs a real HTTP server on `127.0.0.1` for
+  the collector, reached through `FetchHttpClient`.
 - After a record-format change, also run `pnpm exec tsx packages/effect/scripts/sample-fixture.ts sample` from
   the repo root and report the `git diff --stat` it causes (see the sample-fixture feature).
 

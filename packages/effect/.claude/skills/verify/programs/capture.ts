@@ -5,8 +5,9 @@
 import { copyFileSync, mkdirSync } from "node:fs";
 
 import { NodeServices } from "@effect/platform-node";
-import { JsonlTrace } from "@wmaurer/otelscope-effect";
+import { OtelscopeTracer } from "@wmaurer/otelscope-effect";
 import { Effect, Fiber } from "effect";
+import { FetchHttpClient } from "effect/http";
 
 const checkout = Effect.gen(function* () {
     yield* Effect.logInfo("loading cart");
@@ -22,8 +23,8 @@ const checkout = Effect.gen(function* () {
 
 const run = (runId: string | undefined) =>
     checkout.pipe(
-        Effect.provide(JsonlTrace.layer({ serviceName: "verify-capture", file: "out/spans.jsonl", runId })),
-        Effect.provide(NodeServices.layer),
+        Effect.provide(OtelscopeTracer.layer({ serviceName: "verify-capture", file: "out/spans.jsonl", runId })),
+        Effect.provide([NodeServices.layer, FetchHttpClient.layer]),
         Effect.runPromise,
     );
 

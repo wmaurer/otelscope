@@ -105,7 +105,8 @@ export interface Options {
 
 const RECEIVER_URL = "http://otelscope.invalid/v1/traces";
 
-// `JsonlTrace.layer` built from the same pieces, with what the fixture needs and that layer should not offer:
+// The file half of `OtelscopeTracer.layer`, built from the same pieces, with what the fixture needs and that layer
+// should not offer:
 // - the exporter runs on the live clock (see `VirtualTime`);
 // - it exports once, at shutdown, so no file I/O interleaves with the program while it runs;
 // - each record is normalised before it is written;

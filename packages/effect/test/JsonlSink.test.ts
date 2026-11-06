@@ -5,11 +5,15 @@ import { join } from "node:path";
 import { NodeServices } from "@effect/platform-node";
 import { assert, describe, it } from "@effect/vitest";
 import { Array as Arr, Effect, Option, Schema } from "effect";
+import { Digest } from "effect/crypto";
 import { TestConsole } from "effect/testing";
 
+import { slimSpan } from "../src/format/Bodies.ts";
 import { JsonlSpanRecord } from "../src/format/Jsonl.ts";
 import * as JsonlSink from "../src/JsonlSink.ts";
 import { otlpSpan, str } from "./support/spans.ts";
+
+import type { Span } from "../src/format/TraceData.ts";
 
 const decodeLine = Schema.decodeUnknownOption(Schema.fromJsonString(JsonlSpanRecord));
 
@@ -19,8 +23,18 @@ const records = (file: string): ReadonlyArray<JsonlSpanRecord> =>
         (l) => Option.getOrThrow(decodeLine(l)),
     );
 
-const open = (file: string, bodies?: boolean) =>
-    JsonlSink.make({ file, runId: "run-1", service: "shop-api", bodies }).pipe(Effect.provide(NodeServices.layer));
+// The tracer slims the spans before they reach the sink, when it was opened with `bodies`.
+const open = (file: string, bodies = false) =>
+    Effect.map(
+        JsonlSink.make({ file, runId: "run-1", service: "shop-api", bodies }).pipe(Effect.provide(NodeServices.layer)),
+        (sink) => (spans: ReadonlyArray<Span>) =>
+            Effect.flatMap(
+                bodies
+                    ? Effect.forEach(spans, (span) => slimSpan(span)).pipe(Effect.provide(Digest.layerWebCrypto))
+                    : Effect.succeed(Arr.map(spans, (span) => ({ span, bodies: [] }))),
+                sink.write,
+            ),
+    );
 
 const prompt = (spanId: string) =>
     otlpSpan({ name: "agent.match", spanId, attributes: [str("prompt.body", "Compare this ticket.")] });

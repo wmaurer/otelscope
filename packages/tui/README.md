@@ -36,9 +36,9 @@ otelscope --help | --version
 Without `--no-follow`, the viewer follows the file like `tail -F`. It shows records as the program writes them, waits
 for a file that does not exist yet, and reloads the file when it is truncated or replaced.
 
-To write the file, provide `JsonlTrace.layer` from
-[`@wmaurer/otelscope-effect`](https://www.npmjs.com/package/@wmaurer/otelscope-effect) 0.3.0 or later. The viewer
-skips records from older versions and counts them in the status bar.
+To write the file, provide `OtelscopeTracer.layer` from
+[`@wmaurer/otelscope-effect`](https://www.npmjs.com/package/@wmaurer/otelscope-effect) 0.5.0, or `JsonlTrace.layer`
+from 0.3.0 or 0.4.0. The viewer skips records from older versions and counts them in the status bar.
 
 ## Screens
 

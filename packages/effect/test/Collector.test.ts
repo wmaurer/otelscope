@@ -1,9 +1,10 @@
+import { NodeServices } from "@effect/platform-node";
 import { assert, describe, it } from "@effect/vitest";
-import { Array as Arr, Effect, Layer, Option } from "effect";
+import { Array as Arr, Effect, Layer } from "effect";
 import { OtlpSerialization, OtlpTracer } from "effect/observability";
 import { TestConsole } from "effect/testing";
 
-import * as Collector from "../src/Collector.ts";
+import { OtelscopeTracer } from "../src/index.ts";
 import { configured, env, recordingCollector } from "./support/collector.ts";
 
 // Two spans, each over gzip's 1 KB minimum, so compression shows in the request.
@@ -28,20 +29,14 @@ const effectSends = (variables: Readonly<Record<string, string>>) =>
         return Arr.map(yield* collector.received, configured);
     });
 
-// What a tracer built from `Collector.settings` sends for this environment.
-const settingsSend = (variables: Readonly<Record<string, string>>) =>
+// What `OtelscopeTracer.layer` without a file sends for this environment.
+const otelscopeSends = (variables: Readonly<Record<string, string>>) =>
     Effect.gen(function* () {
         const collector = yield* recordingCollector();
-        const settings = yield* Collector.settings.pipe(Effect.provide(env(variables)));
-        if (Option.isSome(settings)) {
-            yield* program.pipe(
-                Effect.provide(
-                    OtlpTracer.layer({ ...settings.value, resource: { serviceName: "test" } }).pipe(
-                        Layer.provide([OtlpSerialization.layerProtobuf, collector.layer]),
-                    ),
-                ),
-            );
-        }
+        yield* program.pipe(
+            Effect.provide(OtelscopeTracer.layer({ serviceName: "test" })),
+            Effect.provide([NodeServices.layer, collector.layer, env(variables)]),
+        );
         return Arr.map(yield* collector.received, configured);
     });
 
@@ -139,14 +134,14 @@ const rows: ReadonlyArray<readonly [name: string, requests: number, variables: R
     ],
 ];
 
-describe("Collector.settings", () => {
+describe("OtelscopeTracer.layer reads the collector from OTEL_*", () => {
     describe("sends what OtlpTracer.layerFromConfig sends", () => {
         for (const [name, requests, variables] of rows) {
             it.effect(`for ${name}`, () =>
                 Effect.gen(function* () {
                     const expected = yield* effectSends(variables);
                     assert.lengthOf(expected, requests);
-                    assert.deepStrictEqual(yield* settingsSend(variables), expected);
+                    assert.deepStrictEqual(yield* otelscopeSends(variables), expected);
                     assert.deepStrictEqual(yield* TestConsole.errorLines, []);
                 }),
             );
@@ -157,7 +152,7 @@ describe("Collector.settings", () => {
         it.effect("and the comparison tells two different endpoints apart", () =>
             Effect.gen(function* () {
                 assert.notDeepEqual(
-                    yield* settingsSend({ OTEL_TRACES_EXPORTER: "otlp", OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: BASE }),
+                    yield* otelscopeSends({ OTEL_TRACES_EXPORTER: "otlp", OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: BASE }),
                     yield* effectSends({ OTEL_TRACES_EXPORTER: "otlp", OTEL_EXPORTER_OTLP_ENDPOINT: BASE }),
                 );
             }),
@@ -166,7 +161,7 @@ describe("Collector.settings", () => {
 
     it.effect("turns the collector off with one line on stderr for an endpoint that is not http or https", () =>
         Effect.gen(function* () {
-            const sent = yield* settingsSend({
+            const sent = yield* otelscopeSends({
                 OTEL_TRACES_EXPORTER: "otlp",
                 OTEL_EXPORTER_OTLP_ENDPOINT: "localhost:4318",
             });
@@ -180,7 +175,7 @@ describe("Collector.settings", () => {
 
     it.effect("turns the collector off with one line on stderr naming an invalid variable", () =>
         Effect.gen(function* () {
-            const sent = yield* settingsSend({
+            const sent = yield* otelscopeSends({
                 OTEL_TRACES_EXPORTER: "otlp",
                 OTEL_EXPORTER_OTLP_ENDPOINT: BASE,
                 OTEL_EXPORTER_OTLP_COMPRESSION: "brotli",

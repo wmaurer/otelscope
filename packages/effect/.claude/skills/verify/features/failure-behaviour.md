@@ -1,8 +1,9 @@
 # Failure behaviour
 
 Tracing never fails the program it observes. If the JSONL file or a body cannot be written, the first failure
-prints one `otelscope:` warning to stderr and all further writes stop. The program runs to completion with the
-result it would have had untraced.
+prints one `otelscope:` warning to stderr and all further writes stop. A collector that fails, or collector
+variables that are invalid, also print one warning and cost only the collector. The program runs to completion
+with the result it would have had untraced.
 
 ## Sub-features
 
@@ -37,5 +38,8 @@ Preconditions:
   recipe for a failure while spans are being written.
 - Running as root ignores read-only permissions, so `midrun.ts` exits without a warning. Use the regular-file
   blocker instead.
-- `could not decode a batch of spans` is the other stderr warning. Effect's own exporter never sends an
+- A refusing collector is driven in [collector.md](./collector.md). An invalid collector variable, such as
+  `OTEL_EXPORTER_OTLP_ENDPOINT=localhost:4318`, prints `otelscope: not sending spans to a collector: ...` and
+  writes the file as usual; `test/Collector.test.ts` covers it.
+- `could not decode a batch of spans` is another stderr warning. Effect's own exporter never sends an
   undecodable batch, so it is not reachable from a user program; `test/ReceiverClient.test.ts` covers it.

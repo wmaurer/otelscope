@@ -3,8 +3,9 @@
 import { chmodSync } from "node:fs";
 
 import { NodeServices } from "@effect/platform-node";
-import { JsonlTrace } from "@wmaurer/otelscope-effect";
+import { OtelscopeTracer } from "@wmaurer/otelscope-effect";
 import { Effect } from "effect";
+import { FetchHttpClient } from "effect/http";
 
 const run = (label: string, bodies: boolean) =>
     Effect.forEach(
@@ -13,9 +14,9 @@ const run = (label: string, bodies: boolean) =>
         { discard: true },
     ).pipe(
         Effect.provide(
-            JsonlTrace.layer({ serviceName: "verify-midrun", file: "out/spans.jsonl", runId: label, bodies }),
+            OtelscopeTracer.layer({ serviceName: "verify-midrun", file: "out/spans.jsonl", runId: label, bodies }),
         ),
-        Effect.provide(NodeServices.layer),
+        Effect.provide([NodeServices.layer, FetchHttpClient.layer]),
         Effect.runPromise,
     );
 

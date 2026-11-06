@@ -6,25 +6,26 @@ Record the spans of an [Effect](https://effect.website) program to a JSONL file,
 
 ## Packages
 
-| Package                                                  | Path               | What it does                                                                                          |
-| -------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------- |
-| [`@wmaurer/otelscope-effect`](packages/effect/README.md) | `packages/effect/` | A layer that installs Effect's OTLP tracer and appends every span to a JSONL file. No collector.      |
-| [`@wmaurer/otelscope`](packages/tui/README.md)           | `packages/tui/`    | The terminal viewer, bin `otelscope`. It follows the file while the program runs. Needs Node >= 26.9. |
+| Package                                                  | Path               | What it does                                                                                                                                      |
+| -------------------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@wmaurer/otelscope-effect`](packages/effect/README.md) | `packages/effect/` | A layer that installs Effect's OTLP tracer and appends every span to a JSONL file, and to the OTLP collector the `OTEL_*` variables name, if any. |
+| [`@wmaurer/otelscope`](packages/tui/README.md)           | `packages/tui/`    | The terminal viewer, bin `otelscope`. It follows the file while the program runs. Needs Node >= 26.9.                                             |
 
 ## Quick start
 
-Provide `JsonlTrace.layer` as the outermost layer of your program:
+Provide `OtelscopeTracer.layer` as the outermost layer of your program:
 
 ```ts
 import { NodeServices } from "@effect/platform-node";
 import { Effect } from "effect";
-import { JsonlTrace } from "@wmaurer/otelscope-effect";
+import { FetchHttpClient } from "effect/http";
+import { OtelscopeTracer } from "@wmaurer/otelscope-effect";
 
 const program = Effect.log("hello").pipe(Effect.withSpan("greet"));
 
 program.pipe(
-    Effect.provide(JsonlTrace.layer({ serviceName: "my-app", file: "traces/spans.jsonl" })),
-    Effect.provide(NodeServices.layer),
+    Effect.provide(OtelscopeTracer.layer({ serviceName: "my-app", file: "traces/spans.jsonl" })),
+    Effect.provide([NodeServices.layer, FetchHttpClient.layer]),
     Effect.runPromise,
 );
 ```
