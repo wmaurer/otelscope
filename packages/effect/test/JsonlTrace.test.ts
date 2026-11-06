@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 
 import { NodeServices } from "@effect/platform-node";
 import { assert, describe, it } from "@effect/vitest";
-import { Array as Arr, Effect, Fiber, Option, Schedule, Schema } from "effect";
+import { Array as Arr, Effect, Fiber, Option, Order, Schedule, Schema } from "effect";
 import { TestClock } from "effect/testing";
 
 import { type JsonlSpanRecord, JsonlSpanRecord as RecordSchema, JsonlTrace } from "../src/index.ts";
@@ -90,6 +90,30 @@ describe("JsonlTrace.layer", () => {
         const decoded = Arr.map(lines(file), (line) => decodeLine(line));
         assert.lengthOf(decoded, 7);
         assert.isTrue(Arr.every(decoded, Option.isSome));
+    });
+
+    it("writes a batch whose span has a NaN or infinite number attribute, with null for those values", async () => {
+        const file = tempFile();
+        const nonFinite = Effect.void.pipe(
+            Effect.withSpan("ratio", {
+                attributes: { "ratio.nan": NaN, "ratio.max": Infinity, "ratio.min": -Infinity },
+            }),
+            Effect.andThen(Effect.void.pipe(Effect.withSpan("plain"))),
+        );
+        await run(nonFinite, file);
+
+        const rows = records(file);
+        assert.deepStrictEqual(
+            Arr.sort(
+                Arr.map(rows, (r) => r.name),
+                Order.String,
+            ),
+            ["plain", "ratio"],
+        );
+        const ratio = named(rows, "ratio");
+        assert.isNull(ratio?.attrs["ratio.nan"]);
+        assert.isNull(ratio?.attrs["ratio.max"]);
+        assert.isNull(ratio?.attrs["ratio.min"]);
     });
 
     it("names the run by start time and a random suffix when no run id is given", async () => {

@@ -1,8 +1,7 @@
-import { Array as Arr, pipe, Schema } from "effect";
+import { Array as Arr, pipe, Schema, SchemaTransformation } from "effect";
 
 // The OTLP/JSON trace payload, limited to the fields that `OtlpTracer` from `effect/observability` writes.
-// `OtlpResource.unknownToAttributeValue` produces only these five value kinds. JSON writes a non-finite
-// double as `null`, so `doubleValue` admits it.
+// `OtlpResource.unknownToAttributeValue` produces only these five value kinds.
 export interface AnyValue {
     readonly stringValue?: string;
     readonly boolValue?: boolean;
@@ -11,13 +10,36 @@ export interface AnyValue {
     readonly arrayValue?: { readonly values: ReadonlyArray<AnyValue> };
 }
 
-export const AnyValue: Schema.Codec<AnyValue> = Schema.Struct({
+// `OtlpSerialization.layerJson` writes a non-finite double as the string OTLP/JSON prescribes, `"NaN"`,
+// `"Infinity"` or `"-Infinity"`. `JSON.stringify` alone writes it as `null`.
+export interface AnyValueEncoded {
+    readonly stringValue?: string;
+    readonly boolValue?: boolean;
+    readonly intValue?: string | number;
+    readonly doubleValue?: number | "NaN" | "Infinity" | "-Infinity" | null;
+    readonly arrayValue?: { readonly values: ReadonlyArray<AnyValueEncoded> };
+}
+
+const NonFinite = Schema.Literals(["NaN", "Infinity", "-Infinity"]).pipe(
+    Schema.decodeTo(
+        // @effect-diagnostics-next-line schemaNumber:off
+        Schema.Number,
+        SchemaTransformation.transform({
+            decode: (text) => Number(text),
+            encode: (value) => (Number.isNaN(value) ? "NaN" : value > 0 ? "Infinity" : "-Infinity"),
+        }),
+    ),
+);
+
+export const AnyValue: Schema.Codec<AnyValue, AnyValueEncoded> = Schema.Struct({
     stringValue: Schema.optionalKey(Schema.String),
     boolValue: Schema.optionalKey(Schema.Boolean),
     intValue: Schema.optionalKey(Schema.Union([Schema.String, Schema.Finite])),
-    doubleValue: Schema.optionalKey(Schema.NullOr(Schema.Finite)),
+    doubleValue: Schema.optionalKey(Schema.Union([Schema.Finite, Schema.Null, NonFinite])),
     arrayValue: Schema.optionalKey(
-        Schema.Struct({ values: Schema.Array(Schema.suspend((): Schema.Codec<AnyValue> => AnyValue)) }),
+        Schema.Struct({
+            values: Schema.Array(Schema.suspend((): Schema.Codec<AnyValue, AnyValueEncoded> => AnyValue)),
+        }),
     ),
 });
 
